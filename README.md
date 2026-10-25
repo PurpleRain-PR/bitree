@@ -1,8 +1,18 @@
-# BITree 理枝
+<p align="center">
+  <img src="assets/brand/bitree.svg" width="160" alt="BITree 理枝 logo" />
+</p>
 
-<img src="assets/brand/bitree.svg" width="160" alt="BITree 理枝 logo" />
+<h1 align="center">BITree 理枝</h1>
 
-BITree 是面向北京理工大学的跨平台工具集，中文名“理枝”，谐音“荔枝”。
+<p align="center">
+  面向北京理工大学的跨平台工具集。理枝，谐音“荔枝”。
+</p>
+
+<p align="center">
+  <a href="https://github.com/so1ve/bitree/releases/latest">下载正式版</a>
+  &nbsp;|&nbsp;
+  <a href="https://github.com/so1ve/bitree/releases/tag/dev">下载测试版</a>
+</p>
 
 > [!WARNING]
 >
