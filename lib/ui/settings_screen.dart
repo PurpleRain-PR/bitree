@@ -131,7 +131,7 @@ class SettingsScreen extends StatelessWidget {
               ),
             ],
           ),
-          content: const Text('北京理工大学工具集。'),
+          content: const Text('面向北京理工大学的跨平台工具集。'),
           actions: [
             TextButton(
               onPressed: () {
