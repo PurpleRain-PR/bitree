@@ -7,6 +7,9 @@
 /result-*
 /local.properties
 /work/
+/dist/
+/android/signing/*
+!/android/signing/bitree-release.p12.gpg
 .env
 .env.*
 !.env.example

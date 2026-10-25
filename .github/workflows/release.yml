@@ -1,0 +1,75 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      native_version: ${{ steps.version.outputs.native_version }}
+      build_number: ${{ steps.version.outputs.build_number }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - id: version
+        run: python3 tool/prepare_release.py
+
+  build:
+    needs: prepare
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - target: android
+            runner: ubuntu-24.04
+          - target: linux
+            runner: ubuntu-24.04
+          - target: windows
+            runner: windows-2022
+          - target: macos
+            runner: macos-15
+          - target: ios
+            runner: macos-15
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/build
+        with:
+          target: ${{ matrix.target }}
+          version: ${{ needs.prepare.outputs.version }}
+          native-version: ${{ needs.prepare.outputs.native_version }}
+          build-number: ${{ needs.prepare.outputs.build_number }}
+          signing-password: ${{ secrets.ANDROID_SIGNING_PASSWORD }}
+
+  publish:
+    needs: [prepare, build]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: BITree-*
+          path: dist
+          merge-multiple: true
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BITREE_VERSION: ${{ needs.prepare.outputs.version }}
+        run: python3 tool/publish_release.py release "$BITREE_VERSION"

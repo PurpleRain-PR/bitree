@@ -1,16 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../app_controller.dart';
+import '../app_version.dart';
 import '../schedule/model.dart';
 import 'course_editor.dart';
+import 'external_link.dart';
 import 'school_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key, required this.controller});
+  const SettingsScreen({
+    super.key,
+    required this.controller,
+    required this.checkingForUpdates,
+    required this.onCheckForUpdates,
+  });
 
   final AppController controller;
+  final bool checkingForUpdates;
+  final VoidCallback onCheckForUpdates;
 
   Future<void> _selectTerm(BuildContext context) => showDialog<void>(
     context: context,
@@ -65,106 +72,88 @@ class SettingsScreen extends StatelessWidget {
     if (confirmed == true) await controller.clearSchedule();
   }
 
-  Future<void> _showAbout(BuildContext context) => showDialog<void>(
-    context: context,
-    builder: (dialogContext) {
-      final theme = Theme.of(dialogContext);
-      return AlertDialog(
-        constraints: const BoxConstraints(maxWidth: 360),
-        insetPadding: const EdgeInsets.all(24),
-        titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-        contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
-        scrollable: true,
-        title: Row(
-          children: [
-            Image.asset('assets/brand/bitree.png', width: 40, height: 40),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Wrap(
-                    spacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      Text(
-                        'BITree',
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text('理枝', style: theme.textTheme.titleMedium),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '0.1.0',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        content: const Text('北京理工大学工具集。\n理枝，谐音“荔枝”。'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              showLicensePage(
-                context: context,
-                applicationName: 'BITree 理枝',
-                applicationVersion: '0.1.0',
-                applicationIcon: Image.asset(
-                  'assets/brand/bitree.png',
-                  width: 40,
-                  height: 40,
-                ),
-              );
-            },
-            child: const Text('查看许可'),
-          ),
-          TextButton(
-            onPressed: () => _openGitHub(dialogContext),
-            child: const Text('GitHub'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('关闭'),
-          ),
-        ],
-      );
-    },
-  );
+  Future<void> _showAbout(BuildContext context) async {
+    final version = await appVersion();
+    if (!context.mounted) return;
 
-  Future<void> _openGitHub(BuildContext context) async {
-    final repository = Uri.https('github.com', '/so1ve/bitree');
-    bool opened;
-    try {
-      opened = await launchUrl(
-        repository,
-        mode: LaunchMode.externalApplication,
-      );
-    } on PlatformException {
-      opened = false;
-    }
-    if (opened || !context.mounted) return;
     await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('无法打开 GitHub'),
-        content: SelectableText('请在浏览器中打开：\n$repository'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('关闭'),
+      builder: (dialogContext) {
+        final theme = Theme.of(dialogContext);
+        return AlertDialog(
+          constraints: const BoxConstraints(maxWidth: 360),
+          insetPadding: const EdgeInsets.all(24),
+          titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+          contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+          scrollable: true,
+          title: Row(
+            children: [
+              Image.asset('assets/brand/bitree.png', width: 40, height: 40),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Wrap(
+                      spacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          'BITree',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text('理枝', style: theme.textTheme.titleMedium),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      version,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+          content: const Text('北京理工大学工具集。\n理枝，谐音“荔枝”。'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                showLicensePage(
+                  context: context,
+                  applicationName: 'BITree 理枝',
+                  applicationVersion: version,
+                  applicationIcon: Image.asset(
+                    'assets/brand/bitree.png',
+                    width: 40,
+                    height: 40,
+                  ),
+                );
+              },
+              child: const Text('查看许可'),
+            ),
+            TextButton(
+              onPressed: () => openExternalLink(
+                dialogContext,
+                Uri.https('github.com', '/so1ve/bitree'),
+                failureTitle: '无法打开 GitHub',
+              ),
+              child: const Text('GitHub'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('关闭'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -344,6 +333,19 @@ class SettingsScreen extends StatelessWidget {
                 ],
               ]),
               section('应用', [
+                ListTile(
+                  contentPadding: tilePadding,
+                  leading: const Icon(Icons.system_update_outlined),
+                  title: Text(checkingForUpdates ? '正在检查更新…' : '检查更新'),
+                  trailing: checkingForUpdates
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.chevron_right_rounded, size: 20),
+                  onTap: checkingForUpdates ? null : onCheckForUpdates,
+                ),
                 ListTile(
                   contentPadding: tilePadding,
                   leading: const Icon(Icons.info_outline_rounded),

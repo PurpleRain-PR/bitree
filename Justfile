@@ -27,6 +27,9 @@ build target=os():
 apk:
     flutter build apk --debug
 
+release version:
+    python3 tool/release.py {{ quote(version) }}
+
 doctor:
     flutter doctor -v
 

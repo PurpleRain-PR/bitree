@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
 import 'schedule_screen.dart';
 import 'settings_screen.dart';
+import 'update_check.dart';
 
 class AppScreen extends StatefulWidget {
   const AppScreen({super.key, required this.controller});
@@ -15,6 +18,26 @@ class AppScreen extends StatefulWidget {
 
 class _AppScreenState extends State<AppScreen> {
   int _tab = 0;
+  bool _checkingUpdates = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_checkUpdates(silent: true));
+    });
+  }
+
+  Future<void> _checkUpdates({bool silent = false}) async {
+    if (_checkingUpdates) return;
+    setState(() => _checkingUpdates = true);
+
+    try {
+      await checkForUpdates(context, silent: silent);
+    } finally {
+      if (mounted) setState(() => _checkingUpdates = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -24,7 +47,11 @@ class _AppScreenState extends State<AppScreen> {
         ScheduleScreen(controller: widget.controller),
         const _PendingPage(title: '日程'),
         const _PendingPage(title: '工具'),
-        SettingsScreen(controller: widget.controller),
+        SettingsScreen(
+          controller: widget.controller,
+          checkingForUpdates: _checkingUpdates,
+          onCheckForUpdates: () => _checkUpdates(),
+        ),
       ],
     ),
     bottomNavigationBar: DecoratedBox(

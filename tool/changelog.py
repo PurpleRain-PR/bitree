@@ -1,0 +1,58 @@
+import os
+import re
+import subprocess
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+
+def git(*arguments):
+    return subprocess.check_output(
+        ["git", *arguments], text=True, encoding="utf-8"
+    ).strip()
+
+
+def update_changelog(tag=None):
+    tags = git("tag", "--merged", "HEAD", "--list", "v[0-9]*")
+    previous = (
+        git("describe", "--tags", "--abbrev=0", "--match", "v[0-9]*") if tags else None
+    )
+    revision = f"{previous}..HEAD" if previous else "HEAD"
+    # Exclude commits that only update the changelog itself.
+    commits = git("log", "--format=%H%x09%s", revision, "--", ".", ":!CHANGELOG.md")
+    lines = []
+    for commit in commits.splitlines():
+        sha, subject = commit.split("\t", 1)
+        lines.append(
+            f"- {subject} ([{sha[:7]}](https://github.com/so1ve/bitree/commit/{sha}))"
+        )
+
+    changelog = Path("CHANGELOG.md")
+    history = re.sub(
+        r"\A# Changelog\n+## Unreleased\n.*?(?=^## |\Z)",
+        "",
+        changelog.read_text(encoding="utf-8"),
+        flags=re.MULTILINE | re.DOTALL,
+    ).lstrip("\n")
+
+    if tag:
+        released_on = datetime.now(timezone(timedelta(hours=8))).date().isoformat()
+        lines = [f"## {tag} - {released_on}", "", *lines]
+        if previous:
+            lines.extend(
+                [
+                    "",
+                    f"[完整变更](https://github.com/so1ve/bitree/compare/{previous}...{tag})",
+                ]
+            )
+
+    sections = ["# Changelog", "## Unreleased"]
+    if lines:
+        sections.append("\n".join(lines))
+    if history:
+        sections.append(history.rstrip())
+    changelog.write_text("\n\n".join(sections) + "\n", encoding="utf-8")
+
+
+if __name__ == "__main__":
+    os.chdir(Path(__file__).resolve().parent.parent)
+    update_changelog()

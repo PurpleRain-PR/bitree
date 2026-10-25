@@ -1,0 +1,117 @@
+import argparse
+import os
+import shutil
+import subprocess
+import tarfile
+from pathlib import Path
+
+
+def run(*command):
+    subprocess.run(command, check=True)
+
+
+def build_android(flags, prefix):
+    suffix = "-unsigned" if os.environ["GITHUB_EVENT_NAME"] == "pull_request" else ""
+
+    run("flutter", "build", "apk", "--split-per-abi", *flags)
+    for apk in Path("build/app/outputs/flutter-apk").glob("*.apk"):
+        abi = (
+            apk.stem.removeprefix("app-")
+            .removesuffix("-unsigned")
+            .removesuffix("-release")
+        )
+        shutil.copy2(apk, f"dist/{prefix}-android-{abi}{suffix}.apk")
+
+    run("flutter", "build", "appbundle", *flags)
+    shutil.copy2(
+        "build/app/outputs/bundle/release/app-release.aab",
+        f"dist/{prefix}-android{suffix}.aab",
+    )
+
+
+def build_linux(flags, prefix):
+    run("flutter", "build", "linux", *flags)
+    with tarfile.open(f"dist/{prefix}-linux-x64.tar.xz", "w:xz") as archive:
+        archive.add("build/linux/x64/release/bundle", arcname="BITree")
+
+
+def build_windows(flags, prefix):
+    run("flutter", "build", "windows", *flags)
+    shutil.make_archive(
+        f"dist/{prefix}-windows-x64-unsigned",
+        "zip",
+        "build/windows/x64/runner/Release",
+    )
+
+
+def build_macos(flags, prefix):
+    run("flutter", "config", "--no-enable-macos-arm64-only")
+    run("flutter", "build", "macos", *flags)
+    app = Path("build/macos/Build/Products/Release/BITree.app")
+    run(
+        "ditto",
+        "-c",
+        "-k",
+        "--sequesterRsrc",
+        "--keepParent",
+        str(app),
+        f"dist/{prefix}-macos-universal-unsigned.zip",
+    )
+
+
+def build_ios(flags, prefix):
+    run("flutter", "build", "ios", "--no-codesign", *flags)
+    payload = Path("build/unsigned-ipa/Payload")
+    payload.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(
+        "build/ios/iphoneos/Runner.app",
+        payload / "Runner.app",
+        dirs_exist_ok=True,
+        symlinks=True,
+    )
+    run(
+        "ditto",
+        "-c",
+        "-k",
+        "--keepParent",
+        str(payload),
+        f"dist/{prefix}-ios-arm64-unsigned.ipa",
+    )
+
+
+def main():
+    os.chdir(Path(__file__).resolve().parent.parent)
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "platform", choices=["android", "linux", "windows", "macos", "ios"]
+    )
+    parser.add_argument("--version", required=True)
+    parser.add_argument("--native-version", required=True)
+    parser.add_argument("--build-number", required=True)
+    args = parser.parse_args()
+
+    Path("dist").mkdir(exist_ok=True)
+    flags = [
+        "--release",
+        "--no-pub",
+        f"--build-name={args.native_version}",
+        f"--build-number={args.build_number}",
+        f"--dart-define=BITREE_VERSION={args.version}",
+    ]
+    prefix = f"BITree-{args.version}"
+
+    match args.platform:
+        case "android":
+            build_android(flags, prefix)
+        case "linux":
+            build_linux(flags, prefix)
+        case "windows":
+            build_windows(flags, prefix)
+        case "macos":
+            build_macos(flags, prefix)
+        case "ios":
+            build_ios(flags, prefix)
+
+
+if __name__ == "__main__":
+    main()
