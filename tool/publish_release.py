@@ -40,6 +40,8 @@ sha = os.environ["GITHUB_SHA"]
 tag = "dev" if args.channel == "dev" else args.version
 endpoint = f"repos/{repository}"
 assets = sorted(Path("dist").glob("BITree-*"))
+if not assets:
+    raise SystemExit("没有成功构建的产物可供发布。")
 
 checksums = Path("dist/SHA256SUMS.txt")
 with checksums.open("w", encoding="utf-8") as output:

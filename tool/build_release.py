@@ -39,12 +39,13 @@ def build_linux(flags, prefix):
         archive.add("build/linux/x64/release/bundle", arcname="BITree")
 
 
-def build_windows(flags, prefix):
+def build_windows(flags, prefix, native_version):
     run("flutter", "build", "windows", *flags)
-    shutil.make_archive(
-        f"dist/{prefix}-windows-x64-unsigned",
-        "zip",
-        "build/windows/x64/runner/Release",
+    run(
+        "iscc",
+        f"/DAppVersion={native_version}",
+        f"/DOutputName={prefix}-windows-x64-setup-unsigned",
+        "windows/installer.iss",
     )
 
 
@@ -110,7 +111,7 @@ def main():
         case "linux":
             build_linux(flags, prefix)
         case "windows":
-            build_windows(flags, prefix)
+            build_windows(flags, prefix, args.native_version)
         case "macos":
             build_macos(flags, prefix)
         case "ios":
