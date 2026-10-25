@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- fix(windows): install runtime libraries into the application bundle ([b9066e1](https://github.com/so1ve/bitree/commit/b9066e1d929f4eb548bf10f8a84cc3d936afc437))
 - feat: add scrolling timetable widgets with evening previews ([005a513](https://github.com/so1ve/bitree/commit/005a5137e216d7797739cf15b8c0a49f8661e607))
 - chore(deps): add renovate.json (#1) ([e67ea01](https://github.com/so1ve/bitree/commit/e67ea01d5e0beb2f53bc405d404ddd1e67a34872))
 - fix(release): publish partial dev builds and provide a Windows installer ([8c86d55](https://github.com/so1ve/bitree/commit/8c86d55c493189c12d07a6cd8000c99dd0b1ff0e))
