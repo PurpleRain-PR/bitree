@@ -1,0 +1,202 @@
+import 'package:flutter/material.dart';
+
+import '../app_controller.dart';
+import '../schedule/model.dart';
+import 'course_detail.dart';
+import 'sheet_layout.dart';
+import 'theme.dart';
+
+class ConflictingCourses extends StatelessWidget {
+  const ConflictingCourses({
+    super.key,
+    required this.courses,
+    required this.controller,
+    required this.isToday,
+  });
+
+  final List<Course> courses;
+  final AppController controller;
+  final bool isToday;
+
+  Future<void> _selectCourse(BuildContext context) async {
+    final selected = await showModalBottomSheet<Course>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      constraints: const BoxConstraints(maxWidth: 560),
+      builder: (context) => SafeArea(
+        top: false,
+        child: SheetLayout(
+          header: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 8, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '选择课程',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                IconButton(
+                  tooltip: '关闭',
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded, size: 20),
+                ),
+              ],
+            ),
+          ),
+          content: Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final course in courses)
+                  ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 6,
+                    ),
+                    leading: Container(
+                      width: 4,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: courseColors(context, course.colorIndex).accent,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    title: Text(course.name),
+                    subtitle: Text(
+                      [
+                        '${course.sectionLabel}（${course.timeLabel}）',
+                        if (course.room.isNotEmpty) course.room,
+                        if (course.teacher.isNotEmpty) course.teacher,
+                      ].join('\n'),
+                    ),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => Navigator.pop(context, course),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (selected != null && context.mounted) {
+      await showCourse(context, controller, selected);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final fill = isToday
+        ? Color.lerp(scheme.primaryContainer, scheme.primary, 0.12)!
+        : scheme.primaryContainer;
+    final summary = courses
+        .map((course) => '${course.name}，${course.sectionLabel}')
+        .join('\n');
+
+    return Semantics(
+      button: true,
+      label: '${courses.length}门课程时间重叠，$summary，选择课程',
+      child: ExcludeSemantics(
+        child: Tooltip(
+          message: summary,
+          child: Material(
+            color: fill,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(6),
+              side: isToday
+                  ? BorderSide(color: scheme.primary, width: 1.5)
+                  : BorderSide.none,
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () => _selectCourse(context),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final scaler = MediaQuery.textScalerOf(context);
+                  final titleHeight = scaler.scale(12) * 1.35;
+                  final sectionHeight = scaler.scale(10) * 1.3;
+                  final available = constraints.maxHeight - sectionHeight - 18;
+                  final showSections =
+                      available >= titleHeight + sectionHeight + 3;
+                  final sectionSpace = showSections ? sectionHeight + 3 : 0;
+                  final shownCount =
+                      available >= (titleHeight * 2 + sectionSpace) * 2 + 8
+                      ? 2
+                      : 1;
+                  final titleLines =
+                      ((available - (shownCount - 1) * 8) / shownCount -
+                          sectionSpace) ~/
+                      titleHeight;
+
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 3,
+                      vertical: 6,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          '${courses.length}门',
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 10,
+                            height: 1.3,
+                            fontWeight: FontWeight.w600,
+                            color: scheme.primary,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              for (var i = 0; i < shownCount; i++) ...[
+                                if (i > 0) const SizedBox(height: 8),
+                                Text(
+                                  courses[i].name,
+                                  textAlign: TextAlign.center,
+                                  maxLines: titleLines.clamp(1, 3),
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    height: 1.35,
+                                    fontWeight: FontWeight.w600,
+                                    color: scheme.onPrimaryContainer,
+                                  ),
+                                ),
+                                if (showSections) ...[
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    courses[i].sectionLabel,
+                                    textAlign: TextAlign.center,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      height: 1.3,
+                                      color: scheme.onPrimaryContainer,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

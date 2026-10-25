@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../app_controller.dart';
 import '../schedule/layout.dart';
 import '../schedule/model.dart';
+import 'conflicting_courses.dart';
 import 'course_tile.dart';
 
 class Timetable extends StatefulWidget {
@@ -26,15 +27,11 @@ class Timetable extends StatefulWidget {
 }
 
 class _TimetableState extends State<Timetable> {
-  final _horizontal = ScrollController();
-  final _dates = ScrollController();
   late final ScrollController _vertical;
-  DateTime? _shownMonday;
 
   @override
   void initState() {
     super.initState();
-    _horizontal.addListener(_alignDates);
     _vertical = ScrollController(
       initialScrollOffset: widget.initialScrollOffset,
       keepScrollOffset: false,
@@ -43,19 +40,8 @@ class _TimetableState extends State<Timetable> {
 
   void _rememberScroll() => widget.onScroll(_vertical.offset);
 
-  void _alignDates() {
-    if (!_horizontal.hasClients || !_dates.hasClients) return;
-    final offset = _horizontal.offset.clamp(
-      _dates.position.minScrollExtent,
-      _dates.position.maxScrollExtent,
-    );
-    if (_dates.offset != offset) _dates.jumpTo(offset);
-  }
-
   @override
   void dispose() {
-    _horizontal.dispose();
-    _dates.dispose();
     _vertical.dispose();
     super.dispose();
   }
@@ -73,41 +59,19 @@ class _TimetableState extends State<Timetable> {
     final scale = MediaQuery.textScalerOf(context).scale(1);
     final layouts = [
       for (var day = 1; day <= 7; day++)
-        layoutDayCourses(schedule.coursesAt(widget.week, weekday: day)),
+        groupOverlappingCourses(schedule.coursesAt(widget.week, weekday: day)),
     ];
-    var minimumColumn = 42.0 * scale;
-    for (final day in layouts) {
-      for (final placement in day) {
-        minimumColumn = math.max(minimumColumn, 42 * scale * placement.lanes);
-      }
-    }
     return LayoutBuilder(
       builder: (context, constraints) {
         final gutterWidth = 30.0 * scale;
         final headerHeight = 56.0 * scale;
-        final columnWidth = math.max(
-          minimumColumn,
-          (constraints.maxWidth - gutterWidth) / 7,
-        );
+        final columnWidth = (constraints.maxWidth - gutterWidth) / 7;
         final gridWidth = columnWidth * 7;
-        final viewportWidth = constraints.maxWidth - gutterWidth;
         final rowHeight = math.max(
           (constraints.maxWidth < 680 ? 76.0 : 52.0) * scale,
           (constraints.maxHeight - headerHeight) / sectionTimes.length,
         );
         final gridHeight = rowHeight * sectionTimes.length;
-        if (_shownMonday != monday) {
-          _shownMonday = monday;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted || !_horizontal.hasClients) return;
-            final offset = currentWeek
-                ? today.weekday * columnWidth - viewportWidth
-                : 0.0;
-            _horizontal.jumpTo(
-              offset.clamp(0.0, _horizontal.position.maxScrollExtent),
-            );
-          });
-        }
         return Column(
           children: [
             SizedBox(
@@ -127,28 +91,19 @@ class _TimetableState extends State<Timetable> {
                     ),
                   ),
                   Expanded(
-                    child: ScrollConfiguration(
-                      behavior: ScrollConfiguration.of(context)
-                          .copyWith(scrollbars: false),
-                      child: SingleChildScrollView(
-                        controller: _dates,
-                        scrollDirection: Axis.horizontal,
-                        physics: const NeverScrollableScrollPhysics(),
-                        child: Row(
-                          children: [
-                            for (var day = 1; day <= 7; day++)
-                              SizedBox(
-                                width: columnWidth,
-                                height: headerHeight,
-                                child: _DateHeading(
-                                  date: monday.add(Duration(days: day - 1)),
-                                  today: today,
-                                  todayBackground: todayBackground,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
+                    child: Row(
+                      children: [
+                        for (var day = 1; day <= 7; day++)
+                          SizedBox(
+                            width: columnWidth,
+                            height: headerHeight,
+                            child: _DateHeading(
+                              date: monday.add(Duration(days: day - 1)),
+                              today: today,
+                              todayBackground: todayBackground,
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ],
@@ -179,95 +134,76 @@ class _TimetableState extends State<Timetable> {
                         ),
                       ),
                       Expanded(
-                        child: Scrollbar(
-                          controller: _horizontal,
-                          thumbVisibility: gridWidth > viewportWidth + 1,
-                          child: SingleChildScrollView(
-                            controller: _horizontal,
-                            scrollDirection: Axis.horizontal,
-                            physics: gridWidth > viewportWidth + 1
-                                ? const ClampingScrollPhysics()
-                                : const NeverScrollableScrollPhysics(),
-                            child: SizedBox(
-                              width: gridWidth,
-                              height: gridHeight,
-                              child: Stack(
-                                children: [
-                                  for (
-                                    var section = 0;
-                                    section < sectionTimes.length;
-                                    section++
-                                  )
-                                    for (var day = 0; day < 7; day++)
-                                      Positioned(
-                                        left: day * columnWidth + 2,
-                                        top: section * rowHeight + 2,
-                                        width: columnWidth - 4,
-                                        height: rowHeight - 4,
-                                        child: DecoratedBox(
-                                          decoration: BoxDecoration(
-                                            color: scheme.onSurface.withValues(
-                                              alpha: section.isEven
-                                                  ? 0.025
-                                                  : 0.045,
+                        child: SizedBox(
+                          width: gridWidth,
+                          height: gridHeight,
+                          child: Stack(
+                            children: [
+                              for (
+                                var section = 0;
+                                section < sectionTimes.length;
+                                section++
+                              )
+                                for (var day = 0; day < 7; day++)
+                                  Positioned(
+                                    left: day * columnWidth + 2,
+                                    top: section * rowHeight + 2,
+                                    width: columnWidth - 4,
+                                    height: rowHeight - 4,
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        color: scheme.onSurface.withValues(
+                                          alpha: section.isEven ? 0.025 : 0.045,
+                                        ),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                    ),
+                                  ),
+                              for (var day = 0; day < 7; day++)
+                                if (day == todayColumn)
+                                  Positioned(
+                                    left: day * columnWidth + 2,
+                                    width: columnWidth - 4,
+                                    top: 0,
+                                    bottom: 0,
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        color: todayBackground,
+                                        borderRadius:
+                                            const BorderRadius.vertical(
+                                              bottom: Radius.circular(6),
                                             ),
-                                            borderRadius: BorderRadius.circular(
-                                              6,
-                                            ),
+                                      ),
+                                    ),
+                                  ),
+                              for (var day = 0; day < 7; day++)
+                                for (final block in layouts[day])
+                                  Positioned(
+                                    key: ValueKey((day, block.startSection)),
+                                    left: day * columnWidth + 2,
+                                    width: columnWidth - 4,
+                                    top:
+                                        (block.startSection - 1) * rowHeight +
+                                        2,
+                                    height:
+                                        (block.endSection -
+                                                block.startSection +
+                                                1) *
+                                            rowHeight -
+                                        4,
+                                    child: block.courses.length == 1
+                                        ? CourseTile(
+                                            course: block.courses.single,
+                                            controller: controller,
+                                            isToday: day == todayColumn,
+                                          )
+                                        : ConflictingCourses(
+                                            courses: block.courses,
+                                            controller: controller,
+                                            isToday: day == todayColumn,
                                           ),
-                                        ),
-                                      ),
-                                  for (var day = 0; day < 7; day++)
-                                    if (day == todayColumn)
-                                      Positioned(
-                                        left: day * columnWidth + 2,
-                                        width: columnWidth - 4,
-                                        top: 0,
-                                        bottom: 0,
-                                        child: DecoratedBox(
-                                          decoration: BoxDecoration(
-                                            color: todayBackground,
-                                            borderRadius:
-                                                const BorderRadius.vertical(
-                                                  bottom: Radius.circular(6),
-                                                ),
-                                          ),
-                                        ),
-                                      ),
-                                  for (var day = 0; day < 7; day++)
-                                    for (final placement in layouts[day])
-                                      Positioned(
-                                        key: ValueKey(placement.course.id),
-                                        left:
-                                            day * columnWidth +
-                                            placement.lane *
-                                                columnWidth /
-                                                placement.lanes +
-                                            2,
-                                        width:
-                                            columnWidth / placement.lanes - 4,
-                                        top:
-                                            (placement.course.startSection! -
-                                                    1) *
-                                                rowHeight +
-                                            2,
-                                        height:
-                                            (placement.course.endSection! -
-                                                    placement
-                                                        .course
-                                                        .startSection! +
-                                                    1) *
-                                                rowHeight -
-                                            4,
-                                        child: CourseTile(
-                                          course: placement.course,
-                                          controller: controller,
-                                          isToday: day == todayColumn,
-                                        ),
-                                      ),
-                                ],
-                              ),
-                            ),
+                                  ),
+                            ],
                           ),
                         ),
                       ),
@@ -319,18 +255,26 @@ class _DateHeading extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 5),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-                decoration: BoxDecoration(
-                  color: current ? scheme.primary : null,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  '${date.day}',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: current ? FontWeight.w700 : FontWeight.w500,
-                    color: current ? scheme.onPrimary : scheme.onSurfaceVariant,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: current ? scheme.primary : null,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    '${date.day}',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: current ? FontWeight.w700 : FontWeight.w500,
+                      color: current
+                          ? scheme.onPrimary
+                          : scheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
               ),

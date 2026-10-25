@@ -1,45 +1,38 @@
 import 'model.dart';
 
-/// Overlapping classes share a column rather than covering one another.
-List<({Course course, int lane, int lanes})> layoutDayCourses(
+typedef CourseBlock = ({
   List<Course> courses,
-) {
+  int startSection,
+  int endSection,
+});
+
+/// Courses linked by overlapping sections share one timetable entry.
+List<CourseBlock> groupOverlappingCourses(List<Course> courses) {
   final sorted = [...courses]
-    ..sort((a, b) => a.startSection!.compareTo(b.startSection!));
-  final result = <({Course course, int lane, int lanes})>[];
+    ..sort((first, second) {
+      final section = first.startSection!.compareTo(second.startSection!);
+      return section != 0 ? section : first.name.compareTo(second.name);
+    });
+  final result = <CourseBlock>[];
   var group = <Course>[];
   var groupEnd = 0;
 
   void finish() {
-    final laneEnds = <int>[];
-    final assigned = <({Course course, int lane})>[];
-    for (final course in group) {
-      var lane = laneEnds.indexWhere((end) => end < course.startSection!);
-      if (lane < 0) {
-        lane = laneEnds.length;
-        laneEnds.add(course.endSection!);
-      } else {
-        laneEnds[lane] = course.endSection!;
-      }
-      assigned.add((course: course, lane: lane));
-    }
-    result.addAll(
-      assigned.map(
-        (item) =>
-            (course: item.course, lane: item.lane, lanes: laneEnds.length),
-      ),
-    );
+    result.add((
+      courses: List.unmodifiable(group),
+      startSection: group.first.startSection!,
+      endSection: groupEnd,
+    ));
     group = [];
+    groupEnd = 0;
   }
 
   for (final course in sorted) {
-    if (group.isNotEmpty && course.startSection! > groupEnd) {
-      finish();
-      groupEnd = 0;
-    }
+    if (group.isNotEmpty && course.startSection! > groupEnd) finish();
     group.add(course);
     if (course.endSection! > groupEnd) groupEnd = course.endSection!;
   }
-  finish();
+  if (group.isNotEmpty) finish();
+
   return result;
 }
