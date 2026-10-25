@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- fix: streamline account actions and prevent login black screens ([4ada7a1](https://github.com/so1ve/bitree/commit/4ada7a1b269dedbec36ac4c7df09939a01d1b7c4))
 - fix: make timetable widgets more compact ([b0d36e3](https://github.com/so1ve/bitree/commit/b0d36e3be51aa630cbdd4fdedbb346e0574bdd44))
 - ci: cache Android NDK installations before building ([f4f0332](https://github.com/so1ve/bitree/commit/f4f03328e29ad3dc37ea110cff7bde8df1442f4d))
 - style: clean logo metadata and update app description ([9cc700c](https://github.com/so1ve/bitree/commit/9cc700c16df2527e51b85afec24572d28533115a))
