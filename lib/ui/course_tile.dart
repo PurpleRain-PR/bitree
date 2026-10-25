@@ -20,6 +20,10 @@ class CourseTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = courseColors(context, course.colorIndex);
+    final fill = isToday
+        ? Color.lerp(colors.fill, colors.accent, 0.24)!
+        : colors.fill;
+
     return Semantics(
       button: true,
       label:
@@ -28,7 +32,7 @@ class CourseTile extends StatelessWidget {
         child: Tooltip(
           message: '${course.name}\n${course.room}\n${course.teacher}',
           child: Material(
-            color: colors.fill,
+            color: fill,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(6),
               side: isToday

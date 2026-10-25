@@ -67,6 +67,9 @@ class _TimetableState extends State<Timetable> {
     final monday = schedule.mondayAt(widget.week);
     final today = calendarDate(campusNow());
     final scheme = Theme.of(context).colorScheme;
+    final currentWeek = schedule.weekAt(today) == widget.week;
+    final todayColumn = currentWeek ? today.weekday - 1 : null;
+    final todayBackground = scheme.primary.withValues(alpha: 0.12);
     final scale = MediaQuery.textScalerOf(context).scale(1);
     final layouts = [
       for (var day = 1; day <= 7; day++)
@@ -97,8 +100,7 @@ class _TimetableState extends State<Timetable> {
           _shownMonday = monday;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted || !_horizontal.hasClients) return;
-            final current = schedule.weekAt(today) == widget.week;
-            final offset = current
+            final offset = currentWeek
                 ? today.weekday * columnWidth - viewportWidth
                 : 0.0;
             _horizontal.jumpTo(
@@ -141,6 +143,7 @@ class _TimetableState extends State<Timetable> {
                                 child: _DateHeading(
                                   date: monday.add(Duration(days: day - 1)),
                                   today: today,
+                                  todayBackground: todayBackground,
                                 ),
                               ),
                           ],
@@ -215,21 +218,19 @@ class _TimetableState extends State<Timetable> {
                                         ),
                                       ),
                                   for (var day = 0; day < 7; day++)
-                                    if (monday.add(Duration(days: day)) ==
-                                        today)
+                                    if (day == todayColumn)
                                       Positioned(
-                                        left: day * columnWidth,
-                                        width: columnWidth,
+                                        left: day * columnWidth + 2,
+                                        width: columnWidth - 4,
                                         top: 0,
                                         bottom: 0,
                                         child: DecoratedBox(
                                           decoration: BoxDecoration(
-                                            color: scheme.primary.withValues(
-                                              alpha: 0.045,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              6,
-                                            ),
+                                            color: todayBackground,
+                                            borderRadius:
+                                                const BorderRadius.vertical(
+                                                  bottom: Radius.circular(6),
+                                                ),
                                           ),
                                         ),
                                       ),
@@ -261,9 +262,7 @@ class _TimetableState extends State<Timetable> {
                                         child: CourseTile(
                                           course: placement.course,
                                           controller: controller,
-                                          isToday:
-                                              monday.add(Duration(days: day)) ==
-                                              today,
+                                          isToday: day == todayColumn,
                                         ),
                                       ),
                                 ],
@@ -285,10 +284,15 @@ class _TimetableState extends State<Timetable> {
 }
 
 class _DateHeading extends StatelessWidget {
-  const _DateHeading({required this.date, required this.today});
+  const _DateHeading({
+    required this.date,
+    required this.today,
+    required this.todayBackground,
+  });
 
   final DateTime date;
   final DateTime today;
+  final Color todayBackground;
 
   @override
   Widget build(BuildContext context) {
@@ -298,33 +302,40 @@ class _DateHeading extends StatelessWidget {
       label:
           '${date.month}月${date.day}日${weekdays[date.weekday - 1]}${current ? '，今天' : ''}',
       child: ExcludeSemantics(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              weekdays[date.weekday - 1].substring(1),
-              style: TextStyle(
-                fontSize: 12,
-                color: current ? scheme.onSurface : scheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 5),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-              decoration: BoxDecoration(
-                color: current ? scheme.primary : null,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                '${date.day}',
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 2),
+          decoration: BoxDecoration(
+            color: current ? todayBackground : null,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                weekdays[date.weekday - 1].substring(1),
                 style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: current ? FontWeight.w700 : FontWeight.w500,
-                  color: current ? scheme.onPrimary : scheme.onSurfaceVariant,
+                  fontSize: 12,
+                  color: current ? scheme.onSurface : scheme.onSurfaceVariant,
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 5),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                decoration: BoxDecoration(
+                  color: current ? scheme.primary : null,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '${date.day}',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: current ? FontWeight.w700 : FontWeight.w500,
+                    color: current ? scheme.onPrimary : scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
