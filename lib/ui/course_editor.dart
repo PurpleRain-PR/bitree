@@ -129,7 +129,7 @@ class _CourseEditorState extends State<_CourseEditor> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
                 child: Text(
                   widget.course == null ? '添加课程' : '编辑课程',
                   style: theme.textTheme.titleLarge,
@@ -137,7 +137,8 @@ class _CourseEditorState extends State<_CourseEditor> {
               ),
               Flexible(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  // Keep floating labels inside the scroll viewport.
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
                   child: Form(
