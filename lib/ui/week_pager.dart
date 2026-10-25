@@ -22,7 +22,10 @@ class _WeekPagerState extends State<WeekPager> {
   void initState() {
     super.initState();
     _week = widget.controller.week;
-    _pages = PageController(initialPage: _week - 1, keepPage: false);
+    _pages = PageController(
+      initialPage: widget.controller.schedule!.weeks.indexOf(_week),
+      keepPage: false,
+    );
   }
 
   @override
@@ -31,13 +34,14 @@ class _WeekPagerState extends State<WeekPager> {
     final week = widget.controller.week;
     if (_week == week) return;
     _week = week;
+    final page = widget.controller.schedule!.weeks.indexOf(week);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_pages.hasClients) return;
       if (MediaQuery.disableAnimationsOf(context)) {
-        _pages.jumpToPage(week - 1);
+        _pages.jumpToPage(page);
       } else {
         _pages.animateToPage(
-          week - 1,
+          page,
           duration: const Duration(milliseconds: 260),
           curve: Curves.easeOutCubic,
         );
@@ -54,22 +58,23 @@ class _WeekPagerState extends State<WeekPager> {
   @override
   Widget build(BuildContext context) {
     final behavior = ScrollConfiguration.of(context);
+    final weeks = widget.controller.schedule!.weeks;
     return ScrollConfiguration(
       behavior: behavior.copyWith(
         dragDevices: {...behavior.dragDevices, PointerDeviceKind.mouse},
       ),
       child: PageView.builder(
         controller: _pages,
-        itemCount: widget.controller.schedule!.weekCount,
+        itemCount: weeks.length,
         onPageChanged: (page) {
-          _week = page + 1;
+          _week = weeks[page];
           if (widget.controller.week != _week) {
             widget.controller.selectWeek(_week);
           }
         },
         itemBuilder: (context, page) => Timetable(
           controller: widget.controller,
-          week: page + 1,
+          week: weeks[page],
           initialScrollOffset: _scrollOffset,
           onScroll: (offset) => _scrollOffset = offset,
         ),

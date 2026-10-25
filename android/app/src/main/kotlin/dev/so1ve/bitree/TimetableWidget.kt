@@ -83,9 +83,10 @@ class TimetableWidget : AppWidgetProvider() {
             }
             val today = formatter.parse(formatter.format(date.time))!!
             val firstMonday = formatter.parse(schedule.getString("firstMonday"))!!
-            val week = floor(
+            val weekOffset = floor(
                 (today.time - firstMonday.time).toDouble() / (7 * 86400000L),
-            ).toInt() + 1
+            ).toInt()
+            val week = if (weekOffset >= 0) weekOffset + 1 else weekOffset
 
             val weekdayNames = arrayOf("周一", "周二", "周三", "周四", "周五", "周六", "周日")
             val dateLabel = "${date.get(Calendar.MONTH) + 1}月" +

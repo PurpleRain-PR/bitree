@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
+import '../schedule/model.dart';
 import 'course_detail.dart';
 import 'course_editor.dart';
 import 'schedule_menu.dart';
@@ -44,18 +45,22 @@ class ScheduleScreen extends StatelessWidget {
                           if (!compact && schedule != null) ...[
                             IconButton(
                               tooltip: '上一周',
-                              onPressed: controller.week > 1
+                              onPressed: controller.week > schedule.firstWeek
                                   ? () => controller.selectWeek(
-                                      controller.week - 1,
+                                      weekFromOffset(
+                                        weekOffset(controller.week) - 1,
+                                      ),
                                     )
                                   : null,
                               icon: const Icon(Icons.chevron_left_rounded),
                             ),
                             IconButton(
                               tooltip: '下一周',
-                              onPressed: controller.week < schedule.weekCount
+                              onPressed: controller.week < schedule.lastWeek
                                   ? () => controller.selectWeek(
-                                      controller.week + 1,
+                                      weekFromOffset(
+                                        weekOffset(controller.week) + 1,
+                                      ),
                                     )
                                   : null,
                               icon: const Icon(Icons.chevron_right_rounded),
@@ -134,6 +139,7 @@ class ScheduleScreen extends StatelessWidget {
                             key: ValueKey((
                               schedule.term,
                               schedule.firstMonday,
+                              schedule.firstWeek,
                             )),
                             controller: controller,
                           ),

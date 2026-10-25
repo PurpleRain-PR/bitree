@@ -43,10 +43,8 @@ class _CourseEditorState extends State<_CourseEditor> {
       widget.controller.schedule?.firstMonday ?? mondayOf(campusNow());
   late Set<int> _weeks =
       widget.course?.weeks.toSet() ??
-      {
-        for (var i = 1; i <= (widget.controller.schedule?.weekCount ?? 20); i++)
-          i,
-      };
+      (widget.controller.schedule?.weeks ?? academicWeeks(1, 20)).toSet();
+  late int _firstWeek = widget.controller.schedule?.firstWeek ?? 1;
   bool _saving = false;
   String? _error;
 
@@ -116,7 +114,10 @@ class _CourseEditorState extends State<_CourseEditor> {
 
   @override
   Widget build(BuildContext context) {
-    final count = widget.controller.schedule?.weekCount ?? 20;
+    final weeks = academicWeeks(
+      _firstWeek,
+      widget.controller.schedule?.lastWeek ?? 20,
+    );
     final menuHeight = math.min(320.0, MediaQuery.sizeOf(context).height * 0.4);
     final theme = Theme.of(context);
     final inputTheme = theme.inputDecorationTheme.copyWith(
@@ -273,10 +274,13 @@ class _CourseEditorState extends State<_CourseEditor> {
                     ),
                     const SizedBox(height: 12),
                     CourseWeekPicker(
-                      weekCount: count,
+                      weeks: weeks,
                       selectedWeeks: _weeks,
                       enabled: !_saving,
                       onChanged: (weeks) => setState(() => _weeks = weeks),
+                      onAddEarlierWeek: () => setState(() {
+                        _firstWeek = weekFromOffset(weekOffset(_firstWeek) - 1);
+                      }),
                     ),
                   ],
                 ),

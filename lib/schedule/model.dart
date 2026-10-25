@@ -13,6 +13,16 @@ DateTime mondayOf(DateTime date) =>
 String dateText(DateTime date) =>
     '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
+// Week -1 directly precedes week 1; there is no week 0.
+int weekOffset(int week) => week > 0 ? week - 1 : week;
+
+int weekFromOffset(int offset) => offset >= 0 ? offset + 1 : offset;
+
+List<int> academicWeeks(int first, int last) => [
+  for (var offset = weekOffset(first); offset <= weekOffset(last); offset++)
+    weekFromOffset(offset),
+];
+
 const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
 
 const sectionTimes = [
@@ -62,8 +72,8 @@ class Course {
       throw const FormatException('课程节次超出作息表范围');
     }
 
-    if (weeks.any((week) => week < 1)) {
-      throw const FormatException('课程周次必须大于零');
+    if (weeks.contains(0)) {
+      throw const FormatException('没有第 0 周，请选择负数周或正数周');
     }
   }
 
@@ -136,10 +146,13 @@ class Course {
     final weekday = optionalInt('SKXQ');
     final startSection = optionalInt('KSJC');
     final endSection = optionalInt('JSJC');
-    final weeks = [
-      for (var i = 0; i < mask.length; i++)
-        if (mask[i] == '1') i + 1,
-    ];
+    final description = row['YPSJDD']?.toString() ?? '';
+    final weeks =
+        _smallSemesterWeeks(description) ??
+        [
+          for (var i = 0; i < mask.length; i++)
+            if (mask[i] == '1') i + 1,
+        ];
 
     return Course(
       id: _schoolCourseId(
@@ -158,7 +171,7 @@ class Course {
       room: room,
       campus: campus,
       number: number,
-      description: row['YPSJDD']?.toString() ?? '',
+      description: description,
       weekday: weekday,
       startSection: startSection,
       endSection: endSection,
@@ -195,6 +208,20 @@ class Course {
     weeks: (json['weeks'] as List).cast<int>(),
     local: json['local'] as bool,
   );
+}
+
+List<int>? _smallSemesterWeeks(String description) {
+  // The bitmask loses negative week numbers; the displayed schedule retains them.
+  final ranges = RegExp(r'(-?\d+)\s*(?:[-–~～]\s*(-?\d+)\s*)?周');
+  final weeks = <int>[
+    for (final match in ranges.allMatches(description))
+      if (match[2] == null)
+        int.parse(match[1]!)
+      else
+        ...academicWeeks(int.parse(match[1]!), int.parse(match[2]!)),
+  ];
+
+  return weeks.any((week) => week < 0) ? weeks : null;
 }
 
 String _schoolCourseId({
@@ -249,11 +276,19 @@ class SemesterSchedule {
   final List<Course> courses;
   final DateTime? syncedAt;
 
-  int get weekCount => courses.fold(
+  int get firstWeek => courses.fold(
+    1,
+    (first, course) =>
+        course.weeks.isEmpty ? first : math.min(first, course.weeks.first),
+  );
+
+  int get lastWeek => courses.fold(
     20,
     (count, course) =>
         course.weeks.isEmpty ? count : math.max(count, course.weeks.last),
   );
+
+  List<int> get weeks => academicWeeks(firstWeek, lastWeek);
 
   String get termLabel {
     final parts = term.split('-');
@@ -262,11 +297,12 @@ class SemesterSchedule {
     return '${parts[0]}–${parts[1]} ${parts[2] == '1' ? '秋季' : '春季'}学期';
   }
 
-  int weekAt(DateTime date) =>
-      (calendarDate(date).difference(firstMonday).inDays / 7).floor() + 1;
+  int weekAt(DateTime date) => weekFromOffset(
+    (calendarDate(date).difference(firstMonday).inDays / 7).floor(),
+  );
 
   DateTime mondayAt(int week) =>
-      firstMonday.add(Duration(days: (week - 1) * 7));
+      firstMonday.add(Duration(days: weekOffset(week) * 7));
 
   List<Course> coursesAt(int week, {int? weekday}) {
     final scheduled = courses

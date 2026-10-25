@@ -5,20 +5,23 @@ import 'package:flutter/material.dart';
 class CourseWeekPicker extends StatelessWidget {
   const CourseWeekPicker({
     super.key,
-    required this.weekCount,
+    required this.weeks,
     required this.selectedWeeks,
     required this.enabled,
     required this.onChanged,
+    required this.onAddEarlierWeek,
   });
 
-  final int weekCount;
+  final List<int> weeks;
   final Set<int> selectedWeeks;
   final bool enabled;
   final ValueChanged<Set<int>> onChanged;
+  final VoidCallback onAddEarlierWeek;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final allSelected = weeks.every(selectedWeeks.contains);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -29,21 +32,26 @@ class CourseWeekPicker extends StatelessWidget {
             const Text('上课周次', style: TextStyle(fontWeight: FontWeight.w600)),
             TextButton(
               onPressed: enabled
-                  ? () => onChanged({for (var i = 1; i <= weekCount; i++) i})
+                  ? () => onChanged(allSelected ? {} : weeks.toSet())
                   : null,
-              child: const Text('全选'),
+              child: Text(allSelected ? '清空' : '全选'),
             ),
             TextButton(
               onPressed: enabled
-                  ? () => onChanged({for (var i = 1; i <= weekCount; i += 2) i})
+                  ? () => onChanged(weeks.where((week) => week.isOdd).toSet())
                   : null,
               child: const Text('单周'),
             ),
             TextButton(
               onPressed: enabled
-                  ? () => onChanged({for (var i = 2; i <= weekCount; i += 2) i})
+                  ? () => onChanged(weeks.where((week) => week.isEven).toSet())
                   : null,
               child: const Text('双周'),
+            ),
+            TextButton.icon(
+              onPressed: enabled ? onAddEarlierWeek : null,
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: const Text('增加小学期周次'),
             ),
           ],
         ),
@@ -65,9 +73,9 @@ class CourseWeekPicker extends StatelessWidget {
                 mainAxisSpacing: 4,
                 mainAxisExtent: math.max(48, fontSize * 1.4 + 16),
               ),
-              itemCount: weekCount,
+              itemCount: weeks.length,
               itemBuilder: (context, index) {
-                final week = index + 1;
+                final week = weeks[index];
                 final selected = selectedWeeks.contains(week);
                 return Semantics(
                   selected: selected,

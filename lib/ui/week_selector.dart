@@ -20,7 +20,7 @@ class WeekSelector extends StatelessWidget {
       MediaQuery.textScalerOf(context).scale(14) * 2 + 16,
     );
     final columns = ((screen.width - 32) / (cellSize + 4)).floor().clamp(1, 5);
-    final weekCount = schedule?.weekCount ?? 0;
+    final weeks = schedule?.weeks ?? const <int>[];
     final currentWeek = schedule?.weekAt(campusNow());
     return MenuAnchor(
       style: MenuStyle(
@@ -33,15 +33,11 @@ class WeekSelector extends StatelessWidget {
         ),
       ),
       menuChildren: [
-        for (var row = 1; row <= weekCount; row += columns)
+        for (var row = 0; row < weeks.length; row += columns)
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              for (
-                var week = row;
-                week < row + columns && week <= weekCount;
-                week++
-              )
+              for (final week in weeks.skip(row).take(columns))
                 Padding(
                   padding: const EdgeInsets.all(2),
                   child: SizedBox.square(

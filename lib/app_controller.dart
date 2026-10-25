@@ -63,13 +63,13 @@ class AppController extends ChangeNotifier {
 
   void _goToCurrentWeek() {
     week = (schedule?.weekAt(campusNow()) ?? 1).clamp(
-      1,
-      schedule?.weekCount ?? 20,
+      schedule?.firstWeek ?? 1,
+      schedule?.lastWeek ?? 20,
     );
   }
 
   void selectWeek(int value) {
-    week = value.clamp(1, schedule?.weekCount ?? 20);
+    week = value.clamp(schedule?.firstWeek ?? 1, schedule?.lastWeek ?? 20);
     notifyListeners();
   }
 
@@ -226,6 +226,7 @@ class AppController extends ChangeNotifier {
     try {
       await _store.write(next);
       _schedule = next;
+      week = week.clamp(next.firstWeek, next.lastWeek);
       terms = {...terms, next.term}.toList();
       await _updateWidget();
       return true;
