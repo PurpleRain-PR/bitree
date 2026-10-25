@@ -4,7 +4,7 @@ import '../app_controller.dart';
 import '../app_version.dart';
 import 'course_editor.dart';
 import 'external_link.dart';
-import 'school_screen.dart';
+import 'school_account.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({
@@ -170,12 +170,6 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final signedIn = controller.accountStatus == AccountStatus.signedIn;
-    final accountHint = switch (controller.accountStatus) {
-      AccountStatus.signedIn => '已登录',
-      AccountStatus.expired => '登录已过期，不影响本地课表',
-      AccountStatus.unverified || AccountStatus.signedOut => '登录后可导入课表',
-    };
 
     Widget section(String title, List<Widget> children) => Padding(
       padding: const EdgeInsets.only(top: 24),
@@ -203,39 +197,7 @@ class SettingsScreen extends StatelessWidget {
           body: ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
-              Material(
-                color: scheme.surfaceContainerLow,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: scheme.outlineVariant),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  leading: CircleAvatar(
-                    radius: 20,
-                    backgroundColor: scheme.primaryContainer,
-                    foregroundColor: scheme.onPrimaryContainer,
-                    child: const Icon(Icons.person_outline_rounded, size: 22),
-                  ),
-                  title: Text(
-                    signedIn ? '学校账号' : '登录账号',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: Text(accountHint),
-                  trailing: const Icon(Icons.chevron_right_rounded, size: 20),
-                  onTap: controller.busy
-                      ? null
-                      : () => openSchoolPage(
-                          context,
-                          controller,
-                          action: SchoolAction.signIn,
-                        ),
-                ),
-              ),
+              SchoolAccount(controller: controller),
               if (controller.error != null)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
@@ -340,15 +302,6 @@ class SettingsScreen extends StatelessWidget {
                   trailing: const Icon(Icons.chevron_right_rounded, size: 20),
                   onTap: () => _showAbout(context),
                 ),
-                if (signedIn ||
-                    controller.accountStatus == AccountStatus.expired)
-                  ListTile(
-                    contentPadding: tilePadding,
-                    leading: const Icon(Icons.logout_rounded),
-                    title: const Text('退出学校账号'),
-                    subtitle: const Text('保留本地课表'),
-                    onTap: controller.busy ? null : controller.signOut,
-                  ),
               ]),
             ],
           ),

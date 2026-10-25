@@ -17,6 +17,13 @@ Future<bool?> openSchoolPage(
   required SchoolAction action,
 }) async {
   if (controller.busy) return null;
+  final switching =
+      action == SchoolAction.signIn &&
+      controller.accountStatus == AccountStatus.signedIn;
+  final title = switch (action) {
+    SchoolAction.importSchedule => '导入课表',
+    SchoolAction.signIn => switching ? '切换登录方式' : '登录账号',
+  };
   final network = await showModalBottomSheet<SchoolNetwork>(
     context: context,
     useSafeArea: true,
@@ -31,24 +38,29 @@ Future<bool?> openSchoolPage(
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-              child: Text(
-                action == SchoolAction.importSchedule ? '导入课表' : '登录账号',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+              child: Text(title, style: Theme.of(context).textTheme.titleLarge),
             ),
             ListTile(
               leading: const Icon(Icons.school_outlined),
               title: const Text('校园网'),
               subtitle: const Text('需连接校园网'),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () => Navigator.pop(context, SchoolNetwork.campus),
+              trailing: switching && controller.network == SchoolNetwork.campus
+                  ? const Text('当前')
+                  : const Icon(Icons.chevron_right_rounded),
+              onTap: switching && controller.network == SchoolNetwork.campus
+                  ? null
+                  : () => Navigator.pop(context, SchoolNetwork.campus),
             ),
             ListTile(
               leading: const Icon(Icons.public_rounded),
               title: const Text('WebVPN'),
               subtitle: const Text('校外访问'),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () => Navigator.pop(context, SchoolNetwork.webvpn),
+              trailing: switching && controller.network == SchoolNetwork.webvpn
+                  ? const Text('当前')
+                  : const Icon(Icons.chevron_right_rounded),
+              onTap: switching && controller.network == SchoolNetwork.webvpn
+                  ? null
+                  : () => Navigator.pop(context, SchoolNetwork.webvpn),
             ),
           ],
         ),
@@ -84,6 +96,8 @@ class _SchoolScreen extends StatefulWidget {
 
 class _SchoolScreenState extends State<_SchoolScreen> {
   SchoolNetwork get _network => widget.network;
+
+  bool get _active => mounted && ModalRoute.of(context)!.isCurrent;
 
   bool get _importing => widget.action == SchoolAction.importSchedule;
   late SchoolAction _step;
@@ -129,17 +143,19 @@ class _SchoolScreenState extends State<_SchoolScreen> {
   }
 
   void _loadStarted(Uri url) {
-    if (!mounted) return;
+    if (!_active) return;
     setState(() {
       _progress = 0;
       _error = null;
       if (isSchoolLogin(url)) _step = SchoolAction.signIn;
     });
-    if (isSchoolLogin(url)) widget.controller.requireLogin();
+    if (isSchoolLogin(url) && widget.controller.network == _network) {
+      widget.controller.requireLogin();
+    }
   }
 
   Future<void> _pageLoaded(Uri url) async {
-    if (!mounted) return;
+    if (!_active) return;
     try {
       if (_step == SchoolAction.signIn) {
         if (_network.isLoginLanding(url)) await _finish();
@@ -178,7 +194,7 @@ class _SchoolScreenState extends State<_SchoolScreen> {
   }
 
   Future<void> _finish() async {
-    if (_busy || !_sessionRestored) return;
+    if (_busy || !_sessionRestored || !_active) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -191,13 +207,14 @@ class _SchoolScreenState extends State<_SchoolScreen> {
         await _page.checkSchedule();
       }
       await _browser.captureSession(widget.controller.schoolSession, _network);
+      if (!_active) return;
       final success = signingIn
           ? await widget.controller.completeSignIn(_network)
           : await widget.controller.synchronize(
               using: _network,
               request: _page.json,
             );
-      if (!mounted) return;
+      if (!mounted || !ModalRoute.of(context)!.isCurrent) return;
       if (success) {
         if (signingIn && _importing) {
           setState(() {
@@ -219,7 +236,9 @@ class _SchoolScreenState extends State<_SchoolScreen> {
         setState(() => _error = widget.controller.error);
       }
     } on SessionExpired {
-      widget.controller.requireLogin();
+      if (widget.controller.network == _network) {
+        widget.controller.requireLogin();
+      }
       if (mounted) {
         if (_step == SchoolAction.importSchedule) {
           await _loginAgain();
