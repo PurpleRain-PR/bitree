@@ -1,8 +1,10 @@
 import argparse
+import json
 import os
 import shutil
 import subprocess
 import tarfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -96,12 +98,14 @@ def main():
     args = parser.parse_args()
 
     Path("dist").mkdir(exist_ok=True)
+    built_at = datetime.now(timezone.utc).isoformat()
     flags = [
         "--release",
         "--no-pub",
         f"--build-name={args.native_version}",
         f"--build-number={args.build_number}",
         f"--dart-define=BITREE_VERSION={args.version}",
+        f"--dart-define=BITREE_BUILD_TIME={built_at}",
     ]
     prefix = f"BITree-{args.version}"
 
@@ -116,6 +120,11 @@ def main():
             build_macos(flags, prefix)
         case "ios":
             build_ios(flags, prefix)
+
+    Path(f"dist/{prefix}-{args.platform}-update.json").write_text(
+        json.dumps({"version": args.version, "builtAt": built_at}) + "\n",
+        encoding="utf-8",
+    )
 
 
 if __name__ == "__main__":

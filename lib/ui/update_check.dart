@@ -12,14 +12,16 @@ Future<void> checkForUpdates(
 }) async {
   try {
     final installed = await appVersion();
-    final release = await latestAppRelease();
+    final releases = await availableAppReleases(
+      installed,
+      builtAt: appBuildTime,
+    );
     if (!context.mounted) return;
 
-    if (release == null || !release.isNewerThan(installed)) {
+    if (releases.isEmpty) {
       if (!silent) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(release == null ? '还没有正式发布的版本' : '已是最新版本')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('已是最新版本')));
       }
       return;
     }
@@ -28,31 +30,48 @@ Future<void> checkForUpdates(
       context: context,
       builder: (dialogContext) => AlertDialog(
         constraints: const BoxConstraints(maxWidth: 480),
-        title: Text('发现新版本 v${release.version}'),
-        content: release.notes.isEmpty
-            ? null
-            : ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 280),
-                child: SingleChildScrollView(child: Text(release.notes)),
-              ),
+        title: const Text('发现可用更新'),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 320),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final (index, release) in releases.indexed) ...[
+                  if (index > 0) const Divider(height: 24),
+                  Text(
+                    '${release.isDevelopment ? '测试版' : '正式版'} ${release.version}',
+                    style: Theme.of(dialogContext).textTheme.titleMedium,
+                  ),
+                  if (release.notes.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(release.notes),
+                  ],
+                ],
+              ],
+            ),
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
             child: const Text('稍后'),
           ),
-          FilledButton(
-            onPressed: () async {
-              final opened = await openExternalLink(
-                dialogContext,
-                release.url,
-                failureTitle: '无法打开下载页面',
-              );
-              if (opened && dialogContext.mounted) {
-                Navigator.pop(dialogContext);
-              }
-            },
-            child: const Text('前往下载'),
-          ),
+          for (final release in releases)
+            FilledButton(
+              onPressed: () async {
+                final opened = await openExternalLink(
+                  dialogContext,
+                  release.url,
+                  failureTitle: '无法打开下载页面',
+                );
+                if (opened && dialogContext.mounted) {
+                  Navigator.pop(dialogContext);
+                }
+              },
+              child: Text(release.isDevelopment ? '下载测试版' : '下载正式版'),
+            ),
         ],
       ),
     );

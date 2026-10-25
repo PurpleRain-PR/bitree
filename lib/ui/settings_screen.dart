@@ -73,12 +73,23 @@ class SettingsScreen extends StatelessWidget {
 
   Future<void> _showAbout(BuildContext context) async {
     final version = await appVersion();
+    final builtAt = appBuildTime?.toLocal();
     if (!context.mounted) return;
 
     await showDialog<void>(
       context: context,
       builder: (dialogContext) {
         final theme = Theme.of(dialogContext);
+        final localizations = MaterialLocalizations.of(dialogContext);
+        var versionLabel = version;
+        if (builtAt != null) {
+          final date = localizations.formatCompactDate(builtAt);
+          final time = localizations.formatTimeOfDay(
+            TimeOfDay.fromDateTime(builtAt),
+            alwaysUse24HourFormat: true,
+          );
+          versionLabel += '\n构建于 $date $time';
+        }
         return AlertDialog(
           constraints: const BoxConstraints(maxWidth: 360),
           insetPadding: const EdgeInsets.all(24),
@@ -110,7 +121,7 @@ class SettingsScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      version,
+                      versionLabel,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
