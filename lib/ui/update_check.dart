@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 import '../app_version.dart';
 import '../data/app_release.dart';
@@ -46,7 +47,25 @@ Future<void> checkForUpdates(
                   ),
                   if (release.notes.isNotEmpty) ...[
                     const SizedBox(height: 8),
-                    Text(release.notes),
+                    MarkdownBody(
+                      data: release.notes,
+                      selectable: true,
+                      styleSheet:
+                          MarkdownStyleSheet.fromTheme(Theme.of(dialogContext))
+                              .copyWith(
+                                h2: Theme.of(dialogContext)
+                                    .textTheme
+                                    .titleSmall,
+                              ),
+                      onTapLink: (_, href, _) async {
+                        if (href == null) return;
+                        await openExternalLink(
+                          dialogContext,
+                          Uri.parse(href),
+                          failureTitle: '无法打开链接',
+                        );
+                      },
+                    ),
                   ],
                 ],
               ],

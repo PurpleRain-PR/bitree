@@ -6,6 +6,8 @@ import re
 import subprocess
 from pathlib import Path
 
+from changelog import update_changelog
+
 
 def gh(*arguments):
     subprocess.run(["gh", *arguments], check=True, stdout=subprocess.DEVNULL)
@@ -23,9 +25,12 @@ def github(path):
     raise SystemExit(result.stderr.strip())
 
 
-def release_notes(tag):
+def release_notes(section):
     changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
-    entry = re.search(rf"(?ms)^## {re.escape(tag)} - [^\n]*\n.*?(?=^## |\Z)", changelog)
+    entry = re.search(
+        rf"(?ms)^## {re.escape(section)}(?: - [^\n]*)?\n.*?(?=^## |\Z)",
+        changelog,
+    )
     return entry[0].strip() + "\n"
 
 
@@ -58,6 +63,13 @@ if (
 ):
     raise SystemExit(f"{tag} 已发布或存在其他提交的草稿。")
 
+if args.channel == "dev":
+    update_changelog()
+notes = Path("dist/release-notes.md")
+notes.write_text(
+    release_notes("Unreleased" if args.channel == "dev" else tag), encoding="utf-8"
+)
+
 if existing is None:
     command = [
         "release",
@@ -71,15 +83,11 @@ if existing is None:
         "--latest=false",
         "--title",
         "Dev Build" if args.channel == "dev" else f"BITree {tag}",
+        "--notes-file",
+        str(notes),
     ]
-    if args.channel == "dev":
-        command.extend(["--prerelease", "--notes", "基于最新commit构建"])
-    else:
-        notes = Path("dist/release-notes.md")
-        notes.write_text(release_notes(tag), encoding="utf-8")
-        command.extend(["--notes-file", str(notes)])
-        if "-" in tag:
-            command.append("--prerelease")
+    if args.channel == "dev" or "-" in tag:
+        command.append("--prerelease")
 
     gh(*command)
 
@@ -95,7 +103,7 @@ gh(
 )
 
 if args.channel == "dev" and existing is not None:
-    # Keep the fixed release and its manually maintained description.
+    # Move the fixed dev tag to the newly built commit.
     gh(
         "api",
         "--method",
@@ -121,6 +129,8 @@ command = [
     repository,
     "--draft=false",
     f"--latest={str(latest).lower()}",
+    "--notes-file",
+    str(notes),
 ]
 if args.channel == "dev":
     command.append("--prerelease")
