@@ -47,6 +47,44 @@ runs:
         channel: stable
         cache: true
         pub-cache: true
+    - name: Select Android NDK
+      id: ndk
+      if: ${{ inputs.target == 'android' }}
+      shell: python
+      run: |
+        import os
+        import re
+        from pathlib import Path
+
+        extension = (
+            Path(os.environ['FLUTTER_ROOT'])
+            / 'packages/flutter_tools/gradle/src/main/kotlin/FlutterExtension.kt'
+        )
+        version = re.search(
+            r'val ndkVersion: String = "([^"]+)"', extension.read_text()
+        )[1]
+        path = Path(os.environ['ANDROID_HOME']) / 'ndk' / version
+        with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
+            output.write(f'version={version}\npath={path}\n')
+    - name: Restore Android NDK
+      id: ndk-cache
+      if: ${{ inputs.target == 'android' }}
+      uses: actions/cache/restore@v6
+      with:
+        path: ${{ steps.ndk.outputs.path }}
+        key: ${{ runner.os }}-${{ runner.arch }}-ndk-${{ steps.ndk.outputs.version }}
+    - name: Install Android NDK
+      if: ${{ inputs.target == 'android' && steps.ndk-cache.outputs.cache-hit != 'true' }}
+      shell: bash
+      run: >-
+        "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+        "ndk;${{ steps.ndk.outputs.version }}"
+    - name: Save Android NDK
+      if: ${{ inputs.target == 'android' && steps.ndk-cache.outputs.cache-hit != 'true' }}
+      uses: actions/cache/save@v6
+      with:
+        path: ${{ steps.ndk.outputs.path }}
+        key: ${{ steps.ndk-cache.outputs.cache-primary-key }}
     - run: flutter pub get --enforce-lockfile
       shell: bash
     - name: Analyze
