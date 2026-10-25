@@ -7,9 +7,8 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.text.SpannableString
-import android.text.Spanned
-import android.text.style.ForegroundColorSpan
+import android.os.Bundle
+import android.text.TextPaint
 import android.view.View
 import android.widget.RemoteViews
 import androidx.core.widget.RemoteViewsCompat
@@ -20,6 +19,15 @@ open class TimetableWidget : AppWidgetProvider() {
     }
 
     override fun onDisabled(context: Context) {
+        updateAll(context)
+    }
+
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        manager: AppWidgetManager,
+        id: Int,
+        options: Bundle,
+    ) {
         updateAll(context)
     }
 
@@ -96,27 +104,38 @@ open class TimetableWidget : AppWidgetProvider() {
                     if (content.courses.isEmpty()) View.GONE else View.VISIBLE,
                 )
                 if (content.courses.isNotEmpty()) {
-                    val count = content.courses.size.toString()
-                    val message = context.getString(
-                        if (content.tomorrow) R.string.widget_tomorrow_count else R.string.widget_remaining,
-                        count,
+                    views.setTextViewText(
+                        R.id.widget_message,
+                        context.getString(R.string.widget_course_count, content.courses.size),
                     )
-                    val start = message.indexOf(count)
-                    val highlighted = SpannableString(message).apply {
-                        setSpan(
-                            ForegroundColorSpan(context.getColor(R.color.widget_accent)),
-                            start,
-                            start + count.length,
-                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
-                        )
-                    }
-                    views.setTextViewText(R.id.widget_message, highlighted)
                 }
 
+                val resources = context.resources
+                val widthDp = manager.getAppWidgetOptions(id)
+                    .getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH)
+                val width = if (widthDp > 0) {
+                    widthDp * resources.displayMetrics.density
+                } else {
+                    manager.getAppWidgetInfo(id).minWidth.toFloat()
+                }
+                val columns = if (layout == R.layout.timetable_widget_wide) 2 else 1
+                val textWidth = (
+                    width - 2 * resources.getDimension(R.dimen.widget_padding) -
+                        (columns - 1) * resources.getDimension(R.dimen.widget_column_spacing)
+                    ) / columns - 2 * resources.getDimension(R.dimen.widget_course_padding)
+                val paint = TextPaint().apply {
+                    textSize = resources.getDimension(R.dimen.widget_course_details_size)
+                }
                 val items = RemoteViewsCompat.RemoteCollectionItems.Builder()
                     .setViewTypeCount(1)
                 content.courses.forEachIndexed { index, course ->
-                    items.addItem(index.toLong(), courseView(context, course))
+                    val details = "${course.startTimeLabel} ${course.room}".trimEnd()
+                    val label = if (paint.measureText(details) <= textWidth) {
+                        details
+                    } else {
+                        course.startTimeLabel
+                    }
+                    items.addItem(index.toLong(), courseView(context, course, label))
                 }
                 RemoteViewsCompat.setRemoteAdapter(
                     context, views, id, R.id.widget_courses, items.build(),
@@ -128,20 +147,19 @@ open class TimetableWidget : AppWidgetProvider() {
             alarm.set(AlarmManager.RTC, content.nextUpdate, refresh)
         }
 
-        private fun courseView(context: Context, course: WidgetCourse): RemoteViews {
+        private fun courseView(
+            context: Context,
+            course: WidgetCourse,
+            details: String,
+        ): RemoteViews {
             val color = course.name.codePoints().sum() % cardBackgrounds.size
             val textColor = context.getColor(cardTextColors[color])
             return RemoteViews(context.packageName, R.layout.widget_course).apply {
                 setInt(R.id.widget_course, "setBackgroundResource", cardBackgrounds[color])
                 setTextViewText(R.id.widget_course_name, course.name)
-                setTextViewText(R.id.widget_course_time, course.timeLabel)
-                setTextViewText(
-                    R.id.widget_course_room,
-                    course.room.ifBlank { context.getString(R.string.widget_room_unknown) },
-                )
+                setTextViewText(R.id.widget_course_details, details)
                 setTextColor(R.id.widget_course_name, textColor)
-                setTextColor(R.id.widget_course_time, textColor)
-                setTextColor(R.id.widget_course_room, textColor)
+                setTextColor(R.id.widget_course_details, textColor)
                 setContentDescription(
                     R.id.widget_course,
                     "${course.name}，${course.timeLabel}，${course.room}",

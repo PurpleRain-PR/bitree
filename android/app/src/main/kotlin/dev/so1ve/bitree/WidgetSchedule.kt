@@ -23,15 +23,17 @@ internal data class WidgetCourse(
     val start: Int,
     val end: Int,
 ) {
+    val startTimeLabel: String
+        get() = clockTime(start)
+
     val timeLabel: String
-        get() = "${clockTime(start)}–${clockTime(end)}"
+        get() = "$startTimeLabel–${clockTime(end)}"
 }
 
 internal data class WidgetContent(
     val heading: String,
     val courses: List<WidgetCourse>,
     val emptyMessage: String,
-    val tomorrow: Boolean,
     val nextUpdate: Long,
 )
 
@@ -55,7 +57,7 @@ internal fun readWidgetContent(context: Context): WidgetContent {
         if (!file.exists()) {
             return WidgetContent(
                 todayHeading, emptyList(), context.getString(R.string.widget_no_schedule),
-                false, nextUpdate,
+                nextUpdate,
             )
         }
         val library = JSONObject(file.readText())
@@ -108,14 +110,13 @@ internal fun readWidgetContent(context: Context): WidgetContent {
             if (showTomorrow) "明天${weekdays[weekday(tomorrow) - 1]}" else todayHeading,
             displayed,
             context.getString(emptyMessage),
-            showTomorrow,
             nextUpdate,
         )
     } catch (error: Exception) {
         Log.w("BITree", "无法读取桌面组件的本地课表", error)
         return WidgetContent(
             todayHeading, emptyList(), context.getString(R.string.widget_read_error),
-            false, nextUpdate,
+            nextUpdate,
         )
     }
 }
