@@ -77,6 +77,41 @@ class Course {
     }
   }
 
+  Course.imported({
+    required String name,
+    required int? weekday,
+    required int? startSection,
+    required int? endSection,
+    required List<int> weeks,
+    String teacher = '',
+    String room = '',
+    String campus = '',
+    String number = '',
+    String description = '',
+  }) : this(
+         id: _schoolCourseId(
+           number: number,
+           name: name,
+           teacher: teacher,
+           campus: campus,
+           room: room,
+           weekday: weekday,
+           startSection: startSection,
+           endSection: endSection,
+           weeks: weeks,
+         ),
+         name: name,
+         weekday: weekday,
+         startSection: startSection,
+         endSection: endSection,
+         weeks: weeks,
+         teacher: teacher,
+         room: room,
+         campus: campus,
+         number: number,
+         description: description,
+       );
+
   final String id;
   final String name;
   final String teacher;
@@ -88,6 +123,7 @@ class Course {
   final int? startSection;
   final int? endSection;
   final List<int> weeks;
+
   // Includes manual additions and local edits of imported courses.
   final bool local;
 
@@ -123,63 +159,6 @@ class Course {
 
   bool occurs(int week) => isScheduled && weeks.contains(week);
 
-  factory Course._fromSchool(
-    Map<String, dynamic> row, {
-    required int firstWeekOffset,
-  }) {
-    int? optionalInt(String key) {
-      final value = row[key]?.toString();
-      if (value == null || value.isEmpty || value == '0') {
-        return null;
-      }
-
-      return int.parse(value);
-    }
-
-    final mask = row['SKZC']?.toString() ?? '';
-    if (!RegExp(r'^[01]*$').hasMatch(mask)) {
-      throw const FormatException('学校返回的上课周次格式不正确');
-    }
-
-    final name = row['KCM']?.toString() ?? '';
-    final teacher = row['SKJS']?.toString() ?? '';
-    final room = row['JASMC']?.toString() ?? '';
-    final campus = row['XXXQMC']?.toString() ?? '';
-    final number = row['KCH']?.toString() ?? '';
-    final weekday = optionalInt('SKXQ');
-    final startSection = optionalInt('KSJC');
-    final endSection = optionalInt('JSJC');
-    final description = row['YPSJDD']?.toString() ?? '';
-    final weeks = [
-      for (var i = 0; i < mask.length; i++)
-        if (mask[i] == '1') weekFromOffset(firstWeekOffset + i),
-    ];
-
-    return Course(
-      id: _schoolCourseId(
-        number: number,
-        name: name,
-        teacher: teacher,
-        campus: campus,
-        room: room,
-        weekday: weekday,
-        startSection: startSection,
-        endSection: endSection,
-        weeks: weeks,
-      ),
-      name: name,
-      teacher: teacher,
-      room: room,
-      campus: campus,
-      number: number,
-      description: description,
-      weekday: weekday,
-      startSection: startSection,
-      endSection: endSection,
-      weeks: weeks,
-    );
-  }
-
   Map<String, dynamic> toJson() => {
     'id': id,
     'name': name,
@@ -211,42 +190,6 @@ class Course {
   );
 }
 
-int _schoolWeekOrigin(List<Map<String, dynamic>> rows) {
-  // A term's masks share one origin, which may start before week 1.
-  // Infer it from a row whose set bits match all of its displayed weeks.
-  for (final row in rows) {
-    final described = _describedWeeks(row['YPSJDD']?.toString() ?? '');
-    final mask = row['SKZC']?.toString() ?? '';
-    final positions = [
-      for (var i = 0; i < mask.length; i++)
-        if (mask[i] == '1') i,
-    ];
-    if (described.isEmpty || described.length != positions.length) continue;
-
-    final offset = weekOffset(described.first) - positions.first;
-    if (positions.indexed.every(
-      (entry) => weekFromOffset(offset + entry.$2) == described[entry.$1],
-    )) {
-      return offset;
-    }
-  }
-
-  return 0;
-}
-
-List<int> _describedWeeks(String description) {
-  final ranges = RegExp(r'(-?\d+)\s*(?:[-–~～]\s*(-?\d+)\s*)?周');
-  final weeks = <int>[
-    for (final match in ranges.allMatches(description))
-      if (match[2] == null)
-        int.parse(match[1]!)
-      else
-        ...academicWeeks(int.parse(match[1]!), int.parse(match[2]!)),
-  ];
-
-  return weeks.toSet().toList()..sort();
-}
-
 String _schoolCourseId({
   required String number,
   required String name,
@@ -257,8 +200,21 @@ String _schoolCourseId({
   required int? startSection,
   required int? endSection,
   required List<int> weeks,
-}) =>
-    'school-${jsonEncode([number, name, teacher, campus, room, weekday, startSection, endSection, weeks])}';
+}) {
+  final identity = [
+    number,
+    name,
+    teacher,
+    campus,
+    room,
+    weekday,
+    startSection,
+    endSection,
+    weeks,
+  ];
+
+  return 'school-${jsonEncode(identity)}';
+}
 
 String weeksLabel(List<int> weeks) {
   if (weeks.isEmpty) return '周次待定';
@@ -292,27 +248,6 @@ class SemesterSchedule {
     if (term.trim().isEmpty || firstMonday.weekday != DateTime.monday) {
       throw const FormatException('学期或开学日期不正确；开学日期应为第一周周一');
     }
-  }
-
-  factory SemesterSchedule.fromSchool({
-    required String term,
-    required DateTime termStartMonday,
-    required List<Map<String, dynamic>> rows,
-  }) {
-    final firstWeekOffset = _schoolWeekOrigin(rows);
-
-    // The school calendar and course masks both start at the first short-term week.
-    // Store the Monday of week 1 so all date calculations share the same baseline.
-    return SemesterSchedule(
-      term: term,
-      firstMonday: calendarDate(termStartMonday)
-          .subtract(Duration(days: firstWeekOffset * 7)),
-      courses: [
-        for (final row in rows)
-          Course._fromSchool(row, firstWeekOffset: firstWeekOffset),
-      ],
-      syncedAt: DateTime.now().toUtc(),
-    );
   }
 
   final String term;
@@ -376,6 +311,15 @@ class SemesterSchedule {
     courses: courses ?? this.courses,
     syncedAt: syncedAt,
   );
+
+  SemesterSchedule mergeLocalCourses(Iterable<Course> previousCourses) =>
+      copyWith(
+        courses: {
+          for (final course in courses) course.id: course,
+          for (final course in previousCourses)
+            if (course.local) course.id: course,
+        }.values.toList(),
+      );
 
   Map<String, dynamic> toJson() => {
     'term': term,

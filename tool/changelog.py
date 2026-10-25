@@ -11,6 +11,15 @@ def git(*arguments):
     ).strip()
 
 
+def release_notes(section):
+    changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
+    entry = re.search(
+        rf"(?ms)^## {re.escape(section)}(?: - [^\n]*)?\n.*?(?=^## |\Z)",
+        changelog,
+    )
+    return entry[0].strip() + "\n"
+
+
 def update_changelog(tag=None):
     tags = git("tag", "--merged", "HEAD", "--list", "v[0-9]*")
     previous = (

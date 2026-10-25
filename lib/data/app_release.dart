@@ -24,9 +24,6 @@ Future<List<AppRelease>> availableAppReleases(
   final client = HttpClient()..connectionTimeout = const Duration(seconds: 10);
 
   try {
-    final releases = <AppRelease>[];
-    final normalized = installed.replaceFirst(RegExp(r'^v'), '');
-    final current = Version.parse(normalized.split('-').first);
     final [stable, dev] = await Future.wait([
       _readJson(
         client,
@@ -37,60 +34,77 @@ Future<List<AppRelease>> availableAppReleases(
         Uri.https('api.github.com', '/repos/so1ve/bitree/releases/tags/dev'),
       ),
     ]);
-    if (stable != null &&
-        stable['draft'] != true &&
-        stable['prerelease'] != true) {
-      final tag = stable['tag_name'] as String;
-      final version = Version.parse(tag.replaceFirst(RegExp(r'^v'), ''));
-      if (!version.isPreRelease &&
-          (version > current ||
-              (version == current && normalized.contains('-')))) {
-        releases.add(
-          AppRelease(
-            version: tag,
-            url: Uri.parse(stable['html_url'] as String),
-            notes: stable['body'] as String? ?? '',
-            isDevelopment: false,
-          ),
-        );
-      }
-    }
-
-    if (dev == null || dev['draft'] == true) return releases;
-
-    final suffix = '-${Platform.operatingSystem}-update.json';
-    final asset = (dev['assets'] as List)
-        .cast<Map<String, dynamic>>()
-        .where((asset) => (asset['name'] as String).endsWith(suffix))
-        .firstOrNull;
-    if (asset == null) return releases;
-
-    final metadata = await _readJson(
+    final stableUpdate = _stableUpdate(stable, installed);
+    final developmentUpdate = await _developmentUpdate(
       client,
-      Uri.parse(asset['browser_download_url'] as String),
+      dev,
+      installed,
+      builtAt: builtAt,
     );
-    if (metadata == null) return releases;
 
-    final version = metadata['version'] as String;
-    final publishedBuildTime = DateTime.parse(metadata['builtAt'] as String);
-    final newer = builtAt == null
-        ? version != installed
-        : publishedBuildTime.isAfter(builtAt);
-    if (newer) {
-      releases.add(
-        AppRelease(
-          version: version,
-          url: Uri.parse(dev['html_url'] as String),
-          notes: dev['body'] as String? ?? '',
-          isDevelopment: true,
-        ),
-      );
-    }
-
-    return releases;
+    return [?stableUpdate, ?developmentUpdate];
   } finally {
     client.close(force: true);
   }
+}
+
+AppRelease? _stableUpdate(Map<String, dynamic>? release, String installed) {
+  final normalized = installed.replaceFirst(RegExp(r'^v'), '');
+  final current = Version.parse(normalized.split('-').first);
+  if (release == null ||
+      release['draft'] == true ||
+      release['prerelease'] == true) {
+    return null;
+  }
+
+  final tag = release['tag_name'] as String;
+  final version = Version.parse(tag.replaceFirst(RegExp(r'^v'), ''));
+  final newer =
+      version > current || (version == current && normalized.contains('-'));
+  if (version.isPreRelease || !newer) return null;
+
+  return AppRelease(
+    version: tag,
+    url: Uri.parse(release['html_url'] as String),
+    notes: release['body'] as String? ?? '',
+    isDevelopment: false,
+  );
+}
+
+Future<AppRelease?> _developmentUpdate(
+  HttpClient client,
+  Map<String, dynamic>? release,
+  String installed, {
+  DateTime? builtAt,
+}) async {
+  if (release == null || release['draft'] == true) return null;
+
+  final suffix = '-${Platform.operatingSystem}-update.json';
+  final asset = (release['assets'] as List)
+      .cast<Map<String, dynamic>>()
+      .where((asset) => (asset['name'] as String).endsWith(suffix))
+      .firstOrNull;
+  if (asset == null) return null;
+
+  final metadata = await _readJson(
+    client,
+    Uri.parse(asset['browser_download_url'] as String),
+  );
+  if (metadata == null) return null;
+
+  final version = metadata['version'] as String;
+  final publishedBuildTime = DateTime.parse(metadata['builtAt'] as String);
+  final newer = builtAt == null
+      ? version != installed
+      : publishedBuildTime.isAfter(builtAt);
+  if (!newer) return null;
+
+  return AppRelease(
+    version: version,
+    url: Uri.parse(release['html_url'] as String),
+    notes: release['body'] as String? ?? '',
+    isDevelopment: true,
+  );
 }
 
 Future<Map<String, dynamic>?> _readJson(HttpClient client, Uri url) async {

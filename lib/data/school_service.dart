@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../schedule/model.dart';
 import 'school_network.dart';
+import 'school_schedule.dart';
 import 'school_session.dart';
 
 typedef SchoolJsonRequest = Future<Map<String, dynamic>> Function(
@@ -12,12 +13,14 @@ typedef SchoolJsonRequest = Future<Map<String, dynamic>> Function(
 /// BIT teaching-center protocol, following BIT101 Android / BIT-Login.
 class SchoolService {
   SchoolService(this.session);
+
   final SchoolSession session;
 
   Future<String> _currentTerm(SchoolJsonRequest request) async {
     final current = await request('modules/jshkcb/dqxnxq.do');
     final row = _rows(current, 'dqxnxq').firstOrNull;
     if (row == null) throw const FormatException('学校未返回当前学期');
+
     return _termCode(row);
   }
 
@@ -28,40 +31,40 @@ class SchoolService {
   }) async {
     if (request == null) await session.initializeApp(network);
 
-    final read =
+    final requestJson =
         request ??
         (String path, {Map<String, String>? form}) =>
             session.json(network, path, form: form);
-    final selected = term ?? await _currentTerm(read);
-    final termResponse = await read('modules/jshkcb/xnxqcx.do');
+    final selectedTerm = term ?? await _currentTerm(requestJson);
+    final termResponse = await requestJson('modules/jshkcb/xnxqcx.do');
     final terms = _rows(termResponse, 'xnxqcx').map(_termCode).toList();
 
-    final calendar = await read(
+    final calendar = await requestJson(
       'wdkbByController/cxzkbrq.do',
       form: {
-        'requestParamStr': jsonEncode({'XNXQDM': selected, 'ZC': '1'}),
+        'requestParamStr': jsonEncode({'XNXQDM': selectedTerm, 'ZC': '1'}),
       },
     );
     final dates = calendar['data'];
     if (dates is! List) throw const FormatException('学校未返回学期校历');
-    final monday = dates
+    final mondayRow = dates
         .whereType<Map>()
         .where((row) => row['XQ']?.toString() == '1')
         .firstOrNull;
-    if (monday == null || monday['RQ'] is! String) {
+    if (mondayRow == null || mondayRow['RQ'] is! String) {
       throw const FormatException('学校未返回学期起始周的周一日期');
     }
 
-    final response = await read(
+    final response = await requestJson(
       'modules/xskcb/cxxszhxqkb.do',
-      form: {'XNXQDM': selected},
+      form: {'XNXQDM': selectedTerm},
     );
     final rows = _rows(response, 'cxxszhxqkb');
 
     return (
-      schedule: SemesterSchedule.fromSchool(
-        term: selected,
-        termStartMonday: DateTime.parse(monday['RQ'] as String),
+      schedule: parseSchoolSchedule(
+        term: selectedTerm,
+        termStartMonday: DateTime.parse(mondayRow['RQ'] as String),
         rows: rows,
       ),
       terms: terms,

@@ -7,6 +7,7 @@ import '../data/school_errors.dart';
 import '../data/school_network.dart';
 import '../data/school_page.dart';
 import '../error_message.dart';
+import 'school_network_picker.dart';
 import 'school_webview.dart';
 
 enum SchoolAction { signIn, importSchedule }
@@ -24,48 +25,10 @@ Future<bool?> openSchoolPage(
     SchoolAction.importSchedule => '导入课表',
     SchoolAction.signIn => switching ? '切换登录方式' : '登录账号',
   };
-  final network = await showModalBottomSheet<SchoolNetwork>(
-    context: context,
-    useSafeArea: true,
-    isScrollControlled: true,
-    constraints: const BoxConstraints(maxWidth: 520),
-    builder: (context) => SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-              child: Text(title, style: Theme.of(context).textTheme.titleLarge),
-            ),
-            ListTile(
-              leading: const Icon(Icons.school_outlined),
-              title: const Text('校园网'),
-              subtitle: const Text('需连接校园网'),
-              trailing: switching && controller.network == SchoolNetwork.campus
-                  ? const Text('当前')
-                  : const Icon(Icons.chevron_right_rounded),
-              onTap: switching && controller.network == SchoolNetwork.campus
-                  ? null
-                  : () => Navigator.pop(context, SchoolNetwork.campus),
-            ),
-            ListTile(
-              leading: const Icon(Icons.public_rounded),
-              title: const Text('WebVPN'),
-              subtitle: const Text('校外访问'),
-              trailing: switching && controller.network == SchoolNetwork.webvpn
-                  ? const Text('当前')
-                  : const Icon(Icons.chevron_right_rounded),
-              onTap: switching && controller.network == SchoolNetwork.webvpn
-                  ? null
-                  : () => Navigator.pop(context, SchoolNetwork.webvpn),
-            ),
-          ],
-        ),
-      ),
-    ),
+  final network = await pickSchoolNetwork(
+    context,
+    title: title,
+    current: switching ? controller.network : null,
   );
   if (network == null || !context.mounted || controller.busy) return null;
   return Navigator.of(context).push<bool>(

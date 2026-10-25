@@ -109,9 +109,11 @@ class AppController extends ChangeNotifier {
 
   Future<bool> completeSignIn(SchoolNetwork using) async {
     if (busy) return false;
+
     busy = true;
     error = null;
     notifyListeners();
+
     try {
       await _saveLoginState(using);
       return true;
@@ -130,9 +132,11 @@ class AppController extends ChangeNotifier {
     SchoolJsonRequest? request,
   }) async {
     if (busy) return false;
+
     busy = true;
     error = null;
     notifyListeners();
+
     try {
       final selectedNetwork = using ?? network;
       final result = await _school.synchronize(
@@ -143,14 +147,8 @@ class AppController extends ChangeNotifier {
       await _saveLoginState(selectedNetwork);
 
       final previous = await _store.readTerm(result.schedule.term);
-      final localCourses = previous != null
-          ? previous.courses.where((course) => course.local).toList()
-          : <Course>[];
-      final next = result.schedule.copyWith(
-        courses: {
-          for (final course in result.schedule.courses) course.id: course,
-          for (final course in localCourses) course.id: course,
-        }.values.toList(),
+      final next = result.schedule.mergeLocalCourses(
+        previous?.courses ?? const [],
       );
 
       await _store.write(next);
@@ -175,6 +173,7 @@ class AppController extends ChangeNotifier {
   }) async {
     final current = semester ?? _schedule;
     if (current == null || busy) return false;
+
     return _save(
       current.copyWith(
         courses: [
@@ -189,10 +188,12 @@ class AppController extends ChangeNotifier {
 
   Future<bool> selectTerm(String term) async {
     if (busy) return false;
+
     try {
       final saved = await _store.readTerm(term);
       if (busy) return false;
       if (saved == null) return await synchronize(term: term);
+
       final success = await _save(saved);
       if (success) showCurrentWeek();
       return success;
@@ -205,6 +206,7 @@ class AppController extends ChangeNotifier {
 
   Future<bool> deleteCourse(Course course) async {
     if (_schedule == null || busy) return false;
+
     return _save(
       _schedule!.copyWith(
         courses: [..._schedule!.courses.where((item) => item.id != course.id)],
@@ -216,6 +218,7 @@ class AppController extends ChangeNotifier {
     busy = true;
     error = null;
     notifyListeners();
+
     try {
       await _store.write(next);
       _schedule = next;
@@ -244,8 +247,10 @@ class AppController extends ChangeNotifier {
 
   Future<bool> signOut() async {
     if (busy) return false;
+
     busy = true;
     notifyListeners();
+
     try {
       await _school.session.clear();
       accountStatus = AccountStatus.signedOut;
@@ -262,8 +267,10 @@ class AppController extends ChangeNotifier {
 
   Future<bool> clearSchedule() async {
     if (busy) return false;
+
     busy = true;
     notifyListeners();
+
     try {
       await _store.clear();
       _schedule = null;

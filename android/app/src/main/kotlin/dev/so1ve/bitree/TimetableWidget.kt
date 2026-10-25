@@ -110,41 +110,65 @@ open class TimetableWidget : AppWidgetProvider() {
                     )
                 }
 
-                val resources = context.resources
-                val widthDp = manager.getAppWidgetOptions(id)
-                    .getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH)
-                val width = if (widthDp > 0) {
-                    widthDp * resources.displayMetrics.density
-                } else {
-                    manager.getAppWidgetInfo(id).minWidth.toFloat()
-                }
                 val columns = if (layout == R.layout.timetable_widget_wide) 2 else 1
-                val textWidth = (
-                    width - 2 * resources.getDimension(R.dimen.widget_padding) -
-                        (columns - 1) * resources.getDimension(R.dimen.widget_column_spacing)
-                    ) / columns - 2 * resources.getDimension(R.dimen.widget_course_padding)
-                val paint = TextPaint().apply {
-                    textSize = resources.getDimension(R.dimen.widget_course_details_size)
-                }
-                val items = RemoteViewsCompat.RemoteCollectionItems.Builder()
-                    .setViewTypeCount(1)
-                content.courses.forEachIndexed { index, course ->
-                    val details = "${course.startTimeLabel} ${course.room}".trimEnd()
-                    val label = if (paint.measureText(details) <= textWidth) {
-                        details
-                    } else {
-                        course.startTimeLabel
-                    }
-                    items.addItem(index.toLong(), courseView(context, course, label))
-                }
+                val widthPx = widgetWidthPx(context, manager, id)
+                val items = courseItems(context, content.courses, widthPx, columns)
+
                 RemoteViewsCompat.setRemoteAdapter(
-                    context, views, id, R.id.widget_courses, items.build(),
+                    context, views, id, R.id.widget_courses, items,
                 )
                 manager.updateAppWidget(id, views)
             }
 
             // Inexact, non-wakeup alarms update visible data without an alarm permission.
             alarm.set(AlarmManager.RTC, content.nextUpdate, refresh)
+        }
+
+        private fun widgetWidthPx(
+            context: Context,
+            manager: AppWidgetManager,
+            id: Int,
+        ): Float {
+            val widthDp = manager.getAppWidgetOptions(id)
+                .getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH)
+
+            return if (widthDp > 0) {
+                widthDp * context.resources.displayMetrics.density
+            } else {
+                manager.getAppWidgetInfo(id).minWidth.toFloat()
+            }
+        }
+
+        private fun courseItems(
+            context: Context,
+            courses: List<WidgetCourse>,
+            widthPx: Float,
+            columns: Int,
+        ): RemoteViewsCompat.RemoteCollectionItems {
+            val resources = context.resources
+            val outerPadding = resources.getDimension(R.dimen.widget_padding)
+            val columnSpacing = resources.getDimension(R.dimen.widget_column_spacing)
+            val cardPadding = resources.getDimension(R.dimen.widget_course_padding)
+            val gridWidth = widthPx - 2 * outerPadding
+            val columnWidth = (gridWidth - (columns - 1) * columnSpacing) / columns
+            val textWidth = columnWidth - 2 * cardPadding
+            val paint = TextPaint().apply {
+                textSize = resources.getDimension(R.dimen.widget_course_details_size)
+            }
+
+            val items = RemoteViewsCompat.RemoteCollectionItems.Builder()
+                .setViewTypeCount(1)
+            courses.forEachIndexed { index, course ->
+                val details = "${course.startTimeLabel} ${course.room}".trimEnd()
+                val label = if (paint.measureText(details) <= textWidth) {
+                    details
+                } else {
+                    course.startTimeLabel
+                }
+                items.addItem(index.toLong(), courseView(context, course, label))
+            }
+
+            return items.build()
         }
 
         private fun courseView(
