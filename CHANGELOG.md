@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- docs: adopt the Unlicense ([bc30f61](https://github.com/so1ve/bitree/commit/bc30f614dc9234e18b587d6868d4062c24f28b44))
 - feat: publish unreleased notes and render update details ([edf2d31](https://github.com/so1ve/bitree/commit/edf2d31f85b237939e89ea76fbfdf43880e54303))
 - fix: anchor week one after the short semester ([0b3300b](https://github.com/so1ve/bitree/commit/0b3300bac35b10466616ff568f4d2a53efc487df))
 - feat: check stable and dev updates with build timestamps ([0966f63](https://github.com/so1ve/bitree/commit/0966f637beb055a0fb0adf8c8d5daea9b848bd92))
