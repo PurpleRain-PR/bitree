@@ -36,59 +36,74 @@ Future<void> showCourse(
         ],
       ),
     );
-    return SingleChildScrollView(
+    return SafeArea(
+      top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
         child: Container(
-          padding: const EdgeInsets.all(22),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainerLow,
             borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 4,
-                    height: 25,
-                    decoration: BoxDecoration(
-                      color: colors.accent,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Text(
-                      course.name,
-                      style: const TextStyle(
-                        fontSize: 21,
-                        height: 1.4,
-                        fontWeight: FontWeight.w600,
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 4,
+                            height: 25,
+                            decoration: BoxDecoration(
+                              color: colors.accent,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Text(
+                              course.name,
+                              style: const TextStyle(
+                                fontSize: 21,
+                                height: 1.4,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
+                      const Divider(height: 32),
+                      detail(
+                        Icons.date_range_outlined,
+                        weeksLabel(course.weeks),
+                      ),
+                      detail(
+                        Icons.schedule_outlined,
+                        '${course.weekday == null ? '' : '${weekdays[course.weekday! - 1]} '}${course.sectionLabel}\n${course.timeLabel}',
+                      ),
+                      detail(
+                        Icons.place_outlined,
+                        location.isEmpty ? '教室待定' : location,
+                      ),
+                      if (course.teacher.isNotEmpty)
+                        detail(Icons.person_outline, course.teacher),
+                      if (course.number.isNotEmpty)
+                        detail(Icons.tag, course.number),
+                      if (course.description.isNotEmpty)
+                        detail(Icons.notes_rounded, course.description),
+                    ],
                   ),
-                ],
+                ),
               ),
-              const Divider(height: 32),
-              detail(Icons.date_range_outlined, weeksLabel(course.weeks)),
-              detail(
-                Icons.schedule_outlined,
-                '${course.weekday == null ? '' : '${weekdays[course.weekday! - 1]} '}${course.sectionLabel}\n${course.timeLabel}',
-              ),
-              detail(
-                Icons.place_outlined,
-                location.isEmpty ? '教室待定' : location,
-              ),
-              if (course.teacher.isNotEmpty)
-                detail(Icons.person_outline, course.teacher),
-              if (course.number.isNotEmpty) detail(Icons.tag, course.number),
-              if (course.description.isNotEmpty)
-                detail(Icons.notes_rounded, course.description),
               if (course.local) ...[
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(
