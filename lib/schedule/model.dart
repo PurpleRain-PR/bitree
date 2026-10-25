@@ -211,11 +211,9 @@ class Course {
   );
 }
 
-List<Course> coursesFromSchool(List<Map<String, dynamic>> rows) {
+int _schoolWeekOrigin(List<Map<String, dynamic>> rows) {
   // A term's masks share one origin, which may start before week 1.
   // Infer it from a row whose set bits match all of its displayed weeks.
-  var firstWeekOffset = 0;
-
   for (final row in rows) {
     final described = _describedWeeks(row['YPSJDD']?.toString() ?? '');
     final mask = row['SKZC']?.toString() ?? '';
@@ -229,15 +227,11 @@ List<Course> coursesFromSchool(List<Map<String, dynamic>> rows) {
     if (positions.indexed.every(
       (entry) => weekFromOffset(offset + entry.$2) == described[entry.$1],
     )) {
-      firstWeekOffset = offset;
-      break;
+      return offset;
     }
   }
 
-  return [
-    for (final row in rows)
-      Course._fromSchool(row, firstWeekOffset: firstWeekOffset),
-  ];
+  return 0;
 }
 
 List<int> _describedWeeks(String description) {
@@ -300,7 +294,30 @@ class SemesterSchedule {
     }
   }
 
+  factory SemesterSchedule.fromSchool({
+    required String term,
+    required DateTime termStartMonday,
+    required List<Map<String, dynamic>> rows,
+  }) {
+    final firstWeekOffset = _schoolWeekOrigin(rows);
+
+    // The school calendar and course masks both start at the first short-term week.
+    // Store the Monday of week 1 so all date calculations share the same baseline.
+    return SemesterSchedule(
+      term: term,
+      firstMonday: calendarDate(termStartMonday)
+          .subtract(Duration(days: firstWeekOffset * 7)),
+      courses: [
+        for (final row in rows)
+          Course._fromSchool(row, firstWeekOffset: firstWeekOffset),
+      ],
+      syncedAt: DateTime.now().toUtc(),
+    );
+  }
+
   final String term;
+
+  /// Monday of week 1, after any negative weeks.
   final DateTime firstMonday;
   final List<Course> courses;
   final DateTime? syncedAt;

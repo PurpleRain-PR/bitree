@@ -49,7 +49,7 @@ class SchoolService {
         .where((row) => row['XQ']?.toString() == '1')
         .firstOrNull;
     if (monday == null || monday['RQ'] is! String) {
-      throw const FormatException('学校未返回第一周周一日期');
+      throw const FormatException('学校未返回学期起始周的周一日期');
     }
 
     final response = await read(
@@ -59,11 +59,10 @@ class SchoolService {
     final rows = _rows(response, 'cxxszhxqkb');
 
     return (
-      schedule: SemesterSchedule(
+      schedule: SemesterSchedule.fromSchool(
         term: selected,
-        firstMonday: DateTime.parse(monday['RQ'] as String),
-        courses: coursesFromSchool(rows),
-        syncedAt: DateTime.now().toUtc(),
+        termStartMonday: DateTime.parse(monday['RQ'] as String),
+        rows: rows,
       ),
       terms: terms,
     );
