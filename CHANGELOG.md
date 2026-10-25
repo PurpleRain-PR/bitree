@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- feat: add scrolling timetable widgets with evening previews ([005a513](https://github.com/so1ve/bitree/commit/005a5137e216d7797739cf15b8c0a49f8661e607))
 - chore(deps): add renovate.json (#1) ([e67ea01](https://github.com/so1ve/bitree/commit/e67ea01d5e0beb2f53bc405d404ddd1e67a34872))
 - fix(release): publish partial dev builds and provide a Windows installer ([8c86d55](https://github.com/so1ve/bitree/commit/8c86d55c493189c12d07a6cd8000c99dd0b1ff0e))
 - fix: group overlapping courses within fixed timetable columns ([7501051](https://github.com/so1ve/bitree/commit/7501051836938cd648d3e64e80f3582cb6d66cad))
