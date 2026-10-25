@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- fix(ui): compact timetable rows ([3777966](https://github.com/so1ve/bitree/commit/3777966cce2616793234bf043432f6350fa6a930))
 - refactor: separate school parsing and simplify workflows ([9e35e9e](https://github.com/so1ve/bitree/commit/9e35e9e5fe697907fb2a17228e999425db00d330))
 - fix: streamline account actions and prevent login black screens ([4ada7a1](https://github.com/so1ve/bitree/commit/4ada7a1b269dedbec36ac4c7df09939a01d1b7c4))
 - fix: make timetable widgets more compact ([b0d36e3](https://github.com/so1ve/bitree/commit/b0d36e3be51aa630cbdd4fdedbb346e0574bdd44))
