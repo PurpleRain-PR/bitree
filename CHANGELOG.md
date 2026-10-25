@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- feat: check stable and dev updates with build timestamps ([0966f63](https://github.com/so1ve/bitree/commit/0966f637beb055a0fb0adf8c8d5daea9b848bd92))
 - docs: remove the explanation of the name's wordplay ([ac5bac9](https://github.com/so1ve/bitree/commit/ac5bac9410a0a25f269abf6b07e22b2b42fc94d6))
 - fix: align imported course weeks with short semesters ([1fbf3b1](https://github.com/so1ve/bitree/commit/1fbf3b1d109c1926ed546b584847c9ef97a957f3))
 - fix(windows): install runtime libraries into the application bundle ([b9066e1](https://github.com/so1ve/bitree/commit/b9066e1d929f4eb548bf10f8a84cc3d936afc437))
