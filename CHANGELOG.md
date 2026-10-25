@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- ci: cache Android NDK installations before building ([f4f0332](https://github.com/so1ve/bitree/commit/f4f03328e29ad3dc37ea110cff7bde8df1442f4d))
 - style: clean logo metadata and update app description ([9cc700c](https://github.com/so1ve/bitree/commit/9cc700c16df2527e51b85afec24572d28533115a))
 - docs: adopt the Unlicense ([bc30f61](https://github.com/so1ve/bitree/commit/bc30f614dc9234e18b587d6868d4062c24f28b44))
 - feat: publish unreleased notes and render update details ([edf2d31](https://github.com/so1ve/bitree/commit/edf2d31f85b237939e89ea76fbfdf43880e54303))
