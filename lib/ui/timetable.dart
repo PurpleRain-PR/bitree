@@ -84,7 +84,7 @@ class _TimetableState extends State<Timetable> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final gutterWidth = 30.0 * scale;
-        final headerHeight = 64.0 * scale;
+        final headerHeight = 56.0 * scale;
         final columnWidth = math.max(
           minimumColumn,
           (constraints.maxWidth - gutterWidth) / 7,

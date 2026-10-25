@@ -48,17 +48,28 @@ class _CourseDetails extends StatelessWidget {
       course.room,
     ].where((part) => part.isNotEmpty).join(' ');
 
-    Widget detail(IconData icon, String text) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+    Widget detail(IconData icon, String text, {String? secondary}) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 21, color: theme.colorScheme.onSurfaceVariant),
-          const SizedBox(width: 16),
+          Icon(icon, size: 20, color: theme.colorScheme.onSurfaceVariant),
+          const SizedBox(width: 14),
           Expanded(
-            child: SelectableText(
-              text,
-              style: const TextStyle(fontSize: 15, height: 1.5),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SelectableText(text, style: theme.textTheme.bodyLarge),
+                if (secondary != null) ...[
+                  const SizedBox(height: 2),
+                  SelectableText(
+                    secondary,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],
@@ -67,85 +78,90 @@ class _CourseDetails extends StatelessWidget {
 
     return SafeArea(
       top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(16),
+      child: SheetLayout(
+        header: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 8, 12),
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: colors.accent,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(course.name, style: theme.textTheme.titleLarge),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                tooltip: '关闭',
+                onPressed: controller.busy
+                    ? null
+                    : () => Navigator.pop(context),
+                icon: const Icon(Icons.close_rounded, size: 20),
+              ),
+            ],
           ),
-          child: SheetLayout(
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+        ),
+        content: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              detail(
+                Icons.schedule_outlined,
+                '${course.weekday == null ? '' : '${weekdays[course.weekday! - 1]} '}${course.sectionLabel}',
+                secondary: course.timeLabel,
+              ),
+              detail(Icons.date_range_outlined, weeksLabel(course.weeks)),
+              detail(
+                Icons.place_outlined,
+                location.isEmpty ? '教室待定' : location,
+              ),
+              if (course.teacher.isNotEmpty)
+                detail(Icons.person_outline, course.teacher),
+              if (course.number.isNotEmpty) detail(Icons.tag, course.number),
+              if (course.description.isNotEmpty)
+                detail(Icons.notes_rounded, course.description),
+            ],
+          ),
+        ),
+        actions: course.local
+            ? Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+                child: Row(
                   children: [
-                    Container(
-                      width: 4,
-                      height: 25,
-                      decoration: BoxDecoration(
-                        color: colors.accent,
-                        borderRadius: BorderRadius.circular(2),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: controller.busy ? null : onEdit,
+                        child: const Text('编辑课程'),
                       ),
                     ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Text(
-                        course.name,
-                        style: const TextStyle(
-                          fontSize: 21,
-                          height: 1.4,
-                          fontWeight: FontWeight.w600,
+                    const SizedBox(width: 12),
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: theme.colorScheme.error,
+                        side: BorderSide(
+                          color: theme.colorScheme.error.withValues(alpha: 0.4),
                         ),
                       ),
+                      onPressed: controller.busy
+                          ? null
+                          : () => _deleteCourse(context, controller, course),
+                      icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                      label: const Text('删除'),
                     ),
                   ],
                 ),
-                const Divider(height: 32),
-                detail(Icons.date_range_outlined, weeksLabel(course.weeks)),
-                detail(
-                  Icons.schedule_outlined,
-                  '${course.weekday == null ? '' : '${weekdays[course.weekday! - 1]} '}${course.sectionLabel}\n${course.timeLabel}',
-                ),
-                detail(
-                  Icons.place_outlined,
-                  location.isEmpty ? '教室待定' : location,
-                ),
-                if (course.teacher.isNotEmpty)
-                  detail(Icons.person_outline, course.teacher),
-                if (course.number.isNotEmpty) detail(Icons.tag, course.number),
-                if (course.description.isNotEmpty)
-                  detail(Icons.notes_rounded, course.description),
-              ],
-            ),
-            actions: course.local
-                ? Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: FilledButton(
-                            onPressed: controller.busy ? null : onEdit,
-                            child: const Text('编辑课程'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        IconButton.filledTonal(
-                          tooltip: '删除课程',
-                          onPressed: controller.busy
-                              ? null
-                              : () =>
-                                    _deleteCourse(context, controller, course),
-                          icon: const Icon(Icons.delete_outline_rounded),
-                        ),
-                      ],
-                    ),
-                  )
-                : null,
-          ),
-        ),
+              )
+            : null,
       ),
     );
   }
@@ -167,6 +183,10 @@ Future<void> _deleteCourse(
           child: const Text('取消'),
         ),
         FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: Theme.of(context).colorScheme.error,
+            foregroundColor: Theme.of(context).colorScheme.onError,
+          ),
           onPressed: () => Navigator.pop(context, true),
           child: const Text('删除课程'),
         ),

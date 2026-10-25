@@ -24,7 +24,18 @@ class SheetLayout extends StatelessWidget {
           child: content,
         ),
       ),
-      ?actions,
+      if (actions != null)
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerLow,
+            border: Border(
+              top: BorderSide(
+                color: Theme.of(context).colorScheme.outlineVariant,
+              ),
+            ),
+          ),
+          child: actions!,
+        ),
     ],
   );
 }

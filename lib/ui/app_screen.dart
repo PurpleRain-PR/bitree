@@ -41,7 +41,7 @@ class _AppScreenState extends State<AppScreen> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 640),
             child: NavigationBar(
-              height: 72,
+              height: 56 + MediaQuery.textScalerOf(context).scale(12),
               backgroundColor: Colors.transparent,
               surfaceTintColor: Colors.transparent,
               elevation: 0,

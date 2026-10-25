@@ -52,6 +52,10 @@ class SettingsScreen extends StatelessWidget {
             child: const Text('取消'),
           ),
           FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('删除课表'),
           ),
@@ -173,142 +177,190 @@ class SettingsScreen extends StatelessWidget {
       AccountStatus.expired => '登录已过期，不影响本地课表',
       AccountStatus.unverified || AccountStatus.signedOut => '登录后可导入课表',
     };
-    return Scaffold(
-      appBar: AppBar(title: const Text('设置')),
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 680),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+
+    Widget section(String title, List<Widget> children) => Padding(
+      padding: const EdgeInsets.only(top: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: _SectionLabel(title),
+          ),
+          const SizedBox(height: 8),
+          ...children,
+        ],
+      ),
+    );
+
+    const tilePadding = EdgeInsets.symmetric(horizontal: 12, vertical: 2);
+
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 680),
+        child: Scaffold(
+          appBar: AppBar(titleSpacing: 28, title: const Text('设置')),
+          body: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                leading: CircleAvatar(
-                  radius: 26,
-                  backgroundColor: scheme.primaryContainer,
-                  foregroundColor: scheme.onPrimaryContainer,
-                  child: const Icon(Icons.person_outline_rounded),
+              Material(
+                color: scheme.surfaceContainerLow,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: scheme.outlineVariant),
                 ),
-                title: Text(
-                  signedIn ? '学校账号' : '登录账号',
-                  style: const TextStyle(
-                    fontSize: 19,
-                    fontWeight: FontWeight.w600,
+                clipBehavior: Clip.antiAlias,
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
                   ),
+                  leading: CircleAvatar(
+                    radius: 20,
+                    backgroundColor: scheme.primaryContainer,
+                    foregroundColor: scheme.onPrimaryContainer,
+                    child: const Icon(Icons.person_outline_rounded, size: 22),
+                  ),
+                  title: Text(
+                    signedIn ? '学校账号' : '登录账号',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(accountHint),
+                  trailing: const Icon(Icons.chevron_right_rounded, size: 20),
+                  onTap: controller.busy
+                      ? null
+                      : () => openSchoolPage(
+                          context,
+                          controller,
+                          action: SchoolAction.signIn,
+                        ),
                 ),
-                subtitle: Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(accountHint),
-                ),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: controller.busy
-                    ? null
-                    : () => openSchoolPage(
-                        context,
-                        controller,
-                        action: SchoolAction.signIn,
-                      ),
               ),
               if (controller.error != null)
                 Padding(
-                  padding: const EdgeInsets.only(top: 8),
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
                   child: Text(
                     controller.error!,
                     style: TextStyle(color: scheme.error),
                   ),
                 ),
-              const Divider(height: 32),
-              const _SectionLabel('外观'),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final (mode, label) in const [
-                      (ThemeMode.system, '跟随系统'),
-                      (ThemeMode.light, '浅色'),
-                      (ThemeMode.dark, '深色'),
-                    ])
-                      ChoiceChip(
-                        label: Text(label),
-                        showCheckmark: false,
-                        selected: controller.themeMode == mode,
-                        onSelected: (_) => controller.setTheme(mode),
+              section('外观', [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: SegmentedButton<ThemeMode>(
+                    expandedInsets: EdgeInsets.zero,
+                    showSelectedIcon: false,
+                    style: SegmentedButton.styleFrom(
+                      minimumSize: const Size(48, 44),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 10,
                       ),
-                  ],
+                      textStyle: const TextStyle(fontSize: 14),
+                      backgroundColor: scheme.surfaceContainerLow,
+                      foregroundColor: scheme.onSurfaceVariant,
+                      selectedBackgroundColor: scheme.primaryContainer,
+                      selectedForegroundColor: scheme.onPrimaryContainer,
+                      side: BorderSide(color: scheme.outlineVariant),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    segments: const [
+                      ButtonSegment(
+                        value: ThemeMode.system,
+                        label: Text(
+                          '跟随系统',
+                          maxLines: 2,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      ButtonSegment(value: ThemeMode.light, label: Text('浅色')),
+                      ButtonSegment(value: ThemeMode.dark, label: Text('深色')),
+                    ],
+                    selected: {controller.themeMode},
+                    onSelectionChanged: (selection) =>
+                        controller.setTheme(selection.single),
+                  ),
                 ),
-              ),
-              const Divider(height: 32),
-              const _SectionLabel('本地课表'),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.add_rounded),
-                title: const Text('添加课程'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: controller.busy
-                    ? null
-                    : () => editCourse(context, controller),
-              ),
-              if (controller.schedule != null) ...[
+              ]),
+              section('本地课表', [
                 ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.calendar_month_outlined),
-                  title: const Text('学期'),
-                  subtitle: Text(controller.schedule!.termLabel),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: controller.busy ? null : () => _selectTerm(context),
-                ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.event_outlined),
-                  title: const Text('第一周周一'),
-                  subtitle: Text(dateText(controller.schedule!.firstMonday)),
-                  trailing: const Icon(Icons.chevron_right_rounded),
+                  contentPadding: tilePadding,
+                  leading: const Icon(Icons.add_rounded),
+                  title: const Text('添加课程'),
+                  trailing: const Icon(Icons.chevron_right_rounded, size: 20),
                   onTap: controller.busy
                       ? null
-                      : () async {
-                          final date = await showDatePicker(
-                            context: context,
-                            initialDate: controller.schedule!.firstMonday,
-                            firstDate: DateTime(2000),
-                            lastDate: DateTime(2100),
-                            selectableDayPredicate: (date) =>
-                                date.weekday == DateTime.monday,
-                            helpText: '选择第一周周一',
-                          );
-                          if (date != null) {
-                            await controller.setFirstMonday(date);
-                          }
-                        },
+                      : () => editCourse(context, controller),
                 ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(
-                    Icons.delete_outline_rounded,
-                    color: scheme.error,
+                if (controller.schedule != null) ...[
+                  ListTile(
+                    contentPadding: tilePadding,
+                    leading: const Icon(Icons.calendar_month_outlined),
+                    title: const Text('学期'),
+                    subtitle: Text(controller.schedule!.termLabel),
+                    trailing: const Icon(Icons.chevron_right_rounded, size: 20),
+                    onTap: controller.busy ? null : () => _selectTerm(context),
                   ),
-                  title: Text('删除本地课表', style: TextStyle(color: scheme.error)),
-                  onTap: controller.busy ? null : () => _clearSchedule(context),
-                ),
-              ],
-              const Divider(height: 32),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.info_outline_rounded),
-                title: const Text('关于 BITree'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => _showAbout(context),
-              ),
-              if (signedIn || controller.accountStatus == AccountStatus.expired)
+                  ListTile(
+                    contentPadding: tilePadding,
+                    leading: const Icon(Icons.event_outlined),
+                    title: const Text('第一周周一'),
+                    subtitle: Text(dateText(controller.schedule!.firstMonday)),
+                    trailing: const Icon(Icons.chevron_right_rounded, size: 20),
+                    onTap: controller.busy
+                        ? null
+                        : () async {
+                            final date = await showDatePicker(
+                              context: context,
+                              initialDate: controller.schedule!.firstMonday,
+                              firstDate: DateTime(2000),
+                              lastDate: DateTime(2100),
+                              selectableDayPredicate: (date) =>
+                                  date.weekday == DateTime.monday,
+                              helpText: '选择第一周周一',
+                            );
+                            if (date != null) {
+                              await controller.setFirstMonday(date);
+                            }
+                          },
+                  ),
+                  ListTile(
+                    contentPadding: tilePadding,
+                    leading: Icon(
+                      Icons.delete_outline_rounded,
+                      color: scheme.error,
+                    ),
+                    title: Text(
+                      '删除本地课表',
+                      style: TextStyle(color: scheme.error),
+                    ),
+                    onTap: controller.busy
+                        ? null
+                        : () => _clearSchedule(context),
+                  ),
+                ],
+              ]),
+              section('应用', [
                 ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.logout_rounded),
-                  title: const Text('退出学校账号'),
-                  subtitle: const Text('保留本地课表'),
-                  onTap: controller.busy ? null : controller.signOut,
+                  contentPadding: tilePadding,
+                  leading: const Icon(Icons.info_outline_rounded),
+                  title: const Text('关于 BITree'),
+                  trailing: const Icon(Icons.chevron_right_rounded, size: 20),
+                  onTap: () => _showAbout(context),
                 ),
+                if (signedIn ||
+                    controller.accountStatus == AccountStatus.expired)
+                  ListTile(
+                    contentPadding: tilePadding,
+                    leading: const Icon(Icons.logout_rounded),
+                    title: const Text('退出学校账号'),
+                    subtitle: const Text('保留本地课表'),
+                    onTap: controller.busy ? null : controller.signOut,
+                  ),
+              ]),
             ],
           ),
         ),

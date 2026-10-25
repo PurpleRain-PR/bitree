@@ -75,14 +75,14 @@ class CourseWeekPicker extends StatelessWidget {
                     style: OutlinedButton.styleFrom(
                       padding: EdgeInsets.zero,
                       backgroundColor: selected
-                          ? theme.colorScheme.secondaryContainer
+                          ? theme.colorScheme.primary
                           : Colors.transparent,
                       foregroundColor: selected
-                          ? theme.colorScheme.onSecondaryContainer
+                          ? theme.colorScheme.onPrimary
                           : theme.colorScheme.onSurfaceVariant,
                       side: BorderSide(
                         color: selected
-                            ? Colors.transparent
+                            ? theme.colorScheme.primary
                             : theme.colorScheme.outlineVariant,
                       ),
                     ),

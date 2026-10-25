@@ -128,14 +128,25 @@ class _CourseEditorState extends State<_CourseEditor> {
           child: SheetLayout(
             header: Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-              child: Text(
-                widget.course == null ? '添加课程' : '编辑课程',
-                style: theme.textTheme.titleLarge,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.course == null ? '添加课程' : '编辑课程',
+                      style: theme.textTheme.titleLarge,
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: '关闭',
+                    onPressed: _saving ? null : () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded, size: 20),
+                  ),
+                ],
               ),
             ),
             content: Padding(
               // Keep floating labels inside the scroll viewport.
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
               child: Form(
                 key: _form,
                 child: Column(
@@ -145,26 +156,32 @@ class _CourseEditorState extends State<_CourseEditor> {
                     if (widget.controller.schedule == null) ...[
                       TextFormField(
                         controller: _term,
+                        enabled: !_saving,
                         decoration: const InputDecoration(labelText: '学期'),
                         validator: (value) =>
                             value!.trim().isEmpty ? '请输入学期' : null,
                       ),
                       const SizedBox(height: 12),
                       OutlinedButton.icon(
-                        onPressed: () async {
-                          final date = await showDatePicker(
-                            context: context,
-                            initialDate: _monday,
-                            firstDate: DateTime(2000),
-                            lastDate: DateTime(2100),
-                            selectableDayPredicate: (date) =>
-                                date.weekday == DateTime.monday,
-                            helpText: '选择第一周周一',
-                          );
-                          if (date != null) {
-                            setState(() => _monday = calendarDate(date));
-                          }
-                        },
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 48),
+                        ),
+                        onPressed: _saving
+                            ? null
+                            : () async {
+                                final date = await showDatePicker(
+                                  context: context,
+                                  initialDate: _monday,
+                                  firstDate: DateTime(2000),
+                                  lastDate: DateTime(2100),
+                                  selectableDayPredicate: (date) =>
+                                      date.weekday == DateTime.monday,
+                                  helpText: '选择第一周周一',
+                                );
+                                if (date != null) {
+                                  setState(() => _monday = calendarDate(date));
+                                }
+                              },
                         icon: const Icon(
                           Icons.calendar_today_outlined,
                           size: 18,
@@ -175,33 +192,48 @@ class _CourseEditorState extends State<_CourseEditor> {
                     ],
                     TextFormField(
                       controller: _name,
+                      enabled: !_saving,
                       textInputAction: TextInputAction.next,
                       decoration: const InputDecoration(labelText: '课程名称'),
                       validator: (value) =>
                           value!.trim().isEmpty ? '请输入课程名称' : null,
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _room,
-                            textInputAction: TextInputAction.next,
-                            decoration: const InputDecoration(
-                              labelText: '教室（选填）',
-                            ),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final room = TextFormField(
+                          controller: _room,
+                          enabled: !_saving,
+                          textInputAction: TextInputAction.next,
+                          decoration: const InputDecoration(
+                            labelText: '教室（选填）',
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _teacher,
-                            decoration: const InputDecoration(
-                              labelText: '教师（选填）',
-                            ),
+                        );
+                        final teacher = TextFormField(
+                          controller: _teacher,
+                          enabled: !_saving,
+                          decoration: const InputDecoration(
+                            labelText: '教师（选填）',
                           ),
-                        ),
-                      ],
+                        );
+                        final scale = MediaQuery.textScalerOf(context).scale(1);
+                        if (constraints.maxWidth < 300 * scale) {
+                          return Column(
+                            children: [
+                              room,
+                              const SizedBox(height: 12),
+                              teacher,
+                            ],
+                          );
+                        }
+                        return Row(
+                          children: [
+                            Expanded(child: room),
+                            const SizedBox(width: 12),
+                            Expanded(child: teacher),
+                          ],
+                        );
+                      },
                     ),
                     const SizedBox(height: 12),
                     DropdownMenu<int>(

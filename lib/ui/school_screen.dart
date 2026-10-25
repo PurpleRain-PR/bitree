@@ -291,16 +291,6 @@ class _SchoolScreenState extends State<_SchoolScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
-              child: Text(
-                '登录状态保存在本机。',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
@@ -317,34 +307,44 @@ class _SchoolScreenState extends State<_SchoolScreen> {
             ),
             Expanded(child: _buildBrowser()),
             const Divider(height: 1),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  IconButton(
-                    tooltip: '重新打开网页',
-                    onPressed: _busy ? null : _restart,
-                    icon: const Icon(Icons.refresh_rounded),
+            Center(
+              heightFactor: 1,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 680),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        tooltip: '重新打开网页',
+                        onPressed: _busy ? null : _restart,
+                        icon: const Icon(Icons.refresh_rounded),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: _busy || !_sessionRestored
+                              ? null
+                              : _finish,
+                          icon: _busy
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Icon(
+                                  _step == SchoolAction.signIn
+                                      ? Icons.login_rounded
+                                      : Icons.input_rounded,
+                                ),
+                          label: Text(_actionLabel),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: _busy || !_sessionRestored ? null : _finish,
-                      icon: _busy
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Icon(
-                              _step == SchoolAction.signIn
-                                  ? Icons.login_rounded
-                                  : Icons.input_rounded,
-                            ),
-                      label: Text(_actionLabel),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ],
