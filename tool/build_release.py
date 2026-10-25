@@ -6,8 +6,12 @@ import tarfile
 from pathlib import Path
 
 
-def run(*command):
-    subprocess.run(command, check=True)
+def run(program, *arguments):
+    executable = shutil.which(program)
+    if executable is None:
+        raise FileNotFoundError(f"Executable not found on PATH: {program}")
+
+    subprocess.run([executable, *arguments], check=True)
 
 
 def build_android(flags, prefix):
