@@ -4,14 +4,15 @@ publish_to: 'none'
 version: 0.1.0+1
 
 environment:
-  sdk: '>=3.8.0 <4.0.0'
+  sdk: '>=3.13.0 <4.0.0'
+  flutter: '>=3.47.0'
 
 dependencies:
   flutter:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
-  flutter_inappwebview: 6.1.5
+  flutter_inappwebview: ^6.1.5
   flutter_secure_storage: ^11.0.0
   cookie_jar: ^4.0.8
   path_provider: ^2.1.5

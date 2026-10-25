@@ -63,7 +63,6 @@ class LinuxSchoolWebView extends StatefulWidget {
   const LinuxSchoolWebView({
     super.key,
     required this.initialUrl,
-    required this.onCreated,
     required this.onLoadStart,
     required this.onLoadStop,
     required this.onProgress,
@@ -71,7 +70,6 @@ class LinuxSchoolWebView extends StatefulWidget {
   });
 
   final Uri initialUrl;
-  final ValueChanged<LinuxSchoolBrowser> onCreated;
   final ValueChanged<Uri> onLoadStart;
   final ValueChanged<Uri> onLoadStop;
   final ValueChanged<double> onProgress;
@@ -106,7 +104,6 @@ class _LinuxSchoolWebViewState extends State<LinuxSchoolWebView>
     });
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      widget.onCreated(LinuxSchoolBrowser());
       try {
         await schoolBrowserChannel.invokeMethod('create', {
           'url': widget.initialUrl.toString(),

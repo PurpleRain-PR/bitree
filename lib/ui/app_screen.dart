@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
-import '../schedule/controller.dart';
+import '../app_controller.dart';
 import 'schedule_screen.dart';
 import 'settings_screen.dart';
 
 class AppScreen extends StatefulWidget {
   const AppScreen({super.key, required this.controller});
-  final ScheduleController controller;
+
+  final AppController controller;
 
   @override
   State<AppScreen> createState() => _AppScreenState();
@@ -78,6 +79,7 @@ class _AppScreenState extends State<AppScreen> {
 
 class _PendingPage extends StatelessWidget {
   const _PendingPage({required this.title});
+
   final String title;
 
   @override

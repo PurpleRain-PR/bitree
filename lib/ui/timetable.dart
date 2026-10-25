@@ -1,10 +1,11 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
-import '../schedule/controller.dart';
+
+import '../app_controller.dart';
 import '../schedule/layout.dart';
 import '../schedule/model.dart';
-import 'course_detail.dart';
-import 'theme.dart';
+import 'course_tile.dart';
 
 class Timetable extends StatefulWidget {
   const Timetable({
@@ -14,10 +15,12 @@ class Timetable extends StatefulWidget {
     required this.initialScrollOffset,
     required this.onScroll,
   });
-  final ScheduleController controller;
+
+  final AppController controller;
   final int week;
   final double initialScrollOffset;
   final ValueChanged<double> onScroll;
+
   @override
   State<Timetable> createState() => _TimetableState();
 }
@@ -77,14 +80,14 @@ class _TimetableState extends State<Timetable> {
     }
     return LayoutBuilder(
       builder: (context, constraints) {
-        final gutter = 30.0 * scale;
+        final gutterWidth = 30.0 * scale;
         final headerHeight = 64.0 * scale;
-        final column = math.max(
+        final columnWidth = math.max(
           minimumColumn,
-          (constraints.maxWidth - gutter) / 7,
+          (constraints.maxWidth - gutterWidth) / 7,
         );
-        final width = column * 7;
-        final viewport = constraints.maxWidth - gutter;
+        final gridWidth = columnWidth * 7;
+        final viewportWidth = constraints.maxWidth - gutterWidth;
         final rowHeight = math.max(
           (constraints.maxWidth < 680 ? 76.0 : 52.0) * scale,
           (constraints.maxHeight - headerHeight) / sectionTimes.length,
@@ -95,7 +98,9 @@ class _TimetableState extends State<Timetable> {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted || !_horizontal.hasClients) return;
             final current = schedule.weekAt(today) == widget.week;
-            final offset = current ? today.weekday * column - viewport : 0.0;
+            final offset = current
+                ? today.weekday * columnWidth - viewportWidth
+                : 0.0;
             _horizontal.jumpTo(
               offset.clamp(0.0, _horizontal.position.maxScrollExtent),
             );
@@ -108,7 +113,7 @@ class _TimetableState extends State<Timetable> {
               child: Row(
                 children: [
                   SizedBox(
-                    width: gutter,
+                    width: gutterWidth,
                     child: Center(
                       child: Text(
                         '${monday.month}月',
@@ -121,9 +126,8 @@ class _TimetableState extends State<Timetable> {
                   ),
                   Expanded(
                     child: ScrollConfiguration(
-                      behavior: ScrollConfiguration.of(
-                        context,
-                      ).copyWith(scrollbars: false),
+                      behavior: ScrollConfiguration.of(context)
+                          .copyWith(scrollbars: false),
                       child: SingleChildScrollView(
                         controller: _dates,
                         scrollDirection: Axis.horizontal,
@@ -132,7 +136,7 @@ class _TimetableState extends State<Timetable> {
                           children: [
                             for (var day = 1; day <= 7; day++)
                               SizedBox(
-                                width: column,
+                                width: columnWidth,
                                 height: headerHeight,
                                 child: _DateHeading(
                                   date: monday.add(Duration(days: day - 1)),
@@ -156,7 +160,7 @@ class _TimetableState extends State<Timetable> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       SizedBox(
-                        width: gutter,
+                        width: gutterWidth,
                         child: Column(
                           children: [
                             for (
@@ -174,15 +178,15 @@ class _TimetableState extends State<Timetable> {
                       Expanded(
                         child: Scrollbar(
                           controller: _horizontal,
-                          thumbVisibility: width > viewport + 1,
+                          thumbVisibility: gridWidth > viewportWidth + 1,
                           child: SingleChildScrollView(
                             controller: _horizontal,
                             scrollDirection: Axis.horizontal,
-                            physics: width > viewport + 1
+                            physics: gridWidth > viewportWidth + 1
                                 ? const ClampingScrollPhysics()
                                 : const NeverScrollableScrollPhysics(),
                             child: SizedBox(
-                              width: width,
+                              width: gridWidth,
                               height: gridHeight,
                               child: Stack(
                                 children: [
@@ -193,9 +197,9 @@ class _TimetableState extends State<Timetable> {
                                   )
                                     for (var day = 0; day < 7; day++)
                                       Positioned(
-                                        left: day * column + 2,
+                                        left: day * columnWidth + 2,
                                         top: section * rowHeight + 2,
-                                        width: column - 4,
+                                        width: columnWidth - 4,
                                         height: rowHeight - 4,
                                         child: DecoratedBox(
                                           decoration: BoxDecoration(
@@ -214,8 +218,8 @@ class _TimetableState extends State<Timetable> {
                                     if (monday.add(Duration(days: day)) ==
                                         today)
                                       Positioned(
-                                        left: day * column,
-                                        width: column,
+                                        left: day * columnWidth,
+                                        width: columnWidth,
                                         top: 0,
                                         bottom: 0,
                                         child: DecoratedBox(
@@ -234,12 +238,13 @@ class _TimetableState extends State<Timetable> {
                                       Positioned(
                                         key: ValueKey(placement.course.id),
                                         left:
-                                            day * column +
+                                            day * columnWidth +
                                             placement.lane *
-                                                column /
+                                                columnWidth /
                                                 placement.lanes +
                                             2,
-                                        width: column / placement.lanes - 4,
+                                        width:
+                                            columnWidth / placement.lanes - 4,
                                         top:
                                             (placement.course.startSection! -
                                                     1) *
@@ -253,7 +258,7 @@ class _TimetableState extends State<Timetable> {
                                                     1) *
                                                 rowHeight -
                                             4,
-                                        child: _CourseBlock(
+                                        child: CourseTile(
                                           course: placement.course,
                                           controller: controller,
                                           isToday:
@@ -281,6 +286,7 @@ class _TimetableState extends State<Timetable> {
 
 class _DateHeading extends StatelessWidget {
   const _DateHeading({required this.date, required this.today});
+
   final DateTime date;
   final DateTime today;
 
@@ -327,6 +333,7 @@ class _DateHeading extends StatelessWidget {
 
 class _PeriodLabel extends StatelessWidget {
   const _PeriodLabel({required this.section});
+
   final int section;
 
   @override
@@ -354,122 +361,6 @@ class _PeriodLabel extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CourseBlock extends StatelessWidget {
-  const _CourseBlock({
-    required this.course,
-    required this.controller,
-    required this.isToday,
-  });
-  final Course course;
-  final ScheduleController controller;
-  final bool isToday;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = courseColors(context, course.colorIndex);
-    return Semantics(
-      button: true,
-      label:
-          '${course.name}，${course.timeLabel}，${course.room}${isToday ? '，今天' : ''}，查看详情',
-      child: ExcludeSemantics(
-        child: Tooltip(
-          message: '${course.name}\n${course.room}\n${course.teacher}',
-          child: Material(
-            color: colors.fill,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(6),
-              side: isToday
-                  ? BorderSide(color: colors.accent, width: 1.5)
-                  : BorderSide.none,
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: () => showCourse(context, controller, course),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final narrow = constraints.maxWidth < 100;
-                  final fontSize = narrow ? 12.0 : 14.0;
-                  final scaler = MediaQuery.textScalerOf(context);
-                  final titleHeight = scaler.scale(fontSize) * 1.35;
-                  final roomLineHeight = scaler.scale(fontSize - 1) * 1.3;
-                  final available = constraints.maxHeight - 12;
-                  final roomLines = course.room.isEmpty
-                      ? 0
-                      : ((available - titleHeight * 2 - 8) / roomLineHeight)
-                            .floor()
-                            .clamp(0, narrow ? 4 : 2);
-                  final roomStyle = TextStyle(
-                    fontSize: fontSize - 1,
-                    height: 1.3,
-                    color: colors.text,
-                  );
-                  var roomHeight = 0.0;
-                  if (roomLines > 0) {
-                    final painter =
-                        TextPainter(
-                          text: TextSpan(
-                            text: course.room,
-                            style: DefaultTextStyle.of(
-                              context,
-                            ).style.merge(roomStyle),
-                          ),
-                          textDirection: Directionality.of(context),
-                          textScaler: scaler,
-                          maxLines: roomLines,
-                        )..layout(
-                          maxWidth: constraints.maxWidth - (narrow ? 6 : 20),
-                        );
-                    roomHeight = painter.height + 8;
-                    painter.dispose();
-                  }
-                  final titleLines = ((available - roomHeight) / titleHeight)
-                      .floor()
-                      .clamp(1, 5);
-                  return Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: narrow ? 3 : 10,
-                      vertical: 6,
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          course.name,
-                          textAlign: TextAlign.center,
-                          maxLines: titleLines,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: fontSize,
-                            height: 1.35,
-                            fontWeight: isToday
-                                ? FontWeight.w700
-                                : FontWeight.w600,
-                            color: colors.text,
-                          ),
-                        ),
-                        if (roomLines > 0) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            course.room,
-                            textAlign: TextAlign.center,
-                            maxLines: roomLines,
-                            overflow: TextOverflow.ellipsis,
-                            style: roomStyle,
-                          ),
-                        ],
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
         ),
       ),
     );

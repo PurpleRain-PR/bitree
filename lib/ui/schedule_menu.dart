@@ -1,0 +1,90 @@
+import 'dart:convert';
+
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../schedule/ics.dart';
+import '../schedule/model.dart';
+
+class ScheduleMenu extends StatefulWidget {
+  const ScheduleMenu({
+    super.key,
+    required this.schedule,
+    required this.enabled,
+  });
+
+  final SemesterSchedule? schedule;
+  final bool enabled;
+
+  @override
+  State<ScheduleMenu> createState() => _ScheduleMenuState();
+}
+
+class _ScheduleMenuState extends State<ScheduleMenu> {
+  bool _exporting = false;
+
+  Future<void> _export(SemesterSchedule schedule) async {
+    if (_exporting) return;
+    final skipped = schedule.courses
+        .where((course) => !course.isScheduled)
+        .length;
+    final messenger = ScaffoldMessenger.of(context);
+    if (skipped == schedule.courses.length) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('没有可导出的课程，请先添加课程或设置上课时间。')),
+      );
+      return;
+    }
+    setState(() => _exporting = true);
+    try {
+      final term = schedule.term.replaceAll(
+        RegExp(r'[<>:"/\\|?*\x00-\x1f]'),
+        '_',
+      );
+      final saved = await FilePicker.saveFile(
+        fileName: 'BITree-$term.ics',
+        bytes: Uint8List.fromList(utf8.encode(scheduleToIcs(schedule))),
+        mimeType: 'text/calendar',
+        dialogTitle: '导出课表',
+      );
+      if (!mounted || saved == null) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(skipped == 0 ? '已导出课表' : '已导出课表，跳过 $skipped 门时间待定的课程'),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      final message = error is PlatformException
+          ? error.message ?? error.code
+          : error.toString();
+      messenger.showSnackBar(SnackBar(content: Text('导出失败：$message')));
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final schedule = widget.schedule;
+    return MenuAnchor(
+      menuChildren: [
+        MenuItemButton(
+          onPressed: schedule == null || !widget.enabled || _exporting
+              ? null
+              : () => _export(schedule),
+          leadingIcon: const Icon(Icons.file_download_outlined),
+          child: const Text('导出 ICS'),
+        ),
+      ],
+      builder: (context, menu, child) => IconButton(
+        tooltip: '更多',
+        onPressed: _exporting
+            ? null
+            : () => menu.isOpen ? menu.close() : menu.open(),
+        icon: const Icon(Icons.more_horiz_rounded),
+      ),
+    );
+  }
+}

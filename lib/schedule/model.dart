@@ -48,9 +48,11 @@ class Course {
     if (name.trim().isEmpty || id.isEmpty) {
       throw const FormatException('课程名称或编号缺失');
     }
+
     if (weekday != null && (weekday! < 1 || weekday! > 7)) {
       throw const FormatException('课程星期超出范围');
     }
+
     if ((startSection == null) != (endSection == null) ||
         (startSection != null &&
             (startSection! < 1 ||
@@ -58,6 +60,7 @@ class Course {
                 endSection! > sectionTimes.length))) {
       throw const FormatException('课程节次超出作息表范围');
     }
+
     if (weeks.any((week) => week < 1)) {
       throw const FormatException('课程周次必须大于零');
     }
@@ -79,11 +82,12 @@ class Course {
   bool get isScheduled =>
       weekday != null && startSection != null && weeks.isNotEmpty;
 
-  String get sectionLabel => startSection == null
-      ? '节次待定'
-      : startSection == endSection
-      ? '第 $startSection 节'
-      : '第 $startSection–$endSection 节';
+  String get sectionLabel {
+    if (startSection == null) return '节次待定';
+    if (startSection == endSection) return '第 $startSection 节';
+
+    return '第 $startSection–$endSection 节';
+  }
 
   String get timeLabel => startSection == null
       ? '时间待定'
@@ -94,20 +98,20 @@ class Course {
   bool occurs(int week) => isScheduled && weeks.contains(week);
 
   factory Course.fromSchool(Map<String, dynamic> row, int index) {
-    int? positive(String key) {
-      final value = row[key];
-      if (value == null ||
-          value.toString().isEmpty ||
-          value.toString() == '0') {
+    int? optionalInt(String key) {
+      final value = row[key]?.toString();
+      if (value == null || value.isEmpty || value == '0') {
         return null;
       }
-      return int.parse(value.toString());
+
+      return int.parse(value);
     }
 
     final mask = row['SKZC']?.toString() ?? '';
     if (!RegExp(r'^[01]*$').hasMatch(mask)) {
       throw const FormatException('学校返回的上课周次格式不正确');
     }
+
     return Course(
       id: 'school-$index',
       name: row['KCM']?.toString() ?? '',
@@ -116,9 +120,9 @@ class Course {
       campus: row['XXXQMC']?.toString() ?? '',
       number: row['KCH']?.toString() ?? '',
       description: row['YPSJDD']?.toString() ?? '',
-      weekday: positive('SKXQ'),
-      startSection: positive('KSJC'),
-      endSection: positive('JSJC'),
+      weekday: optionalInt('SKXQ'),
+      startSection: optionalInt('KSJC'),
+      endSection: optionalInt('JSJC'),
       weeks: [
         for (var i = 0; i < mask.length; i++)
           if (mask[i] == '1') i + 1,
@@ -159,9 +163,11 @@ class Course {
 
 String weeksLabel(List<int> weeks) {
   if (weeks.isEmpty) return '周次待定';
+
   final ranges = <String>[];
   var start = weeks.first;
   var end = start;
+
   for (final week in weeks.skip(1)) {
     if (week == end + 1) {
       end = week;
@@ -170,7 +176,9 @@ String weeksLabel(List<int> weeks) {
       start = end = week;
     }
   }
+
   ranges.add(start == end ? '$start' : '$start–$end');
+
   return '${ranges.join('、')} 周';
 }
 
@@ -201,6 +209,7 @@ class SemesterSchedule {
   String get termLabel {
     final parts = term.split('-');
     if (parts.length != 3 || !['1', '2'].contains(parts[2])) return term;
+
     return '${parts[0]}–${parts[1]} ${parts[2] == '1' ? '秋季' : '春季'}学期';
   }
 
@@ -210,20 +219,25 @@ class SemesterSchedule {
   DateTime mondayAt(int week) =>
       firstMonday.add(Duration(days: (week - 1) * 7));
 
-  List<Course> coursesAt(int week, {int? weekday}) =>
-      courses
-          .where(
-            (course) =>
-                course.occurs(week) &&
-                (weekday == null || course.weekday == weekday),
-          )
-          .toList()
-        ..sort((a, b) {
-          final day = a.weekday!.compareTo(b.weekday!);
-          if (day != 0) return day;
-          final section = a.startSection!.compareTo(b.startSection!);
-          return section != 0 ? section : a.name.compareTo(b.name);
-        });
+  List<Course> coursesAt(int week, {int? weekday}) {
+    final scheduled = courses
+        .where(
+          (course) =>
+              course.occurs(week) &&
+              (weekday == null || course.weekday == weekday),
+        )
+        .toList();
+
+    scheduled.sort((first, second) {
+      final day = first.weekday!.compareTo(second.weekday!);
+      if (day != 0) return day;
+
+      final section = first.startSection!.compareTo(second.startSection!);
+      return section != 0 ? section : first.name.compareTo(second.name);
+    });
+
+    return scheduled;
+  }
 
   SemesterSchedule copyWith({DateTime? firstMonday, List<Course>? courses}) =>
       SemesterSchedule(

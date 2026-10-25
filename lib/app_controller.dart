@@ -1,64 +1,62 @@
-import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../data/schedule_store.dart';
-import '../data/school_service.dart';
-import '../data/school_session.dart';
-import '../data/desktop_widget.dart';
-import 'model.dart';
 
-String operationError(Object error) => switch (error) {
-  SessionExpired() => error.toString(),
-  SchoolRequestError() => error.message,
-  SocketException() => '无法连接学校网站，请检查网络或更换登录方式。',
-  TimeoutException() => '连接学校网站超时，请稍后重试。',
-  HandshakeException() => '无法验证学校网站证书，请检查系统时间和网络。',
-  FormatException() => '课表数据格式不正确：${error.message}',
-  FileSystemException() => '无法读写本地课表：${error.message}',
-  PlatformException() => '无法调用系统服务：${error.message ?? error.code}',
-  _ => '操作失败：$error',
-};
+import 'data/desktop_widget.dart';
+import 'data/schedule_store.dart';
+import 'data/school_errors.dart';
+import 'data/school_network.dart';
+import 'data/school_service.dart';
+import 'data/school_session.dart';
+import 'error_message.dart';
+import 'schedule/model.dart';
 
 enum AccountStatus { unverified, signedIn, signedOut, expired }
 
-class ScheduleController extends ChangeNotifier {
-  ScheduleController({
-    required this.store,
-    required this.school,
-    required this.preferences,
+class AppController extends ChangeNotifier {
+  AppController({
+    required this._store,
+    required this._school,
+    required this._preferences,
   });
-  final ScheduleStore store;
-  final SchoolService school;
-  final SharedPreferencesAsync preferences;
-  SemesterSchedule? _saved;
-  SemesterSchedule? get schedule => _saved;
+
+  final ScheduleStore _store;
+  final SchoolService _school;
+  final SharedPreferencesAsync _preferences;
+
+  SemesterSchedule? _schedule;
   bool ready = false;
   bool busy = false;
   String? error;
   AccountStatus accountStatus = AccountStatus.unverified;
-  bool get needsLogin => accountStatus == AccountStatus.expired;
+
   int week = 1;
   ThemeMode themeMode = ThemeMode.system;
   SchoolNetwork network = SchoolNetwork.campus;
   List<String> terms = [];
 
+  SchoolSession get schoolSession => _school.session;
+
+  SemesterSchedule? get schedule => _schedule;
+
+  bool get loginExpired => accountStatus == AccountStatus.expired;
+
   Future<void> initialize() async {
     try {
-      _saved = await store.read();
-      terms = await store.terms();
-      final theme = await preferences.getString('theme');
+      _schedule = await _store.read();
+      terms = await _store.terms();
+
+      final theme = await _preferences.getString('theme');
       themeMode =
           ThemeMode.values.where((value) => value.name == theme).firstOrNull ??
           ThemeMode.system;
-      network = await preferences.getString('network') == 'webvpn'
+      network = await _preferences.getString('network') == 'webvpn'
           ? SchoolNetwork.webvpn
           : SchoolNetwork.campus;
       _goToCurrentWeek();
     } catch (failure) {
-      error = operationError(failure);
+      error = errorMessage(failure);
     }
+
     ready = true;
     notifyListeners();
   }
@@ -75,7 +73,7 @@ class ScheduleController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void today() {
+  void showCurrentWeek() {
     _goToCurrentWeek();
     notifyListeners();
   }
@@ -92,19 +90,21 @@ class ScheduleController extends ChangeNotifier {
       _ => accountStatus,
     };
     if (next == accountStatus) return;
+
     accountStatus = next;
     notifyListeners();
   }
 
-  Future<void> _connected(SchoolNetwork using) async {
-    await preferences.setString('network', using.name);
+  Future<void> _saveLoginState(SchoolNetwork using) async {
+    await _preferences.setString('network', using.name);
+
     accountStatus = AccountStatus.signedIn;
     network = using;
   }
 
-  void _schoolFailure(Object failure) {
+  void _handleSchoolError(Object failure) {
     if (failure is SessionExpired) requireLogin();
-    error = operationError(failure);
+    error = errorMessage(failure);
   }
 
   Future<bool> completeSignIn(SchoolNetwork using) async {
@@ -113,10 +113,10 @@ class ScheduleController extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      await _connected(using);
+      await _saveLoginState(using);
       return true;
     } catch (failure) {
-      _schoolFailure(failure);
+      _handleSchoolError(failure);
       return false;
     } finally {
       busy = false;
@@ -135,27 +135,29 @@ class ScheduleController extends ChangeNotifier {
     notifyListeners();
     try {
       final selectedNetwork = using ?? network;
-      final result = await school.synchronize(
+      final result = await _school.synchronize(
         selectedNetwork,
         term: term,
         request: request,
       );
-      await _connected(selectedNetwork);
-      final previous = await store.readTerm(result.schedule.term);
+      await _saveLoginState(selectedNetwork);
+
+      final previous = await _store.readTerm(result.schedule.term);
       final localCourses = previous != null
           ? previous.courses.where((course) => course.local).toList()
           : <Course>[];
       final next = result.schedule.copyWith(
         courses: [...result.schedule.courses, ...localCourses],
       );
-      await store.write(next);
-      _saved = next;
-      terms = {...await store.terms(), ...result.terms}.toList();
+
+      await _store.write(next);
+      _schedule = next;
+      terms = {...await _store.terms(), ...result.terms}.toList();
       _goToCurrentWeek();
       await _updateWidget();
       return true;
     } catch (failure) {
-      _schoolFailure(failure);
+      _handleSchoolError(failure);
       return false;
     } finally {
       busy = false;
@@ -164,7 +166,7 @@ class ScheduleController extends ChangeNotifier {
   }
 
   Future<bool> saveCourse(Course course, {SemesterSchedule? semester}) async {
-    final current = semester ?? _saved;
+    final current = semester ?? _schedule;
     if (current == null || busy) return false;
     return _save(
       current.copyWith(
@@ -179,32 +181,32 @@ class ScheduleController extends ChangeNotifier {
   Future<bool> selectTerm(String term) async {
     if (busy) return false;
     try {
-      final saved = await store.readTerm(term);
+      final saved = await _store.readTerm(term);
       if (busy) return false;
       if (saved == null) return await synchronize(term: term);
       final success = await _save(saved);
-      if (success) today();
+      if (success) showCurrentWeek();
       return success;
     } catch (failure) {
-      error = operationError(failure);
+      error = errorMessage(failure);
       notifyListeners();
       return false;
     }
   }
 
   Future<bool> deleteCourse(Course course) async {
-    if (_saved == null || !course.local || busy) return false;
+    if (_schedule == null || !course.local || busy) return false;
     return _save(
-      _saved!.copyWith(
-        courses: [..._saved!.courses.where((item) => item.id != course.id)],
+      _schedule!.copyWith(
+        courses: [..._schedule!.courses.where((item) => item.id != course.id)],
       ),
     );
   }
 
   Future<bool> setFirstMonday(DateTime date) async {
-    if (_saved == null || busy) return false;
-    final result = await _save(_saved!.copyWith(firstMonday: date));
-    if (result) today();
+    if (_schedule == null || busy) return false;
+    final result = await _save(_schedule!.copyWith(firstMonday: date));
+    if (result) showCurrentWeek();
     return result;
   }
 
@@ -213,13 +215,13 @@ class ScheduleController extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      await store.write(next);
-      _saved = next;
+      await _store.write(next);
+      _schedule = next;
       terms = {...terms, next.term}.toList();
       await _updateWidget();
       return true;
     } catch (failure) {
-      error = operationError(failure);
+      error = errorMessage(failure);
       return false;
     } finally {
       busy = false;
@@ -229,10 +231,10 @@ class ScheduleController extends ChangeNotifier {
 
   Future<void> setTheme(ThemeMode value) async {
     try {
-      await preferences.setString('theme', value.name);
+      await _preferences.setString('theme', value.name);
       themeMode = value;
     } catch (failure) {
-      error = operationError(failure);
+      error = errorMessage(failure);
     }
     notifyListeners();
   }
@@ -242,12 +244,12 @@ class ScheduleController extends ChangeNotifier {
     busy = true;
     notifyListeners();
     try {
-      await school.session.clear();
+      await _school.session.clear();
       accountStatus = AccountStatus.signedOut;
       error = null;
       return true;
     } catch (failure) {
-      error = operationError(failure);
+      error = errorMessage(failure);
       return false;
     } finally {
       busy = false;
@@ -260,15 +262,15 @@ class ScheduleController extends ChangeNotifier {
     busy = true;
     notifyListeners();
     try {
-      await store.clear();
-      _saved = null;
+      await _store.clear();
+      _schedule = null;
       terms = [];
       error = null;
       _goToCurrentWeek();
       await _updateWidget();
       return true;
     } catch (failure) {
-      error = operationError(failure);
+      error = errorMessage(failure);
       return false;
     } finally {
       busy = false;
@@ -280,7 +282,7 @@ class ScheduleController extends ChangeNotifier {
     try {
       await updateDesktopWidget();
     } catch (failure) {
-      error = '桌面组件更新失败：${operationError(failure)}';
+      error = '桌面组件更新失败：${errorMessage(failure)}';
     }
   }
 }

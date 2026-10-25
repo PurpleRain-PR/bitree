@@ -11,11 +11,13 @@ String scheduleToIcs(SemesterSchedule schedule) {
     'CALSCALE:GREGORIAN',
     'X-WR-CALNAME:${_escapeText('BITree ${schedule.termLabel}')}',
   ];
+
   for (final course in schedule.courses.where((course) => course.isScheduled)) {
     final location = [
       course.campus,
       course.room,
     ].where((part) => part.isNotEmpty).join(' ');
+
     for (final week in course.weeks) {
       final date = schedule
           .mondayAt(week)
@@ -36,6 +38,7 @@ String scheduleToIcs(SemesterSchedule schedule) {
         if (course.number.isNotEmpty) '课程号：${course.number}',
         if (course.description.isNotEmpty) course.description,
       ].join('\n');
+
       lines.addAll([
         'BEGIN:VEVENT',
         'UID:$uid@dev.so1ve.bitree',
@@ -49,7 +52,9 @@ String scheduleToIcs(SemesterSchedule schedule) {
       ]);
     }
   }
+
   lines.add('END:VCALENDAR');
+
   return lines.map(_foldLine).join();
 }
 
@@ -63,7 +68,9 @@ DateTime _campusTime(DateTime date, String time) {
 
 String _timestamp(DateTime value) {
   final utc = value.toUtc();
+
   String two(int number) => number.toString().padLeft(2, '0');
+
   return '${utc.year.toString().padLeft(4, '0')}${two(utc.month)}${two(utc.day)}'
       'T${two(utc.hour)}${two(utc.minute)}${two(utc.second)}Z';
 }
@@ -79,6 +86,7 @@ String _escapeText(String value) => value
 String _foldLine(String line) {
   final result = StringBuffer();
   var length = 0;
+
   for (final rune in line.runes) {
     final character = String.fromCharCode(rune);
     final size = utf8.encode(character).length;
@@ -86,9 +94,11 @@ String _foldLine(String line) {
       result.write('\r\n ');
       length = 1;
     }
+
     result.write(character);
     length += size;
   }
+
   result.write('\r\n');
   return result.toString();
 }

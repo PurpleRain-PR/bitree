@@ -9,6 +9,7 @@ List<({Course course, int lane, int lanes})> layoutDayCourses(
   final result = <({Course course, int lane, int lanes})>[];
   var group = <Course>[];
   var groupEnd = 0;
+
   void finish() {
     final laneEnds = <int>[];
     final assigned = <({Course course, int lane})>[];

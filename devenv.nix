@@ -28,7 +28,9 @@
     android-studio.enable = false;
   };
 
+  # The language server supplies its own JDK while Android builds use JDK 21
   languages.java.jdk.package = pkgs.jdk21;
+  languages.java.lsp.package = pkgs.jdt-language-server;
 
   packages =
     with pkgs;
