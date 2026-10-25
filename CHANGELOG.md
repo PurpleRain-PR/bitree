@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fix(release): publish partial dev builds and provide a Windows installer ([8c86d55](https://github.com/so1ve/bitree/commit/8c86d55c493189c12d07a6cd8000c99dd0b1ff0e))
+- fix: group overlapping courses within fixed timetable columns ([7501051](https://github.com/so1ve/bitree/commit/7501051836938cd648d3e64e80f3582cb6d66cad))
 - fix(ci): resolve Flutter on Windows and configure CocoaPods targets ([86c306f](https://github.com/so1ve/bitree/commit/86c306f8831aedcdcb236110cf1ec5facab26246))
 - refactor: use the school calendar for semester dates ([117dbf8](https://github.com/so1ve/bitree/commit/117dbf84f9a1044f85545075d84728a4f8164fd6))
 - fix: support negative weeks for short semesters ([05d6cfb](https://github.com/so1ve/bitree/commit/05d6cfb861cfc721aa6628fd6257deefe866ccfe))
