@@ -212,13 +212,6 @@ class AppController extends ChangeNotifier {
     );
   }
 
-  Future<bool> setFirstMonday(DateTime date) async {
-    if (_schedule == null || busy) return false;
-    final result = await _save(_schedule!.copyWith(firstMonday: date));
-    if (result) showCurrentWeek();
-    return result;
-  }
-
   Future<bool> _save(SemesterSchedule next) async {
     busy = true;
     error = null;

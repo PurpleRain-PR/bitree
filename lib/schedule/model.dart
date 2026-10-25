@@ -324,13 +324,12 @@ class SemesterSchedule {
     return scheduled;
   }
 
-  SemesterSchedule copyWith({DateTime? firstMonday, List<Course>? courses}) =>
-      SemesterSchedule(
-        term: term,
-        firstMonday: firstMonday ?? this.firstMonday,
-        courses: courses ?? this.courses,
-        syncedAt: syncedAt,
-      );
+  SemesterSchedule copyWith({List<Course>? courses}) => SemesterSchedule(
+    term: term,
+    firstMonday: firstMonday,
+    courses: courses ?? this.courses,
+    syncedAt: syncedAt,
+  );
 
   Map<String, dynamic> toJson() => {
     'term': term,

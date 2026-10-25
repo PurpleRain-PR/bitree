@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
 import '../app_version.dart';
-import '../schedule/model.dart';
 import 'course_editor.dart';
 import 'external_link.dart';
 import 'school_screen.dart';
@@ -292,29 +291,6 @@ class SettingsScreen extends StatelessWidget {
                     subtitle: Text(controller.schedule!.termLabel),
                     trailing: const Icon(Icons.chevron_right_rounded, size: 20),
                     onTap: controller.busy ? null : () => _selectTerm(context),
-                  ),
-                  ListTile(
-                    contentPadding: tilePadding,
-                    leading: const Icon(Icons.event_outlined),
-                    title: const Text('第一周周一'),
-                    subtitle: Text(dateText(controller.schedule!.firstMonday)),
-                    trailing: const Icon(Icons.chevron_right_rounded, size: 20),
-                    onTap: controller.busy
-                        ? null
-                        : () async {
-                            final date = await showDatePicker(
-                              context: context,
-                              initialDate: controller.schedule!.firstMonday,
-                              firstDate: DateTime(2000),
-                              lastDate: DateTime(2100),
-                              selectableDayPredicate: (date) =>
-                                  date.weekday == DateTime.monday,
-                              helpText: '选择第一周周一',
-                            );
-                            if (date != null) {
-                              await controller.setFirstMonday(date);
-                            }
-                          },
                   ),
                   ListTile(
                     contentPadding: tilePadding,
