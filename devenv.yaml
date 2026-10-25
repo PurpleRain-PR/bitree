@@ -1,5 +1,5 @@
 inputs:
   nixpkgs:
-    url: github:cachix/devenv-nixpkgs/ee3d58d53cfcddfc0ae6fc7f04f4fe2a0c7cf0ed
+    url: github:cachix/devenv-nixpkgs/rolling
 nixpkgs:
   allow_unfree: true
