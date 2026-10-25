@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fix: support negative weeks for short semesters ([05d6cfb](https://github.com/so1ve/bitree/commit/05d6cfb861cfc721aa6628fd6257deefe866ccfe))
+- ci: repair Xcode projects and disable matrix fail-fast ([a5e59d3](https://github.com/so1ve/bitree/commit/a5e59d3d69e505b8f1bd0c8dfe94c0cce27e4d7e))
 - fix: allow editing and deleting imported courses ([3692c9b](https://github.com/so1ve/bitree/commit/3692c9b83d5488c815d266a4802adbdb040dd166))
 - feat: automate builds releases and update checks ([45d709a](https://github.com/so1ve/bitree/commit/45d709ad6c7822d2e6679a8691a5ee15e1257415))
 - style: unify layouts and clarify selected states ([efa1d04](https://github.com/so1ve/bitree/commit/efa1d0402c151e28ea80069e35e9f56c1f4d4ba8))
