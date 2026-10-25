@@ -1,0 +1,144 @@
+import 'package:flutter/material.dart';
+
+import 'sheet_layout.dart';
+
+Future<void> showWidgetGuide(BuildContext context) =>
+    showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      constraints: const BoxConstraints(maxWidth: 560),
+      builder: (context) {
+        final theme = Theme.of(context);
+
+        Widget step(int number, String text) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 28,
+                child: Text(
+                  '$number',
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Expanded(child: Text(text, style: theme.textTheme.bodyLarge)),
+            ],
+          ),
+        );
+
+        return SafeArea(
+          top: false,
+          child: SheetLayout(
+            header: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 8, 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text('桌面小组件', style: theme.textTheme.titleLarge),
+                  ),
+                  IconButton(
+                    tooltip: '关闭',
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded, size: 20),
+                  ),
+                ],
+              ),
+            ),
+            content: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _WidgetSize(columns: 1, label: '2×2 单列'),
+                        _WidgetSize(columns: 2, label: '2×4 双列'),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  step(1, '长按桌面空白处，打开“小组件”。'),
+                  step(2, '找到 BITree，选择单列或双列样式，拖到桌面。'),
+                  step(3, '上下滑动课程列表，查看后面的课程。'),
+                  const SizedBox(height: 8),
+                  Text(
+                    '当天课程上完后，21:00 起显示明天的课程。',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+              child: FilledButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('知道了'),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+class _WidgetSize extends StatelessWidget {
+  const _WidgetSize({required this.columns, required this.label});
+
+  final int columns;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ExcludeSemantics(
+          child: Container(
+            width: columns == 1 ? 64 : 112,
+            height: 64,
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              spacing: 6,
+              children: List.generate(
+                columns,
+                (_) => Expanded(
+                  child: Column(
+                    spacing: 6,
+                    children: List.generate(
+                      2,
+                      (_) => Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(label, style: theme.textTheme.labelLarge),
+      ],
+    );
+  }
+}

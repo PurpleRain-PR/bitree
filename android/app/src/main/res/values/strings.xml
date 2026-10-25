@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_single_name">课表 2×2 单列</string>
+    <string name="widget_wide_name">课表 2×4 双列</string>
+    <string name="widget_description">上下滑动查看课程</string>
+    <string name="widget_title">今日课程</string>
+    <string name="widget_remaining">还有 %1$s 门课</string>
+    <string name="widget_tomorrow_count">共 %1$s 门课</string>
+    <string name="widget_room_unknown">教室待定</string>
+    <string name="widget_no_schedule">打开 BITree\n添加或导入课表</string>
+    <string name="widget_read_error">课表读取失败\n点击打开 BITree</string>
+    <string name="widget_today_empty">今天没有课</string>
+    <string name="widget_finished">今天的课已上完</string>
+    <string name="widget_tomorrow_empty">今天的课已上完\n明天没有课</string>
+</resources>

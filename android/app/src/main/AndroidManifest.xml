@@ -1,5 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <application
         android:label="BITree"
         android:allowBackup="false"
@@ -27,14 +28,21 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <receiver android:name=".TimetableWidget" android:exported="false" android:label="BITree 今日课程">
+        <receiver android:name=".TimetableWidget" android:exported="false" android:label="@string/widget_single_name">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="android.intent.action.DATE_CHANGED" />
                 <action android:name="android.intent.action.TIME_SET" />
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/timetable_widget_info" />
+        </receiver>
+        <receiver android:name=".WideTimetableWidget" android:exported="false" android:label="@string/widget_wide_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/timetable_widget_wide_info" />
         </receiver>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

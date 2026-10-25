@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import 'package:flutter/services.dart';
 
 import '../schedule/ics.dart';
 import '../schedule/model.dart';
+import 'widget_guide.dart';
 
 class ScheduleMenu extends StatefulWidget {
   const ScheduleMenu({
@@ -70,6 +72,12 @@ class _ScheduleMenuState extends State<ScheduleMenu> {
     final schedule = widget.schedule;
     return MenuAnchor(
       menuChildren: [
+        if (Platform.isAndroid)
+          MenuItemButton(
+            onPressed: () => showWidgetGuide(context),
+            leadingIcon: const Icon(Icons.widgets_outlined),
+            child: const Text('桌面小组件'),
+          ),
         MenuItemButton(
           onPressed: schedule == null || !widget.enabled || _exporting
               ? null

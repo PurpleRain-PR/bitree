@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_course"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:minHeight="72dp"
+    android:orientation="vertical"
+    android:padding="10dp"
+    android:background="@drawable/widget_course_green">
+    <TextView
+        android:id="@+id/widget_course_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/widget_course_green_text"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:maxLines="1"
+        android:ellipsize="end" />
+    <TextView
+        android:id="@+id/widget_course_time"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textColor="@color/widget_course_green_text"
+        android:textSize="12sp"
+        android:alpha="0.8"
+        android:maxLines="1"
+        android:ellipsize="end" />
+    <TextView
+        android:id="@+id/widget_course_room"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:textColor="@color/widget_course_green_text"
+        android:textSize="11sp"
+        android:alpha="0.8"
+        android:maxLines="1"
+        android:ellipsize="end" />
+</LinearLayout>

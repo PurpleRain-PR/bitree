@@ -59,3 +59,7 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    implementation("androidx.core:core-remoteviews:1.1.0")
+}
