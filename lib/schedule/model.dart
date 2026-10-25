@@ -123,7 +123,10 @@ class Course {
 
   bool occurs(int week) => isScheduled && weeks.contains(week);
 
-  factory Course.fromSchool(Map<String, dynamic> row) {
+  factory Course._fromSchool(
+    Map<String, dynamic> row, {
+    required int firstWeekOffset,
+  }) {
     int? optionalInt(String key) {
       final value = row[key]?.toString();
       if (value == null || value.isEmpty || value == '0') {
@@ -147,12 +150,10 @@ class Course {
     final startSection = optionalInt('KSJC');
     final endSection = optionalInt('JSJC');
     final description = row['YPSJDD']?.toString() ?? '';
-    final weeks =
-        _smallSemesterWeeks(description) ??
-        [
-          for (var i = 0; i < mask.length; i++)
-            if (mask[i] == '1') i + 1,
-        ];
+    final weeks = [
+      for (var i = 0; i < mask.length; i++)
+        if (mask[i] == '1') weekFromOffset(firstWeekOffset + i),
+    ];
 
     return Course(
       id: _schoolCourseId(
@@ -210,8 +211,36 @@ class Course {
   );
 }
 
-List<int>? _smallSemesterWeeks(String description) {
-  // The bitmask loses negative week numbers; the displayed schedule retains them.
+List<Course> coursesFromSchool(List<Map<String, dynamic>> rows) {
+  // A term's masks share one origin, which may start before week 1.
+  // Infer it from a row whose set bits match all of its displayed weeks.
+  var firstWeekOffset = 0;
+
+  for (final row in rows) {
+    final described = _describedWeeks(row['YPSJDD']?.toString() ?? '');
+    final mask = row['SKZC']?.toString() ?? '';
+    final positions = [
+      for (var i = 0; i < mask.length; i++)
+        if (mask[i] == '1') i,
+    ];
+    if (described.isEmpty || described.length != positions.length) continue;
+
+    final offset = weekOffset(described.first) - positions.first;
+    if (positions.indexed.every(
+      (entry) => weekFromOffset(offset + entry.$2) == described[entry.$1],
+    )) {
+      firstWeekOffset = offset;
+      break;
+    }
+  }
+
+  return [
+    for (final row in rows)
+      Course._fromSchool(row, firstWeekOffset: firstWeekOffset),
+  ];
+}
+
+List<int> _describedWeeks(String description) {
   final ranges = RegExp(r'(-?\d+)\s*(?:[-–~～]\s*(-?\d+)\s*)?周');
   final weeks = <int>[
     for (final match in ranges.allMatches(description))
@@ -221,7 +250,7 @@ List<int>? _smallSemesterWeeks(String description) {
         ...academicWeeks(int.parse(match[1]!), int.parse(match[2]!)),
   ];
 
-  return weeks.any((week) => week < 0) ? weeks : null;
+  return weeks.toSet().toList()..sort();
 }
 
 String _schoolCourseId({

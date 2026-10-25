@@ -62,7 +62,7 @@ class SchoolService {
       schedule: SemesterSchedule(
         term: selected,
         firstMonday: DateTime.parse(monday['RQ'] as String),
-        courses: rows.map(Course.fromSchool).toList(),
+        courses: coursesFromSchool(rows),
         syncedAt: DateTime.now().toUtc(),
       ),
       terms: terms,
