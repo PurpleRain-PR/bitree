@@ -1,0 +1,28 @@
+name: bitree
+description: "BITree (理枝) - a local-first toolkit for Beijing Institute of Technology."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.8.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  flutter_inappwebview: 6.1.5
+  flutter_secure_storage: ^11.0.0
+  cookie_jar: ^4.0.8
+  path_provider: ^2.1.5
+  shared_preferences: ^2.5.5
+  url_launcher: ^6.3.3
+  file_picker: ^13.2.0
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/brand/bitree.png

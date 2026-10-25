@@ -1,0 +1,256 @@
+import 'dart:math' as math;
+
+/// Calendar dates are UTC midnights so DST never changes academic week numbers.
+DateTime calendarDate(DateTime value) =>
+    DateTime.utc(value.year, value.month, value.day);
+
+DateTime campusNow() => DateTime.now().toUtc().add(const Duration(hours: 8));
+
+DateTime mondayOf(DateTime date) =>
+    calendarDate(date).subtract(Duration(days: date.weekday - 1));
+
+String dateText(DateTime date) =>
+    '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+
+const sectionTimes = [
+  ('08:00', '08:45'),
+  ('08:50', '09:35'),
+  ('09:55', '10:40'),
+  ('10:45', '11:30'),
+  ('11:35', '12:20'),
+  ('13:20', '14:05'),
+  ('14:10', '14:55'),
+  ('15:15', '16:00'),
+  ('16:05', '16:50'),
+  ('16:55', '17:40'),
+  ('18:30', '19:15'),
+  ('19:20', '20:05'),
+  ('20:10', '20:55'),
+];
+
+class Course {
+  Course({
+    required this.id,
+    required this.name,
+    required this.weekday,
+    required this.startSection,
+    required this.endSection,
+    required List<int> weeks,
+    this.teacher = '',
+    this.room = '',
+    this.campus = '',
+    this.number = '',
+    this.description = '',
+    this.local = false,
+  }) : weeks = List.unmodifiable(weeks.toSet().toList()..sort()) {
+    if (name.trim().isEmpty || id.isEmpty) {
+      throw const FormatException('课程名称或编号缺失');
+    }
+    if (weekday != null && (weekday! < 1 || weekday! > 7)) {
+      throw const FormatException('课程星期超出范围');
+    }
+    if ((startSection == null) != (endSection == null) ||
+        (startSection != null &&
+            (startSection! < 1 ||
+                endSection! < startSection! ||
+                endSection! > sectionTimes.length))) {
+      throw const FormatException('课程节次超出作息表范围');
+    }
+    if (weeks.any((week) => week < 1)) {
+      throw const FormatException('课程周次必须大于零');
+    }
+  }
+
+  final String id;
+  final String name;
+  final String teacher;
+  final String room;
+  final String campus;
+  final String number;
+  final String description;
+  final int? weekday;
+  final int? startSection;
+  final int? endSection;
+  final List<int> weeks;
+  final bool local;
+
+  bool get isScheduled =>
+      weekday != null && startSection != null && weeks.isNotEmpty;
+
+  String get sectionLabel => startSection == null
+      ? '节次待定'
+      : startSection == endSection
+      ? '第 $startSection 节'
+      : '第 $startSection–$endSection 节';
+
+  String get timeLabel => startSection == null
+      ? '时间待定'
+      : '${sectionTimes[startSection! - 1].$1}–${sectionTimes[endSection! - 1].$2}';
+
+  int get colorIndex => name.runes.fold(0, (value, rune) => value + rune) % 6;
+
+  bool occurs(int week) => isScheduled && weeks.contains(week);
+
+  factory Course.fromSchool(Map<String, dynamic> row, int index) {
+    int? positive(String key) {
+      final value = row[key];
+      if (value == null ||
+          value.toString().isEmpty ||
+          value.toString() == '0') {
+        return null;
+      }
+      return int.parse(value.toString());
+    }
+
+    final mask = row['SKZC']?.toString() ?? '';
+    if (!RegExp(r'^[01]*$').hasMatch(mask)) {
+      throw const FormatException('学校返回的上课周次格式不正确');
+    }
+    return Course(
+      id: 'school-$index',
+      name: row['KCM']?.toString() ?? '',
+      teacher: row['SKJS']?.toString() ?? '',
+      room: row['JASMC']?.toString() ?? '',
+      campus: row['XXXQMC']?.toString() ?? '',
+      number: row['KCH']?.toString() ?? '',
+      description: row['YPSJDD']?.toString() ?? '',
+      weekday: positive('SKXQ'),
+      startSection: positive('KSJC'),
+      endSection: positive('JSJC'),
+      weeks: [
+        for (var i = 0; i < mask.length; i++)
+          if (mask[i] == '1') i + 1,
+      ],
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'teacher': teacher,
+    'room': room,
+    'campus': campus,
+    'number': number,
+    'description': description,
+    'weekday': weekday,
+    'startSection': startSection,
+    'endSection': endSection,
+    'weeks': weeks,
+    'local': local,
+  };
+
+  factory Course.fromJson(Map<String, dynamic> json) => Course(
+    id: json['id'] as String,
+    name: json['name'] as String,
+    teacher: json['teacher'] as String,
+    room: json['room'] as String,
+    campus: json['campus'] as String,
+    number: json['number'] as String,
+    description: json['description'] as String,
+    weekday: json['weekday'] as int?,
+    startSection: json['startSection'] as int?,
+    endSection: json['endSection'] as int?,
+    weeks: (json['weeks'] as List).cast<int>(),
+    local: json['local'] as bool,
+  );
+}
+
+String weeksLabel(List<int> weeks) {
+  if (weeks.isEmpty) return '周次待定';
+  final ranges = <String>[];
+  var start = weeks.first;
+  var end = start;
+  for (final week in weeks.skip(1)) {
+    if (week == end + 1) {
+      end = week;
+    } else {
+      ranges.add(start == end ? '$start' : '$start–$end');
+      start = end = week;
+    }
+  }
+  ranges.add(start == end ? '$start' : '$start–$end');
+  return '${ranges.join('、')} 周';
+}
+
+class SemesterSchedule {
+  SemesterSchedule({
+    required this.term,
+    required DateTime firstMonday,
+    required List<Course> courses,
+    this.syncedAt,
+  }) : firstMonday = calendarDate(firstMonday),
+       courses = List.unmodifiable(courses) {
+    if (term.trim().isEmpty || firstMonday.weekday != DateTime.monday) {
+      throw const FormatException('学期或开学日期不正确；开学日期应为第一周周一');
+    }
+  }
+
+  final String term;
+  final DateTime firstMonday;
+  final List<Course> courses;
+  final DateTime? syncedAt;
+
+  int get weekCount => courses.fold(
+    20,
+    (count, course) =>
+        course.weeks.isEmpty ? count : math.max(count, course.weeks.last),
+  );
+
+  String get termLabel {
+    final parts = term.split('-');
+    if (parts.length != 3 || !['1', '2'].contains(parts[2])) return term;
+    return '${parts[0]}–${parts[1]} ${parts[2] == '1' ? '秋季' : '春季'}学期';
+  }
+
+  int weekAt(DateTime date) =>
+      (calendarDate(date).difference(firstMonday).inDays / 7).floor() + 1;
+
+  DateTime mondayAt(int week) =>
+      firstMonday.add(Duration(days: (week - 1) * 7));
+
+  List<Course> coursesAt(int week, {int? weekday}) =>
+      courses
+          .where(
+            (course) =>
+                course.occurs(week) &&
+                (weekday == null || course.weekday == weekday),
+          )
+          .toList()
+        ..sort((a, b) {
+          final day = a.weekday!.compareTo(b.weekday!);
+          if (day != 0) return day;
+          final section = a.startSection!.compareTo(b.startSection!);
+          return section != 0 ? section : a.name.compareTo(b.name);
+        });
+
+  SemesterSchedule copyWith({DateTime? firstMonday, List<Course>? courses}) =>
+      SemesterSchedule(
+        term: term,
+        firstMonday: firstMonday ?? this.firstMonday,
+        courses: courses ?? this.courses,
+        syncedAt: syncedAt,
+      );
+
+  Map<String, dynamic> toJson() => {
+    'term': term,
+    'firstMonday': dateText(firstMonday),
+    'courses': courses.map((course) => course.toJson()).toList(),
+    'syncedAt': syncedAt?.toIso8601String(),
+  };
+
+  factory SemesterSchedule.fromJson(Map<String, dynamic> json) =>
+      SemesterSchedule(
+        term: json['term'] as String,
+        firstMonday: DateTime.parse(json['firstMonday'] as String),
+        courses: (json['courses'] as List)
+            .map(
+              (row) => Course.fromJson(Map<String, dynamic>.from(row as Map)),
+            )
+            .toList(),
+        syncedAt: json['syncedAt'] == null
+            ? null
+            : DateTime.parse(json['syncedAt'] as String),
+      );
+}

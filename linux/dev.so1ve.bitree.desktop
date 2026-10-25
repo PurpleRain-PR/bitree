@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=BITree
+Name[zh_CN]=理枝
+Comment=Toolkit for Beijing Institute of Technology
+Comment[zh_CN]=北京理工大学工具集
+Exec=bitree
+Icon=dev.so1ve.bitree
+Terminal=false
+Categories=Education;Utility;
+StartupWMClass=dev.so1ve.bitree
