@@ -120,7 +120,7 @@ class SettingsScreen extends StatelessWidget {
               ),
             ],
           ),
-          content: const Text('北京理工大学工具集。\n理枝，谐音“荔枝”。'),
+          content: const Text('北京理工大学工具集。'),
           actions: [
             TextButton(
               onPressed: () {

@@ -5,7 +5,7 @@
 <h1 align="center">BITree 理枝</h1>
 
 <p align="center">
-  面向北京理工大学的跨平台工具集。理枝，谐音“荔枝”。
+  面向北京理工大学的跨平台工具集。
 </p>
 
 <p align="center">
