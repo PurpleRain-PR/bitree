@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math' as math;
 
 /// Calendar dates are UTC midnights so DST never changes academic week numbers.
@@ -77,7 +78,22 @@ class Course {
   final int? startSection;
   final int? endSection;
   final List<int> weeks;
+  // Includes manual additions and local edits of imported courses.
   final bool local;
+
+  String get stableId => local
+      ? id
+      : _schoolCourseId(
+          number: number,
+          name: name,
+          teacher: teacher,
+          campus: campus,
+          room: room,
+          weekday: weekday,
+          startSection: startSection,
+          endSection: endSection,
+          weeks: weeks,
+        );
 
   bool get isScheduled =>
       weekday != null && startSection != null && weeks.isNotEmpty;
@@ -97,7 +113,7 @@ class Course {
 
   bool occurs(int week) => isScheduled && weeks.contains(week);
 
-  factory Course.fromSchool(Map<String, dynamic> row, int index) {
+  factory Course.fromSchool(Map<String, dynamic> row) {
     int? optionalInt(String key) {
       final value = row[key]?.toString();
       if (value == null || value.isEmpty || value == '0') {
@@ -112,21 +128,41 @@ class Course {
       throw const FormatException('学校返回的上课周次格式不正确');
     }
 
+    final name = row['KCM']?.toString() ?? '';
+    final teacher = row['SKJS']?.toString() ?? '';
+    final room = row['JASMC']?.toString() ?? '';
+    final campus = row['XXXQMC']?.toString() ?? '';
+    final number = row['KCH']?.toString() ?? '';
+    final weekday = optionalInt('SKXQ');
+    final startSection = optionalInt('KSJC');
+    final endSection = optionalInt('JSJC');
+    final weeks = [
+      for (var i = 0; i < mask.length; i++)
+        if (mask[i] == '1') i + 1,
+    ];
+
     return Course(
-      id: 'school-$index',
-      name: row['KCM']?.toString() ?? '',
-      teacher: row['SKJS']?.toString() ?? '',
-      room: row['JASMC']?.toString() ?? '',
-      campus: row['XXXQMC']?.toString() ?? '',
-      number: row['KCH']?.toString() ?? '',
+      id: _schoolCourseId(
+        number: number,
+        name: name,
+        teacher: teacher,
+        campus: campus,
+        room: room,
+        weekday: weekday,
+        startSection: startSection,
+        endSection: endSection,
+        weeks: weeks,
+      ),
+      name: name,
+      teacher: teacher,
+      room: room,
+      campus: campus,
+      number: number,
       description: row['YPSJDD']?.toString() ?? '',
-      weekday: optionalInt('SKXQ'),
-      startSection: optionalInt('KSJC'),
-      endSection: optionalInt('JSJC'),
-      weeks: [
-        for (var i = 0; i < mask.length; i++)
-          if (mask[i] == '1') i + 1,
-      ],
+      weekday: weekday,
+      startSection: startSection,
+      endSection: endSection,
+      weeks: weeks,
     );
   }
 
@@ -160,6 +196,19 @@ class Course {
     local: json['local'] as bool,
   );
 }
+
+String _schoolCourseId({
+  required String number,
+  required String name,
+  required String teacher,
+  required String campus,
+  required String room,
+  required int? weekday,
+  required int? startSection,
+  required int? endSection,
+  required List<int> weeks,
+}) =>
+    'school-${jsonEncode([number, name, teacher, campus, room, weekday, startSection, endSection, weeks])}';
 
 String weeksLabel(List<int> weeks) {
   if (weeks.isEmpty) return '周次待定';

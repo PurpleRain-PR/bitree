@@ -147,7 +147,10 @@ class AppController extends ChangeNotifier {
           ? previous.courses.where((course) => course.local).toList()
           : <Course>[];
       final next = result.schedule.copyWith(
-        courses: [...result.schedule.courses, ...localCourses],
+        courses: {
+          for (final course in result.schedule.courses) course.id: course,
+          for (final course in localCourses) course.id: course,
+        }.values.toList(),
       );
 
       await _store.write(next);
@@ -165,13 +168,19 @@ class AppController extends ChangeNotifier {
     }
   }
 
-  Future<bool> saveCourse(Course course, {SemesterSchedule? semester}) async {
+  Future<bool> saveCourse(
+    Course course, {
+    Course? replacing,
+    SemesterSchedule? semester,
+  }) async {
     final current = semester ?? _schedule;
     if (current == null || busy) return false;
     return _save(
       current.copyWith(
         courses: [
-          ...current.courses.where((item) => item.id != course.id),
+          ...current.courses.where(
+            (item) => item.id != course.id && item.id != replacing?.id,
+          ),
           course,
         ],
       ),
@@ -195,7 +204,7 @@ class AppController extends ChangeNotifier {
   }
 
   Future<bool> deleteCourse(Course course) async {
-    if (_schedule == null || !course.local || busy) return false;
+    if (_schedule == null || busy) return false;
     return _save(
       _schedule!.copyWith(
         courses: [..._schedule!.courses.where((item) => item.id != course.id)],

@@ -130,38 +130,33 @@ class _CourseDetails extends StatelessWidget {
             ],
           ),
         ),
-        actions: course.local
-            ? Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
+        actions: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: FilledButton(
+                  onPressed: controller.busy ? null : onEdit,
+                  child: const Text('编辑课程'),
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: FilledButton(
-                        onPressed: controller.busy ? null : onEdit,
-                        child: const Text('编辑课程'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: theme.colorScheme.error,
-                        side: BorderSide(
-                          color: theme.colorScheme.error.withValues(alpha: 0.4),
-                        ),
-                      ),
-                      onPressed: controller.busy
-                          ? null
-                          : () => _deleteCourse(context, controller, course),
-                      icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                      label: const Text('删除'),
-                    ),
-                  ],
+              ),
+              const SizedBox(width: 12),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: theme.colorScheme.error,
+                  side: BorderSide(
+                    color: theme.colorScheme.error.withValues(alpha: 0.4),
+                  ),
                 ),
-              )
-            : null,
+                onPressed: controller.busy
+                    ? null
+                    : () => _deleteCourse(context, controller, course),
+                icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                label: const Text('删除'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -176,7 +171,7 @@ Future<void> _deleteCourse(
     context: context,
     builder: (context) => AlertDialog(
       title: const Text('删除这门课程？'),
-      content: Text('删除“${course.name}”后无法恢复。'),
+      content: Text('将从本地课表中删除“${course.name}”。'),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),

@@ -77,10 +77,15 @@ class _CourseEditorState extends State<_CourseEditor> {
       _error = null;
     });
     final course = Course(
-      id: widget.course?.id ?? 'local-${DateTime.now().microsecondsSinceEpoch}',
+      id:
+          widget.course?.stableId ??
+          'local-${DateTime.now().microsecondsSinceEpoch}',
       name: _name.text.trim(),
       teacher: _teacher.text.trim(),
       room: _room.text.trim(),
+      campus: widget.course?.campus ?? '',
+      number: widget.course?.number ?? '',
+      description: widget.course?.description ?? '',
       weekday: _day,
       startSection: _start,
       endSection: _end,
@@ -89,6 +94,7 @@ class _CourseEditorState extends State<_CourseEditor> {
     );
     final success = await widget.controller.saveCourse(
       course,
+      replacing: widget.course,
       semester: widget.controller.schedule == null
           ? SemesterSchedule(
               term: _term.text.trim(),
