@@ -68,7 +68,7 @@ class _TimetableState extends State<Timetable> {
         final columnWidth = (constraints.maxWidth - gutterWidth) / 7;
         final gridWidth = columnWidth * 7;
         final rowHeight = math.max(
-          (constraints.maxWidth < 680 ? 76.0 : 52.0) * scale,
+          (constraints.maxWidth < 680 ? 60.0 : 52.0) * scale,
           (constraints.maxHeight - headerHeight) / sectionTimes.length,
         );
         final gridHeight = rowHeight * sectionTimes.length;
