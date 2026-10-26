@@ -5,10 +5,10 @@ import '../app_controller.dart';
 import '../schedule/model.dart';
 import 'add_menu.dart';
 import 'agenda_list_tile.dart';
-import 'animated_sliver_list.dart';
 import 'app_page.dart';
 import 'campus_time_builder.dart';
 import 'data_errors.dart';
+import 'pull_to_reveal_list.dart';
 import 'school_import_button.dart';
 
 class CalendarScreen extends StatefulWidget {
@@ -59,9 +59,33 @@ class _CalendarScreenState extends State<CalendarScreen>
             return completed ? -order : order;
           });
     final days = <DateTime, List<AgendaEntry>>{};
+    final overdueDays = <DateTime, List<AgendaEntry>>{};
     for (final entry in visible) {
-      days.putIfAbsent(calendarDate(entry.startsAt), () => []).add(entry);
+      final group = entry.overdue(now) ? overdueDays : days;
+      group.putIfAbsent(calendarDate(entry.startsAt), () => []).add(entry);
     }
+
+    List<Widget> dayRows(Map<DateTime, List<AgendaEntry>> groups) => [
+      for (final day in groups.entries) ...[
+        _AgendaDateHeading(
+          key: ValueKey(('day', day.key)),
+          date: day.key,
+          now: now,
+        ),
+        for (final entry in day.value)
+          AgendaListTile(
+            key: ValueKey(entry.id),
+            controller: controller,
+            entry: entry,
+            now: now,
+          ),
+      ],
+    ];
+
+    final overdueCount = overdueDays.values.fold(
+      0,
+      (count, entries) => count + entries.length,
+    );
 
     return AppPage(
       title: const Text('日程'),
@@ -134,43 +158,27 @@ class _CalendarScreenState extends State<CalendarScreen>
           if (!controller.agenda.ready && controller.agenda.busy)
             const LinearProgressIndicator(minHeight: 3),
           Expanded(
-            child: CustomScrollView(
+            child: PullToRevealList(
               key: ValueKey((_kind, completed)),
-              slivers: [
-                AnimatedSliverChildren(
-                  children: [
-                    if (days.isEmpty && controller.agenda.ready)
-                      Padding(
-                        key: const ValueKey('empty-state'),
-                        padding: const EdgeInsets.symmetric(vertical: 64),
-                        child: Center(
-                          child: Text(
-                            completed ? '还没有已完成的日程' : '没有未完成的日程',
-                            style: TextStyle(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
-                            ),
-                          ),
-                        ),
+              hiddenLabel: '逾期日程 $overdueCount',
+              hiddenChildren: dayRows(overdueDays),
+              children: [
+                if (days.isEmpty && controller.agenda.ready)
+                  Padding(
+                    key: const ValueKey('empty-state'),
+                    padding: const EdgeInsets.symmetric(vertical: 64),
+                    child: Center(
+                      child: Text(
+                        completed
+                            ? '还没有已完成的日程'
+                            : overdueCount > 0
+                            ? '没有即将到来的日程'
+                            : '没有未完成的日程',
+                        style: TextStyle(color: scheme.onSurfaceVariant),
                       ),
-                    for (final day in days.entries) ...[
-                      _AgendaDateHeading(
-                        key: ValueKey(('day', day.key)),
-                        date: day.key,
-                        now: now,
-                      ),
-                      for (final entry in day.value)
-                        AgendaListTile(
-                          key: ValueKey(entry.id),
-                          controller: controller,
-                          entry: entry,
-                          now: now,
-                        ),
-                    ],
-                  ],
-                ),
-                const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
+                    ),
+                  ),
+                ...dayRows(days),
               ],
             ),
           ),
