@@ -5,6 +5,7 @@ import '../app_controller.dart';
 import '../schedule/model.dart';
 import 'agenda_editor.dart';
 import 'agenda_operations.dart';
+import 'completion_text.dart';
 import 'external_link.dart';
 import 'sheet_layout.dart';
 
@@ -27,6 +28,8 @@ Future<void> showAgendaEntry(
               .firstOrNull ??
           entry;
       final theme = Theme.of(context);
+      final pastDeadline =
+          current.isDeadline && current.dueAt.isBefore(campusNow());
       void edit() {
         Navigator.pop(sheetContext);
         editAgenda(pageContext, controller, entry: current);
@@ -71,63 +74,58 @@ Future<void> showAgendaEntry(
           ),
           content: Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SelectableText(
-                  current.title,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    decoration: current.done
-                        ? TextDecoration.lineThrough
-                        : null,
+            child: SelectionArea(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CompletionText(
+                    current.title,
+                    completed: current.done,
+                    style: theme.textTheme.titleLarge,
                   ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  '${agendaDateLabel(current.startsAt)}\n${current.timeLabel}',
-                  style: theme.textTheme.bodyLarge,
-                ),
-                if (current.done || current.overdue(campusNow())) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    current.done ? '已完成' : '已逾期',
-                    style: TextStyle(
-                      color: current.done
-                          ? theme.colorScheme.onSurfaceVariant
-                          : theme.colorScheme.error,
-                    ),
-                  ),
-                ],
-                if (current.location.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  SelectableText(current.location),
-                ],
-                if (current.source != null || current.course.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    [
-                      if (current.source != null) current.source!.label,
-                      if (current.course.isNotEmpty) current.course,
-                    ].join('  '),
-                    style: theme.textTheme.bodyMedium,
-                  ),
-                ],
-                if (current.url case final url?)
-                  TextButton.icon(
-                    onPressed: () =>
-                        openExternalLink(context, url, failureTitle: '无法打开作业'),
-                    icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                    label: const Text('打开作业'),
-                  ),
-                if (current.notes.isNotEmpty) ...[
                   const SizedBox(height: 16),
-                  SelectableText(
-                    current.notes,
+                  CompletionText(
+                    '${agendaDateLabel(current.startsAt)}\n'
+                    '${current.timeLabel}${pastDeadline ? '  已截止' : ''}',
+                    completed: current.done,
                     style: theme.textTheme.bodyLarge,
                   ),
+                  if (current.location.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    CompletionText(current.location, completed: current.done),
+                  ],
+                  if (current.source != null || current.course.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    CompletionText(
+                      [
+                        if (current.source != null) current.source!.label,
+                        if (current.course.isNotEmpty) current.course,
+                      ].join('  '),
+                      completed: current.done,
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ],
+                  if (current.url case final url?)
+                    TextButton.icon(
+                      onPressed: () => openExternalLink(
+                        context,
+                        url,
+                        failureTitle: '无法打开作业',
+                      ),
+                      icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                      label: const Text('打开作业'),
+                    ),
+                  if (current.notes.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    CompletionText(
+                      current.notes,
+                      completed: current.done,
+                      style: theme.textTheme.bodyLarge,
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
           actions: SafeArea(
