@@ -10,6 +10,7 @@ import '../agenda/model.dart';
 import '../schedule/layout.dart';
 import '../schedule/model.dart';
 import '../schedule/selection.dart';
+import '../schedule/time_position.dart';
 import 'add_menu.dart';
 import 'calendar_block.dart';
 import 'calendar_list.dart';
@@ -22,12 +23,16 @@ class Timetable extends StatefulWidget {
     required this.week,
     required this.initialScrollOffset,
     required this.onScroll,
+    this.timeRevealRequest,
+    this.onTimeRevealHandled,
   });
 
   final AppController controller;
   final int week;
   final double initialScrollOffset;
   final ValueChanged<double> onScroll;
+  final int? timeRevealRequest;
+  final VoidCallback? onTimeRevealHandled;
 
   @override
   State<Timetable> createState() => _TimetableState();
@@ -40,6 +45,36 @@ class _TimetableState extends State<Timetable> {
   ({int day, int anchor, int end})? _selection;
   Offset? _dragPosition;
   Timer? _scrollTimer;
+  int? _handledTimeReveal;
+
+  void _revealCurrentTime(double rowHeight) {
+    final request = widget.timeRevealRequest;
+    if (request == null || request == _handledTimeReveal) return;
+    _handledTimeReveal = request;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          widget.timeRevealRequest != request ||
+          widget.controller.week != widget.week ||
+          !_vertical.hasClients) {
+        return;
+      }
+      widget.onTimeRevealHandled?.call();
+      final now = campusNow();
+      final schedule = widget.controller.schedule;
+      if (schedule == null || schedule.weekAt(now) != widget.week) return;
+      final offset = sectionOffsetAt(now);
+
+      final position = _vertical.position;
+      if (!position.hasContentDimensions || position.viewportDimension <= 0) {
+        return;
+      }
+      // Leave context above and below the line; clamp near the day's edges.
+      final target = (offset * rowHeight - position.viewportDimension / 2)
+          .clamp(position.minScrollExtent, position.maxScrollExtent)
+          .toDouble();
+      _vertical.jumpTo(target);
+    });
+  }
 
   @override
   void initState() {
@@ -212,6 +247,7 @@ class _TimetableState extends State<Timetable> {
               sectionTimes.length,
         );
         final gridHeight = rowHeight * sectionTimes.length;
+        _revealCurrentTime(rowHeight);
         return Column(
           children: [
             SizedBox(

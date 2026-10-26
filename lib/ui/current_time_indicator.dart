@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../schedule/model.dart';
+import '../schedule/time_position.dart';
 
 /// A non-interactive overlay for the timetable's equal-height section grid.
 class CurrentTimeIndicator extends StatefulWidget {
@@ -78,10 +79,9 @@ class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator>
   @override
   Widget build(BuildContext context) {
     final day = calendarDate(_now).difference(calendarDate(widget.monday)).inDays;
-    final offset = _sectionOffset(_now);
+    final offset = sectionOffsetAt(_now);
     if (day < 0 ||
         day >= 7 ||
-        offset == null ||
         widget.columnWidth <= _horizontalInset * 2 ||
         widget.rowHeight * sectionTimes.length < _lineHeight) {
       return const SizedBox.shrink();
@@ -112,26 +112,4 @@ class _CurrentTimeIndicatorState extends State<CurrentTimeIndicator>
       ),
     );
   }
-}
-
-int _minutes(String time) {
-  final parts = time.split(':');
-  return int.parse(parts[0]) * 60 + int.parse(parts[1]);
-}
-
-/// Breaks have no height in this grid, so the line waits at the next section.
-double? _sectionOffset(DateTime now) {
-  final minute = now.hour * 60 + now.minute + now.second / 60;
-  if (minute < _minutes(sectionTimes.first.$1) ||
-      minute > _minutes(sectionTimes.last.$2)) {
-    return null;
-  }
-
-  for (var index = 0; index < sectionTimes.length; index++) {
-    final start = _minutes(sectionTimes[index].$1);
-    final end = _minutes(sectionTimes[index].$2);
-    if (minute < start) return index.toDouble();
-    if (minute <= end) return index + (minute - start) / (end - start);
-  }
-  return null;
 }
