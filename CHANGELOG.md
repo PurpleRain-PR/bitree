@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- feat(auth): automatically fall back to WebVPN for school access ([ce04053](https://github.com/so1ve/bitree/commit/ce04053d8704700349da47062d2b83af43f02bc4))
 - fix(agenda): bottom-align overdue entries only when they fit ([e617969](https://github.com/so1ve/bitree/commit/e6179698d343879a3315429898a0b0e2c02b0dff))
 - feat(home): implement compact date agenda layout ([f4665e0](https://github.com/so1ve/bitree/commit/f4665e0c4f55dd8b9e50fd4fb604e9d4bdf8efa4))
 - fix(agenda): top-align overdue entries and restore red controls ([a3e2c67](https://github.com/so1ve/bitree/commit/a3e2c67c5b44d56e83b52288dfafcd3fe84824b9))
