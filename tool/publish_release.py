@@ -5,7 +5,7 @@ import os
 import subprocess
 from pathlib import Path
 
-from changelog import release_notes, update_changelog
+from changelog import release_notes, unreleased_notes
 
 
 def gh(*arguments):
@@ -54,11 +54,10 @@ def main():
     ):
         raise SystemExit(f"{tag} 已发布或存在其他提交的草稿。")
 
-    if args.channel == "dev":
-        update_changelog()
     notes = Path("dist/release-notes.md")
     notes.write_text(
-        release_notes("Unreleased" if args.channel == "dev" else tag), encoding="utf-8"
+        unreleased_notes() if args.channel == "dev" else release_notes(tag),
+        encoding="utf-8",
     )
 
     if existing is None:

@@ -5,11 +5,7 @@ import '../app_controller.dart';
 import 'timetable.dart';
 
 class WeekPager extends StatefulWidget {
-  const WeekPager({
-    super.key,
-    required this.controller,
-    this.active = true,
-  });
+  const WeekPager({super.key, required this.controller, this.active = true});
 
   final AppController controller;
   final bool active;
@@ -22,19 +18,11 @@ class _WeekPagerState extends State<WeekPager> {
   late final PageController _pages;
   late int _week;
   double _scrollOffset = 0;
-  int _entry = 0;
-  int? _revealWeek;
-
-  void _requestTimeReveal() {
-    _entry++;
-    _revealWeek = widget.controller.week;
-  }
 
   @override
   void initState() {
     super.initState();
     _week = widget.controller.week;
-    if (widget.active) _requestTimeReveal();
     _pages = PageController(
       initialPage: widget.controller.weeks.indexOf(_week),
       keepPage: false,
@@ -44,15 +32,8 @@ class _WeekPagerState extends State<WeekPager> {
   @override
   void didUpdateWidget(covariant WeekPager oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!widget.active) {
-      _revealWeek = null;
-    } else if (!oldWidget.active) {
-      _requestTimeReveal();
-    }
     final week = widget.controller.week;
     if (_week == week) return;
-    // Changing weeks must not carry an unconsumed entry request with it.
-    _revealWeek = null;
     _week = week;
     final page = widget.controller.weeks.indexOf(week);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -87,7 +68,6 @@ class _WeekPagerState extends State<WeekPager> {
         controller: _pages,
         itemCount: weeks.length,
         onPageChanged: (page) {
-          if (_week != weeks[page]) _revealWeek = null;
           _week = weeks[page];
           if (widget.controller.week != _week) {
             widget.controller.selectWeek(_week);
@@ -98,10 +78,7 @@ class _WeekPagerState extends State<WeekPager> {
           week: weeks[page],
           initialScrollOffset: _scrollOffset,
           onScroll: (offset) => _scrollOffset = offset,
-          timeRevealRequest: widget.active && _revealWeek == weeks[page]
-              ? _entry
-              : null,
-          onTimeRevealHandled: () => _revealWeek = null,
+          active: widget.active && weeks[page] == widget.controller.week,
         ),
       ),
     );
