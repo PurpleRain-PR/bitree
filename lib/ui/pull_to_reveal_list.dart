@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 
 import 'animated_sliver_list.dart';
@@ -99,86 +101,100 @@ class _PullToRevealListState extends State<PullToRevealList> {
       TargetPlatform.windows => 16.0,
       _ => 0.0,
     };
-    return Listener(
-      onPointerUp: (_) => _release(),
-      onPointerCancel: (_) => _dragging = false,
-      child: NotificationListener<ScrollNotification>(
-        onNotification: _onScroll,
-        child: ScrollConfiguration(
-          behavior: behavior.copyWith(overscroll: false, scrollbars: false),
-          child: behavior.buildScrollbar(
-            context,
-            Padding(
-              padding: EdgeInsetsDirectional.only(end: scrollbarGutter),
-              child: ClipRect(
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    CustomScrollView(
-                      controller: _scroll,
-                      center: _currentItems,
-                      physics: _canReveal
-                          ? const _TopPullPhysics(
-                              parent: AlwaysScrollableScrollPhysics(),
-                            )
-                          : const ClampingScrollPhysics(),
-                      slivers: [
-                        // Slivers before the center grow upward, leaving the current items anchored.
-                        if (_revealed) ...[
-                          if (widget.hiddenChildren.isNotEmpty)
-                            const SliverFillRemaining(
-                              hasScrollBody: false,
-                              child: SizedBox.shrink(),
-                            ),
-                          AnimatedSliverChildren(
-                            key: const ValueKey('hidden'),
-                            children: widget.hiddenChildren.reversed.toList(),
-                          ),
-                        ],
-                        AnimatedSliverChildren(
-                          key: _currentItems,
-                          children: [
+    return Semantics(
+      customSemanticsActions: {
+        if (_canReveal)
+          CustomSemanticsAction(label: '查看${widget.hiddenLabel}'): () =>
+              _setRevealed(true),
+      },
+      child: Listener(
+        onPointerUp: (_) => _release(),
+        onPointerCancel: (_) => _dragging = false,
+        child: NotificationListener<ScrollNotification>(
+          onNotification: _onScroll,
+          child: ScrollConfiguration(
+            behavior: behavior.copyWith(
+              overscroll: false,
+              scrollbars: false,
+              dragDevices: {...behavior.dragDevices, PointerDeviceKind.mouse},
+            ),
+            child: behavior.buildScrollbar(
+              context,
+              Padding(
+                padding: EdgeInsetsDirectional.only(end: scrollbarGutter),
+                child: ClipRect(
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      CustomScrollView(
+                        controller: _scroll,
+                        center: _currentItems,
+                        physics: _canReveal
+                            ? const _TopPullPhysics(
+                                parent: AlwaysScrollableScrollPhysics(),
+                              )
+                            : const ClampingScrollPhysics(),
+                        slivers: [
+                          // Slivers before the center grow upward, leaving the current items anchored.
+                          if (_revealed) ...[
                             if (widget.hiddenChildren.isNotEmpty)
-                              Center(
-                                key: const ValueKey('reveal'),
-                                child: TextButton(
-                                  onPressed: () => _setRevealed(!_revealed),
-                                  child: Text(
-                                    '${_revealed ? '收起' : '下拉查看'}${widget.hiddenLabel}',
-                                    textAlign: TextAlign.center,
+                              const SliverFillRemaining(
+                                hasScrollBody: false,
+                                child: SizedBox.shrink(),
+                              ),
+                            AnimatedSliverChildren(
+                              key: const ValueKey('hidden'),
+                              children: widget.hiddenChildren.reversed.toList(),
+                            ),
+                          ],
+                          AnimatedSliverChildren(
+                            key: _currentItems,
+                            children: [
+                              if (_revealed && widget.hiddenChildren.isNotEmpty)
+                                Center(
+                                  key: const ValueKey('reveal'),
+                                  child: TextButton(
+                                    onPressed: () => _setRevealed(false),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: scheme.onSurfaceVariant,
+                                    ),
+                                    child: const Text('收回'),
                                   ),
                                 ),
+                              ...widget.children,
+                            ],
+                          ),
+                          const SliverPadding(
+                            padding: EdgeInsets.only(bottom: 24),
+                          ),
+                        ],
+                      ),
+                      if (_canReveal && _pull > 0)
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          height: math.min(_pull, 96),
+                          child: IgnorePointer(
+                            child: Center(
+                              child: Text(
+                                '${_pull >= _threshold ? '松开查看' : '下拉查看'}'
+                                '${widget.hiddenLabel}',
+                                style: TextStyle(
+                                  color: scheme.onSurfaceVariant,
+                                ),
                               ),
-                            ...widget.children,
-                          ],
-                        ),
-                        const SliverPadding(
-                          padding: EdgeInsets.only(bottom: 24),
-                        ),
-                      ],
-                    ),
-                    if (_canReveal && _pull > 0)
-                      Positioned(
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        height: math.min(_pull, 96),
-                        child: IgnorePointer(
-                          child: Center(
-                            child: Text(
-                              _pull >= _threshold ? '松开显示' : '继续下拉',
-                              style: TextStyle(color: scheme.onSurfaceVariant),
                             ),
                           ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-            ScrollableDetails(
-              direction: AxisDirection.down,
-              controller: _scroll,
+              ScrollableDetails(
+                direction: AxisDirection.down,
+                controller: _scroll,
+              ),
             ),
           ),
         ),

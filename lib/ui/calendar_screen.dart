@@ -5,6 +5,7 @@ import '../app_controller.dart';
 import '../schedule/model.dart';
 import 'add_menu.dart';
 import 'agenda_list_tile.dart';
+import 'app_menu_anchor.dart';
 import 'app_page.dart';
 import 'campus_time_builder.dart';
 import 'data_errors.dart';
@@ -88,7 +89,18 @@ class _CalendarScreenState extends State<CalendarScreen>
     );
 
     return AppPage(
-      title: const Text('日程'),
+      title: Row(
+        children: [
+          const Text('日程'),
+          const SizedBox(width: 8),
+          Flexible(
+            child: _AgendaKindFilter(
+              value: _kind,
+              onChanged: (kind) => setState(() => _kind = kind),
+            ),
+          ),
+        ],
+      ),
       actions: [
         AddButton(controller: controller, includeCourse: false),
         SchoolImportButton(controller: controller, includeSchedule: false),
@@ -97,43 +109,6 @@ class _CalendarScreenState extends State<CalendarScreen>
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           DataErrors(controller: controller),
-          Padding(
-            padding: const EdgeInsets.only(top: 4, bottom: 10),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              children: [
-                for (final kind in [
-                  null,
-                  AgendaKind.deadline,
-                  AgendaKind.event,
-                  AgendaKind.exam,
-                ])
-                  ChoiceChip(
-                    label: Text(kind?.label ?? '全部'),
-                    selected: _kind == kind,
-                    showCheckmark: false,
-                    backgroundColor: scheme.surface,
-                    selectedColor: scheme.primaryContainer,
-                    labelStyle: TextStyle(
-                      fontSize: 13,
-                      fontWeight: _kind == kind
-                          ? FontWeight.w500
-                          : FontWeight.w400,
-                      color: _kind == kind
-                          ? scheme.onPrimaryContainer
-                          : scheme.onSurfaceVariant,
-                    ),
-                    side: BorderSide(
-                      color: _kind == kind
-                          ? Colors.transparent
-                          : scheme.outlineVariant,
-                    ),
-                    onSelected: (_) => setState(() => _kind = kind),
-                  ),
-              ],
-            ),
-          ),
           TabBar(
             controller: _status,
             isScrollable: true,
@@ -160,7 +135,7 @@ class _CalendarScreenState extends State<CalendarScreen>
           Expanded(
             child: PullToRevealList(
               key: ValueKey((_kind, completed)),
-              hiddenLabel: '逾期日程 $overdueCount',
+              hiddenLabel: '$overdueCount项逾期日程',
               hiddenChildren: dayRows(overdueDays),
               children: [
                 if (days.isEmpty && controller.agenda.ready)
@@ -183,6 +158,74 @@ class _CalendarScreenState extends State<CalendarScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AgendaKindFilter extends StatelessWidget {
+  const _AgendaKindFilter({required this.value, required this.onChanged});
+
+  final AgendaKind? value;
+  final ValueChanged<AgendaKind?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return AppMenuAnchor(
+      menuChildren: [
+        for (final kind in [
+          null,
+          AgendaKind.deadline,
+          AgendaKind.event,
+          AgendaKind.exam,
+        ])
+          Semantics(
+            selected: value == kind,
+            child: MenuItemButton(
+              onPressed: () => onChanged(kind),
+              trailingIcon: value == kind
+                  ? const Icon(Icons.check_rounded, size: 18)
+                  : const SizedBox(width: 18),
+              child: Text(kind?.label ?? '全部'),
+            ),
+          ),
+      ],
+      builder: (context, menu, _) => Semantics(
+        label: '日程类型',
+        expanded: menu.isOpen,
+        child: TextButton(
+          onPressed: () => menu.isOpen ? menu.close() : menu.open(),
+          style: TextButton.styleFrom(
+            foregroundColor: value == null
+                ? scheme.onSurfaceVariant
+                : scheme.primary,
+            minimumSize: const Size(48, 48),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            textStyle: theme.textTheme.bodyMedium,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  value?.label ?? '全部',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(
+                menu.isOpen
+                    ? Icons.expand_less_rounded
+                    : Icons.expand_more_rounded,
+                size: 18,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
