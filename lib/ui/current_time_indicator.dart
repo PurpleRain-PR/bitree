@@ -13,7 +13,7 @@ class CurrentTimeIndicator extends StatelessWidget {
     required this.rowHeight,
   });
 
-  static const _lineHeight = 3.0;
+  static const _lineHeight = 2.0;
   static const _horizontalInset = 3.0;
 
   final DateTime now;
@@ -25,14 +25,16 @@ class CurrentTimeIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     final day = calendarDate(now).difference(calendarDate(monday)).inDays;
     final gridHeight = rowHeight * sectionTimes.length;
-    if (day < 0 ||
+    final section = sectionOffsetAt(now);
+    if (section == null ||
+        day < 0 ||
         day >= 7 ||
         columnWidth <= _horizontalInset * 2 ||
         gridHeight < _lineHeight) {
       return const SizedBox.shrink();
     }
 
-    final top = (sectionOffsetAt(now) * rowHeight - _lineHeight / 2)
+    final top = (section * rowHeight - _lineHeight / 2)
         .clamp(0.0, gridHeight - _lineHeight)
         .toDouble();
     return IgnorePointer(
@@ -46,8 +48,20 @@ class CurrentTimeIndicator extends StatelessWidget {
               height: _lineHeight,
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.error,
+                  color: Theme.of(context).colorScheme.primary,
                   borderRadius: BorderRadius.circular(_lineHeight / 2),
+                ),
+              ),
+            ),
+            Positioned(
+              left: day * columnWidth + _horizontalInset - 2,
+              top: (top - 1.5).clamp(0.0, gridHeight - 5),
+              width: 5,
+              height: 5,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
+                  shape: BoxShape.circle,
                 ),
               ),
             ),

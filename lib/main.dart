@@ -1,6 +1,6 @@
-import 'package:flutter/foundation.dart';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -10,15 +10,26 @@ import 'data/agenda_store.dart';
 import 'data/schedule_store.dart';
 import 'data/school_service.dart';
 import 'data/school_storage.dart';
+import 'diagnostics.dart';
 import 'ui/app_screen.dart';
 import 'ui/theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  LicenseRegistry.addLicense(() async* {
-    final license = await rootBundle.loadString('LICENSE');
-    yield LicenseEntryWithLineBreaks(const ['BITree'], license);
-  });
+  final diagnostics = AppDiagnostics.instance;
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    diagnostics.error(
+      'Flutter',
+      details.exception,
+      details.stack ?? StackTrace.current,
+    );
+  };
+  WidgetsBinding.instance.platformDispatcher.onError = (failure, stack) {
+    diagnostics.report('未处理的异常', failure, stack);
+    return true;
+  };
+  diagnostics.info('启动 BITree（${Platform.operatingSystem}）');
 
   final controller = AppController(
     store: ScheduleStore(),
@@ -28,7 +39,7 @@ void main() {
     agenda: AgendaController(AgendaStore()),
   );
   runApp(BitreeApp(controller: controller));
-  controller.initialize();
+  WidgetsBinding.instance.addPostFrameCallback((_) => controller.initialize());
 }
 
 class BitreeApp extends StatelessWidget {

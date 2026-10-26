@@ -11,18 +11,17 @@ class CourseTile extends StatelessWidget {
     required this.course,
     required this.controller,
     required this.isToday,
+    required this.isCurrent,
   });
 
   final Course course;
   final AppController controller;
   final bool isToday;
+  final bool isCurrent;
 
   @override
   Widget build(BuildContext context) {
     final colors = courseColors(context, course.colorIndex);
-    final fill = isToday
-        ? Color.lerp(colors.fill, colors.accent, 0.24)!
-        : colors.fill;
 
     return Semantics(
       button: true,
@@ -32,10 +31,10 @@ class CourseTile extends StatelessWidget {
         child: Tooltip(
           message: '${course.name}\n${course.room}\n${course.teacher}',
           child: Material(
-            color: fill,
+            color: colors.fill,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(6),
-              side: isToday
+              side: isCurrent
                   ? BorderSide(color: colors.accent, width: 1.5)
                   : BorderSide.none,
             ),
@@ -47,18 +46,18 @@ class CourseTile extends StatelessWidget {
                   final narrow = constraints.maxWidth < 100;
                   final fontSize = narrow ? 12.0 : 14.0;
                   final scaler = MediaQuery.textScalerOf(context);
-                  final titleHeight = scaler.scale(fontSize) * 1.25;
-                  final roomLineHeight = scaler.scale(fontSize - 1) * 1.25;
-                  final available = constraints.maxHeight - 8;
+                  final titleHeight = scaler.scale(fontSize) * 1.4;
+                  final roomLineHeight = scaler.scale(fontSize - 1) * 1.35;
+                  final available = constraints.maxHeight - 12;
                   final roomLines = course.room.isEmpty
                       ? 0
                       : ((available - titleHeight * 3 - 4) / roomLineHeight)
                             .floor()
-                            .clamp(0, narrow ? 4 : 2);
+                            .clamp(0, 2);
                   final roomStyle = TextStyle(
                     fontSize: fontSize - 1,
-                    height: 1.25,
-                    color: colors.text,
+                    height: 1.35,
+                    color: colors.text.withValues(alpha: 0.8),
                   );
                   var roomHeight = 0.0;
                   if (roomLines > 0) {
@@ -80,26 +79,24 @@ class CourseTile extends StatelessWidget {
                   }
                   final titleLines = ((available - roomHeight) / titleHeight)
                       .floor()
-                      .clamp(1, 5);
+                      .clamp(1, 6);
                   return Padding(
                     padding: EdgeInsets.symmetric(
                       horizontal: narrow ? 3 : 10,
-                      vertical: 4,
+                      vertical: 6,
                     ),
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           course.name,
-                          textAlign: TextAlign.center,
+                          textAlign: TextAlign.start,
                           maxLines: titleLines,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: fontSize,
-                            height: 1.25,
-                            fontWeight: isToday
-                                ? FontWeight.w700
-                                : FontWeight.w600,
+                            height: 1.4,
+                            fontWeight: FontWeight.w600,
                             color: colors.text,
                           ),
                         ),
@@ -107,7 +104,7 @@ class CourseTile extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text(
                             course.room,
-                            textAlign: TextAlign.center,
+                            textAlign: TextAlign.start,
                             maxLines: roomLines,
                             overflow: TextOverflow.ellipsis,
                             style: roomStyle,

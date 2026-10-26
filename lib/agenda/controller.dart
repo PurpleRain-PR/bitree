@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../data/agenda_store.dart';
+import '../diagnostics.dart';
 import 'model.dart';
 
 class AgendaController extends ChangeNotifier {
@@ -10,7 +11,6 @@ class AgendaController extends ChangeNotifier {
   List<AgendaEntry> _entries = const [];
   bool ready = false;
   bool busy = false;
-  String? error;
 
   Iterable<AgendaEntry> get entries =>
       _entries.where((entry) => !entry.deleted);
@@ -22,13 +22,12 @@ class AgendaController extends ChangeNotifier {
     if (busy) return;
     busy = true;
     ready = false;
-    error = null;
     notifyListeners();
     try {
       _entries = List.unmodifiable(await _store.read());
       ready = true;
-    } catch (failure) {
-      error = '读取安排失败：$failure';
+    } catch (failure, stack) {
+      AppDiagnostics.instance.report('读取日程', failure, stack);
     } finally {
       busy = false;
       notifyListeners();
@@ -84,16 +83,20 @@ class AgendaController extends ChangeNotifier {
   }
 
   Future<bool> _write(List<AgendaEntry> next) async {
-    if (!ready || busy) return false;
+    if (!ready || busy) {
+      AppDiagnostics.instance.notice(
+        busy ? '日程正在保存，请稍后重试。' : '日程尚未加载，请先重新加载日程。',
+      );
+      return false;
+    }
     busy = true;
-    error = null;
     notifyListeners();
     try {
       await _store.write(next);
       _entries = List.unmodifiable(next);
       return true;
-    } catch (failure) {
-      error = '保存安排失败：$failure';
+    } catch (failure, stack) {
+      AppDiagnostics.instance.report('保存日程', failure, stack);
       return false;
     } finally {
       busy = false;

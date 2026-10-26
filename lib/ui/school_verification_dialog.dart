@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../data/school_verification.dart';
-import '../error_message.dart';
+import '../diagnostics.dart';
 
 Future<String?> verifySchoolLogin(
   BuildContext context,
@@ -30,7 +30,6 @@ class _VerificationDialogState extends State<_VerificationDialog> {
   final _code = TextEditingController();
   final _form = GlobalKey<FormState>();
   Uint8List? _image;
-  String? _error;
   bool _loading = false;
   bool _submitting = false;
   int _resendSeconds = 0;
@@ -49,7 +48,6 @@ class _VerificationDialogState extends State<_VerificationDialog> {
   Future<void> _refresh() async {
     setState(() {
       _loading = true;
-      _error = null;
     });
     try {
       switch (widget.request) {
@@ -66,8 +64,8 @@ class _VerificationDialogState extends State<_VerificationDialog> {
             setState(() => _resendSeconds--);
           });
       }
-    } catch (error) {
-      if (mounted) setState(() => _error = errorMessage(error));
+    } catch (failure, stack) {
+      AppDiagnostics.instance.report('获取登录验证码', failure, stack);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -77,7 +75,6 @@ class _VerificationDialogState extends State<_VerificationDialog> {
     if (_submitting || _loading || !_form.currentState!.validate()) return;
     setState(() {
       _submitting = true;
-      _error = null;
     });
     try {
       final code = _code.text.trim();
@@ -85,8 +82,8 @@ class _VerificationDialogState extends State<_VerificationDialog> {
         await checkCode(code);
       }
       if (mounted) Navigator.pop(context, code);
-    } catch (error) {
-      if (mounted) setState(() => _error = errorMessage(error));
+    } catch (failure, stack) {
+      AppDiagnostics.instance.report('校验登录验证码', failure, stack);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -160,11 +157,6 @@ class _VerificationDialogState extends State<_VerificationDialog> {
                 ),
               ),
             ),
-            if (_error != null)
-              Text(
-                _error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
           ],
         ),
       ),

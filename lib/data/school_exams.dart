@@ -22,9 +22,7 @@ Future<({String term, List<AgendaEntry> exams})> fetchSchoolExams(
     final times = RegExp(r'(\d{2}):(\d{2})')
         .allMatches(row['KSSJMS'] as String)
         .toList();
-    if (times.length != 2) {
-      throw FormatException('无法识别考试时间：${row['KSSJMS']}');
-    }
+
     DateTime at(RegExpMatch time) => DateTime.utc(
       date.year,
       date.month,
@@ -32,14 +30,15 @@ Future<({String term, List<AgendaEntry> exams})> fetchSchoolExams(
       int.parse(time[1]!),
       int.parse(time[2]!),
     );
-    final start = at(times.first);
+
+    final start = at(times[0]);
     final subject = row['KCM'] as String;
     return AgendaEntry(
       id: 'exam-$term-${row['KCH']}-$subject-${start.toIso8601String()}',
       title: subject,
       kind: AgendaKind.exam,
       startsAt: start,
-      endsAt: at(times.last),
+      endsAt: at(times[1]),
       location: row['JASMC'] as String? ?? '',
       notes: [
         if (row['ZWH'] case final String seat when seat.isNotEmpty) '座位号：$seat',

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:html/parser.dart' as html;
 
 import '../agenda/deadline_source.dart';
@@ -24,23 +26,107 @@ Future<List<AgendaEntry>> fetchLexueDeadlines(
     },
     stopAtLogin: true,
   );
-  final block = html.parse(exported.text).querySelector('.calendarurl');
-  final address = block == null
-      ? null
-      : RegExp(r'https://\S+').firstMatch(block.text)?[0];
-  if (address == null) throw const SchoolRequestError('乐学没有返回日程导出地址。');
+  final block = html.parse(exported.text).querySelector('.calendarurl')!;
+  final address = RegExp(r'https://\S+').firstMatch(block.text)![0]!;
   final url = Uri.parse(address);
   if (url.host != source.host || url.userInfo.isNotEmpty) {
     throw const SchoolRequestError('乐学返回的日程地址无效。');
   }
   final calendar = await session.request(url, stopAtLogin: true);
-  return _parseLexueCalendar(calendar.text);
+  final entries = _parseLexueCalendar(calendar.text);
+  final completed = await _completedLexueEvents(session, sesskey, entries);
+  return [
+    for (final entry in entries)
+      entry.copyWith(done: completed.contains(entry.id)),
+  ];
+}
+
+Future<Set<String>> _completedLexueEvents(
+  SchoolSession session,
+  String sesskey,
+  List<AgendaEntry> entries,
+) async {
+  if (entries.isEmpty) return {};
+
+  // Moodle's ICS UID is the calendar event ID followed by the site's hostname.
+  final events = await _lexueAjax(session, sesskey, [
+    for (final entry in entries)
+      (
+        method: 'core_calendar_get_calendar_event_by_id',
+        args: {
+          'eventid': int.parse(
+            entry.id.substring('lexue-'.length).split('@').first,
+          ),
+        },
+      ),
+  ]);
+  final modulesByEvent = {
+    for (var index = 0; index < events.length; index++)
+      if (events[index]['event']['instance'] case final int moduleId)
+        entries[index].id: moduleId,
+  };
+  final moduleIds = modulesByEvent.values.toSet().toList();
+  if (moduleIds.isEmpty) return {};
+
+  // Read course-list fragments, which expose completion without viewing an activity.
+  final modules = await _lexueAjax(session, sesskey, [
+    for (final id in moduleIds)
+      (method: 'core_course_get_module', args: {'id': id}),
+  ]);
+  final completedModules = <int>{};
+  for (var index = 0; index < modules.length; index++) {
+    final activity = html.parseFragment(modules[index] as String);
+    final manuallyCompleted =
+        activity.querySelector('[data-toggletype="manual:undo"]') != null;
+    final conditions = activity.querySelectorAll(
+      '[data-region="completionrequirements"] [role="listitem"]',
+    );
+    final automaticallyCompleted =
+        conditions.isNotEmpty &&
+        conditions.every(
+          (condition) => condition.classes.contains('badge-success'),
+        );
+
+    if (manuallyCompleted || automaticallyCompleted) {
+      completedModules.add(moduleIds[index]);
+    }
+  }
+  return {
+    for (final entry in modulesByEvent.entries)
+      if (completedModules.contains(entry.value)) entry.key,
+  };
+}
+
+Future<List<dynamic>> _lexueAjax(
+  SchoolSession session,
+  String sesskey,
+  List<({String method, Map<String, Object> args})> calls,
+) async {
+  final response = await session.request(
+    DeadlineSource.lexue.origin
+        .resolve('/lib/ajax/service.php')
+        .replace(queryParameters: {'sesskey': sesskey}),
+    jsonBody: [
+      for (final (index, call) in calls.indexed)
+        {'index': index, 'methodname': call.method, 'args': call.args},
+    ],
+    headers: {
+      'Accept': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+    },
+    stopAtLogin: true,
+  );
+  final results = (jsonDecode(response.text) as List).cast<Map>();
+  return [
+    for (final result in results)
+      if (result['error'] == true)
+        throw SchoolRequestError(result['exception']['message'] as String)
+      else
+        result['data'],
+  ];
 }
 
 List<AgendaEntry> _parseLexueCalendar(String calendar) {
-  if (!calendar.contains('BEGIN:VCALENDAR')) {
-    throw const SchoolRequestError('乐学没有返回日程数据，请重试。');
-  }
   final unfolded = calendar.replaceAll(RegExp(r'\r?\n[ \t]'), '');
   final result = <AgendaEntry>[];
   for (final block in unfolded.split('BEGIN:VEVENT').skip(1)) {
@@ -98,17 +184,14 @@ String _unescapeCalendarText(String value) => value.replaceAllMapped(
 );
 
 DateTime _calendarDate(String value, String parameters) {
-  final match = RegExp(
-    r'^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?(Z)?)?$',
-  ).firstMatch(value);
-  if (match == null) throw FormatException('无法识别乐学日期：$value');
+  final parsed = DateTime.parse(value);
   final date = DateTime.utc(
-    int.parse(match[1]!),
-    int.parse(match[2]!),
-    int.parse(match[3]!),
-    int.parse(match[4] ?? '0'),
-    int.parse(match[5] ?? '0'),
-    int.parse(match[6] ?? '0'),
+    parsed.year,
+    parsed.month,
+    parsed.day,
+    parsed.hour,
+    parsed.minute,
+    parsed.second,
   );
   final timezone = parameters
       .split(';')
@@ -116,11 +199,8 @@ DateTime _calendarDate(String value, String parameters) {
       .firstOrNull
       ?.substring(5)
       .replaceAll('"', '');
-  if (match[7] == 'Z' || timezone == 'UTC') {
+  if (parsed.isUtc || timezone == 'UTC') {
     return date.add(const Duration(hours: 8));
-  }
-  if (timezone != null && timezone != 'Asia/Shanghai') {
-    throw FormatException('乐学日程使用了不支持的时区：$timezone');
   }
   return date;
 }

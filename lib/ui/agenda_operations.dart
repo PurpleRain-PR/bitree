@@ -7,7 +7,6 @@ import '../app_controller.dart';
 import 'app_notice.dart';
 
 Future<void> toggleAgendaDone(
-  BuildContext context,
   AgendaController controller,
   AgendaEntry entry, {
   bool haptic = true,
@@ -15,8 +14,6 @@ Future<void> toggleAgendaDone(
   final saved = await controller.save(entry.copyWith(done: !entry.done));
   if (saved && haptic) {
     HapticFeedback.selectionClick();
-  } else if (!saved && context.mounted) {
-    showAppNotice(context, controller.error ?? '未能保存，请重试');
   }
 }
 
@@ -54,22 +51,13 @@ Future<bool> deleteAgendaEntry(
   }
   final deleted = await controller.agenda.delete(entry);
   if (!overlay.mounted) return deleted;
-  if (!deleted) {
-    showOverlayNotice(overlay, controller.agenda.error ?? '未能删除，请重试');
-    return false;
-  }
+  if (!deleted) return false;
 
   Future<void> restore() async {
     final restored = await controller.agenda.restore(entry);
     if (!overlay.mounted) return;
     if (restored) {
       showOverlayNotice(overlay, '已恢复“${entry.title}”');
-    } else {
-      showOverlayNotice(
-        overlay,
-        controller.agenda.error ?? '未能恢复，请重试',
-        action: (label: '重试', onPressed: restore),
-      );
     }
   }
 

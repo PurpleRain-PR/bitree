@@ -58,12 +58,14 @@ Future<List<AgendaEntry>> fetchEclassDeadlines(SchoolSession session) async {
       final deadline = (task['end_time'] ?? task['visible_end_at']) as String?;
       if (deadline == null || deadline.isEmpty || deadline == 'null') continue;
       final id = task['id'].toString();
+      final detail = await _eclassJson(session, '/api/activities/$id');
       result.add(
         AgendaEntry(
           id: 'eclass-$id',
           title: task['title'] as String? ?? '未命名作业',
           kind: AgendaKind.deadline,
           startsAt: _eclassDate(deadline),
+          done: (detail['user_submit_count'] as num) > 0,
           course: course['name'] as String,
           source: DeadlineSource.eclass,
           local: false,

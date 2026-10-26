@@ -68,6 +68,8 @@ class AgendaEntry {
 
   bool overdue(DateTime now) => isDeadline && !done && dueAt.isBefore(now);
 
+  bool isFinished(DateTime now) => isDeadline ? done : !endsAt!.isAfter(now);
+
   bool occursOn(DateTime date) {
     final day = calendarDate(date);
     if (isDeadline) return calendarDate(startsAt) == day;

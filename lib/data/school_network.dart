@@ -8,8 +8,6 @@ enum SchoolNetwork {
     'jxzxehall.bit.edu.cn': '77726476706e69737468656265737421faef5b842238695c72468ba58c1b26316e8e7f6f',
   };
 
-  String get label => this == campus ? '校园网' : 'WebVPN';
-
   Uri get app =>
       route(_campusApp.resolve('/jwapp/sys/wdkbby/*default/index.do'));
 
@@ -18,6 +16,9 @@ enum SchoolNetwork {
 
   Uri get examApp =>
       route(_campusApp.resolve('/jwapp/sys/wdksapMobile/*default/index.do'));
+
+  Uri get timetableTranslations =>
+      route(_campusApp.resolve('/jwapp/i18n.do?appName=wdkbby&EMAP_LANG=zh'));
 
   Uri get accountConfig => route(
     _campusApp.resolve(

@@ -19,9 +19,6 @@ SemesterSchedule parseSchoolSchedule({
 
 Course _parseCourse(Map<String, dynamic> row, int maskStartOffset) {
   final mask = row['SKZC']?.toString() ?? '';
-  if (!RegExp(r'^[01]*$').hasMatch(mask)) {
-    throw const FormatException('学校返回的上课周次格式不正确');
-  }
 
   final weeks = [
     for (var index = 0; index < mask.length; index++)

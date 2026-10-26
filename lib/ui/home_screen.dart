@@ -1,64 +1,54 @@
 import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
-import '../schedule/model.dart';
 import 'add_menu.dart';
 import 'app_page.dart';
+import 'campus_time_builder.dart';
 import 'course_detail.dart';
 import 'course_editor.dart';
-import 'data_errors.dart';
 import 'schedule_menu.dart';
 import 'school_import_button.dart';
 import 'school_screen.dart';
+import 'today_agenda.dart';
 import 'week_pager.dart';
 import 'week_selector.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({
-    super.key,
-    required this.controller,
-    this.active = true,
-  });
+  const HomeScreen({super.key, required this.controller, this.active = true});
 
   final AppController controller;
   final bool active;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      CampusTimeBuilder(active: active, builder: _build);
+
+  Widget _build(BuildContext context, DateTime now) {
     final schedule = controller.schedule;
-    final today = campusNow();
-    final monday = schedule?.mondayAt(controller.week);
+    final entries = controller.agenda.entries
+        .where((entry) => !entry.isFinished(now) && entry.occursOn(now))
+        .toList();
+    entries.sort((a, b) => a.startsAt.compareTo(b.startsAt));
     final selectedDate =
-        monday == null || schedule!.weekAt(today) == controller.week
-        ? today
-        : monday.add(const Duration(hours: 9));
+        schedule != null && schedule.weekAt(now) != controller.week
+        ? schedule.mondayAt(controller.week).add(const Duration(hours: 9))
+        : now;
 
     return AppPage(
       title: schedule == null
           ? const Text('首页')
-          : Row(
-              children: [
-                Flexible(child: WeekSelector(controller: controller)),
-                const SizedBox(width: 8),
-                Text(
-                  weekdays[today.weekday - 1],
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
+          : WeekSelector(controller: controller),
       actions: [
         AddButton(controller: controller, date: selectedDate),
         SchoolImportButton(controller: controller),
-        ScheduleMenu(schedule: schedule, enabled: !controller.busy),
+        ScheduleMenu(controller: controller),
       ],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          DataErrors(controller: controller),
           if (!controller.ready) const LinearProgressIndicator(minHeight: 3),
+          if (controller.agenda.ready)
+            TodayAgenda(controller: controller, entries: entries, now: now),
           Expanded(
             child: schedule == null
                 ? Center(

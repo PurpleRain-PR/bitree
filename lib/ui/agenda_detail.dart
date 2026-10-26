@@ -139,11 +139,8 @@ Future<void> showAgendaEntry(
                       child: FilledButton(
                         onPressed: controller.agenda.busy
                             ? null
-                            : () => toggleAgendaDone(
-                                context,
-                                controller.agenda,
-                                current,
-                              ),
+                            : () =>
+                                  toggleAgendaDone(controller.agenda, current),
                         child: Text(
                           current.done ? '标为未完成' : '标记完成',
                           textAlign: TextAlign.center,

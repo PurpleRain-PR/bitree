@@ -28,14 +28,6 @@ class SchoolLogin {
     return account;
   }
 
-  Future<void> restore() async {
-    try {
-      await session.checkLogin();
-    } on SessionExpired {
-      await signIn();
-    }
-  }
-
   Future<SchoolResponse> openLearningPlatform(
     DeadlineSource source, {
     SchoolCredentials? credentials,
@@ -44,11 +36,7 @@ class SchoolLogin {
     if (source == DeadlineSource.eclass) {
       final response = await session.request(service);
       if (!isSchoolLogin(response.url)) return response;
-      final callback = response.url.queryParameters['service'];
-      if (callback == null) {
-        throw const SchoolRequestError('学校登录入口没有提供回调地址。');
-      }
-      service = Uri.parse(callback);
+      service = Uri.parse(response.url.queryParameters['service']!);
     }
     final account = await _credentials(credentials);
     final callback = await _authenticate(account, service);
@@ -75,7 +63,10 @@ class SchoolLogin {
     try {
       await session.checkLogin();
     } on SessionExpired {
-      throw SchoolRequestError('未能建立${session.network.label}登录会话，请重试。');
+      throw SchoolConnectionError(
+        session.network.accountPage,
+        const SchoolRequestError('未能建立学校登录会话，请重试。'),
+      );
     }
   }
 

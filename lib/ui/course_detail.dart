@@ -219,8 +219,5 @@ Future<void> _deleteCourse(
 
   if (success) {
     Navigator.pop(context);
-  } else {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(controller.error ?? '删除失败，请重试。')));
   }
 }

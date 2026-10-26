@@ -24,10 +24,7 @@ Future<void> showDeletedDeadlines(
             ? await controller.restoreDeletedDeadlines()
             : await controller.restore(entry);
         if (!sheetContext.mounted) return;
-        if (!saved) {
-          showAppNotice(context, controller.error ?? '未能恢复，请重试');
-          return;
-        }
+        if (!saved) return;
         showAppNotice(
           context,
           entry == null ? '已恢复全部 DDL' : '已恢复“${entry.title}”',

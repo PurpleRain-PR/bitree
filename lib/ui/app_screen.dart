@@ -3,11 +3,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
+import '../diagnostics.dart';
+import 'app_notice.dart';
 import 'app_page.dart';
 import 'calendar_screen.dart';
 import 'home_screen.dart';
 import 'settings_screen.dart';
 import 'school_verification_dialog.dart';
+import 'tools_screen.dart';
 import 'update_check.dart';
 
 class AppScreen extends StatefulWidget {
@@ -23,10 +26,14 @@ class _AppScreenState extends State<AppScreen> {
   int _tab = 0;
   bool _checkingUpdates = false;
   bool _started = false;
+  late final StreamSubscription<String> _errors;
 
   @override
   void initState() {
     super.initState();
+    _errors = AppDiagnostics.instance.messages.listen((message) {
+      if (mounted) showAppNotice(context, message);
+    });
     widget.controller.addListener(_onReady);
     _onReady();
   }
@@ -49,6 +56,7 @@ class _AppScreenState extends State<AppScreen> {
 
   @override
   void dispose() {
+    _errors.cancel();
     widget.controller.removeListener(_onReady);
     super.dispose();
   }
@@ -73,8 +81,8 @@ class _AppScreenState extends State<AppScreen> {
           index: _tab,
           children: [
             HomeScreen(controller: widget.controller, active: _tab == 0),
-            CalendarScreen(controller: widget.controller),
-            const _PendingPage(title: '工具'),
+            CalendarScreen(controller: widget.controller, active: _tab == 1),
+            ToolsScreen(controller: widget.controller),
             SettingsScreen(
               controller: widget.controller,
               checkingForUpdates: _checkingUpdates,
@@ -136,23 +144,6 @@ class _AppScreenState extends State<AppScreen> {
             ),
           ),
         ),
-      ),
-    ),
-  );
-}
-
-class _PendingPage extends StatelessWidget {
-  const _PendingPage({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) => AppPage(
-    title: Text(title),
-    child: Center(
-      child: Text(
-        '$title功能暂未开放',
-        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
       ),
     ),
   );

@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
-import '../data/school_network.dart';
-import 'school_network_picker.dart';
 import 'school_screen.dart';
-import 'school_verification_dialog.dart';
 
 class SchoolAccount extends StatefulWidget {
   const SchoolAccount({super.key, required this.controller});
@@ -28,24 +25,12 @@ class _SchoolAccountState extends State<SchoolAccount> {
     }
   }
 
-  Future<void> _login({SchoolNetwork? network}) async {
+  Future<void> _login() async {
     await openSchoolPage(
       context,
       widget.controller,
       action: SchoolAction.signIn,
-      network: network,
     );
-  }
-
-  Future<void> _switchNetwork(SchoolNetwork network) async {
-    final controller = widget.controller;
-    final success = await controller.changeNetwork(
-      network,
-      (request) => verifySchoolLogin(context, request),
-    );
-    if (!success && controller.loginExpired && mounted) {
-      await _login(network: network);
-    }
   }
 
   Future<void> _signOut() async {
@@ -82,43 +67,27 @@ class _SchoolAccountState extends State<SchoolAccount> {
       AccountStatus.unverified => '未连接',
       AccountStatus.signedOut => '未登录',
     };
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        ListTile(
-          contentPadding: const EdgeInsets.symmetric(vertical: 4),
-          leading: Icon(
-            Icons.account_circle_outlined,
-            size: 36,
-            color: hasAccount ? scheme.primary : null,
-          ),
-          title: Text(controller.username ?? '登录学校账号'),
-          subtitle: hasAccount ? Text(status) : null,
-          trailing: controller.loginExpired
-              ? TextButton(
-                  onPressed: canLogin ? () => _perform(_login) : null,
-                  child: const Text('登录'),
-                )
-              : Icon(
-                  hasAccount
-                      ? Icons.logout_rounded
-                      : Icons.chevron_right_rounded,
-                  size: 20,
-                ),
-          onTap: (hasAccount ? enabled : canLogin)
-              ? () => _perform(hasAccount ? _signOut : _login)
-              : null,
-        ),
-        Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: SchoolNetworkSelector(
-            selected: controller.network,
-            onChanged: canLogin
-                ? (network) => _perform(() => _switchNetwork(network))
-                : null,
-          ),
-        ),
-      ],
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(vertical: 4),
+      leading: Icon(
+        Icons.account_circle_outlined,
+        size: 36,
+        color: hasAccount ? scheme.primary : null,
+      ),
+      title: Text(controller.username ?? '登录学校账号'),
+      subtitle: hasAccount ? Text(status) : null,
+      trailing: controller.loginExpired
+          ? TextButton(
+              onPressed: canLogin ? () => _perform(_login) : null,
+              child: const Text('登录'),
+            )
+          : Icon(
+              hasAccount ? Icons.logout_rounded : Icons.chevron_right_rounded,
+              size: 20,
+            ),
+      onTap: (hasAccount ? enabled : canLogin)
+          ? () => _perform(hasAccount ? _signOut : _login)
+          : null,
     );
   }
 }

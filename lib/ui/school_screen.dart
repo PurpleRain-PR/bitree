@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
 import '../agenda/deadline_source.dart';
-import '../data/school_network.dart';
 import '../data/school_storage.dart';
 import '../data/school_verification.dart';
 import 'app_notice.dart';
-import 'school_network_picker.dart';
 import 'school_verification_dialog.dart';
 
 enum SchoolAction {
@@ -24,39 +22,31 @@ enum SchoolAction {
 Future<bool> _fetchSchoolData(
   AppController controller,
   SchoolAction action,
-  SchoolNetwork network,
   String? term,
   VerifySchoolLogin verify,
 ) => switch (action) {
   SchoolAction.signIn => throw StateError('登录不获取业务数据'),
   SchoolAction.importSchedule => controller.synchronize(
-    using: network,
     term: term,
     verify: verify,
   ),
-  SchoolAction.importExams => controller.importExams(
-    using: network,
-    verify: verify,
-  ),
+  SchoolAction.importExams => controller.importExams(verify: verify),
   SchoolAction.importLexueDeadlines || SchoolAction.importEclassDeadlines =>
-    controller.importDeadlines(action.source!, using: network, verify: verify),
+    controller.importDeadlines(action.source!, verify: verify),
 };
 
 Future<bool?> openSchoolPage(
   BuildContext context,
   AppController controller, {
   required SchoolAction action,
-  SchoolNetwork? network,
   String? term,
 }) async {
   if (controller.busy || controller.schoolBusy) return null;
-  final using = network ?? controller.network;
   bool? success;
   if (action != SchoolAction.signIn && controller.username != null) {
     success = await _fetchSchoolData(
       controller,
       action,
-      using,
       term,
       (request) => verifySchoolLogin(context, request),
     );
@@ -68,12 +58,8 @@ Future<bool?> openSchoolPage(
   if (success != true) {
     success = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => _SchoolScreen(
-          controller: controller,
-          action: action,
-          network: using,
-          term: term,
-        ),
+        builder: (_) =>
+            _SchoolScreen(controller: controller, action: action, term: term),
       ),
     );
   }
@@ -91,13 +77,11 @@ class _SchoolScreen extends StatefulWidget {
   const _SchoolScreen({
     required this.controller,
     required this.action,
-    required this.network,
     this.term,
   });
 
   final AppController controller;
   final SchoolAction action;
-  final SchoolNetwork network;
   final String? term;
 
   @override
@@ -110,10 +94,8 @@ class _SchoolScreenState extends State<_SchoolScreen> {
     text: widget.controller.username,
   );
   final _password = TextEditingController();
-  late SchoolNetwork _network = widget.network;
   SchoolAction? _operation;
   bool _hidePassword = true;
-  String? _error;
 
   bool get _importing => widget.action != SchoolAction.signIn;
   bool get _running => _operation != null;
@@ -123,7 +105,6 @@ class _SchoolScreenState extends State<_SchoolScreen> {
     FocusScope.of(context).unfocus();
     setState(() {
       _operation = SchoolAction.signIn;
-      _error = null;
     });
     final controller = widget.controller;
     Future<String?> verify(SchoolVerification request) =>
@@ -131,15 +112,11 @@ class _SchoolScreenState extends State<_SchoolScreen> {
     try {
       final signedIn = await controller.signIn(
         SchoolCredentials(username: _username.text, password: _password.text),
-        _network,
         verify,
         source: widget.action.source,
       );
       if (!mounted) return;
-      if (!signedIn) {
-        setState(() => _error = controller.error);
-        return;
-      }
+      if (!signedIn) return;
       _password.clear();
       if (_importing) setState(() => _operation = widget.action);
       final success =
@@ -147,7 +124,6 @@ class _SchoolScreenState extends State<_SchoolScreen> {
           await _fetchSchoolData(
             controller,
             widget.action,
-            _network,
             widget.term,
             verify,
           );
@@ -199,13 +175,6 @@ class _SchoolScreenState extends State<_SchoolScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          SchoolNetworkSelector(
-            selected: _network,
-            onChanged: _running
-                ? null
-                : (network) => setState(() => _network = network),
-          ),
-          const SizedBox(height: 24),
           TextFormField(
             controller: _username,
             enabled: !_running,
@@ -249,13 +218,6 @@ class _SchoolScreenState extends State<_SchoolScreen> {
             onFieldSubmitted: (_) => _run(),
           ),
           const SizedBox(height: 24),
-          if (_error != null) ...[
-            Text(
-              _error!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-            const SizedBox(height: 16),
-          ],
           FilledButton(
             onPressed: _running ? null : _run,
             child: Row(

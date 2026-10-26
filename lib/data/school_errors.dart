@@ -26,6 +26,16 @@ class SchoolRequestError implements Exception {
   String toString() => message;
 }
 
+class SchoolConnectionError implements Exception {
+  const SchoolConnectionError(this.url, this.cause);
+
+  final Uri url;
+  final Object cause;
+
+  @override
+  String toString() => cause.toString();
+}
+
 String? schoolPageError(String text) {
   if (text.contains('Illegal referrer')) {
     return '教学中心拒绝了请求来源，请稍后重试。';

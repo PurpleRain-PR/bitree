@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../app_controller.dart';
+import '../agenda/model.dart';
 import '../schedule/layout.dart';
 import '../schedule/model.dart';
 import '../schedule/selection.dart';
+import '../schedule/time_position.dart';
 import 'add_menu.dart';
 import 'calendar_block.dart';
 import 'current_time_indicator.dart';
@@ -186,16 +188,54 @@ class _TimetableGridState extends State<TimetableGrid> {
             children: [
               SizedBox(
                 width: widget.gutterWidth,
-                child: Column(
+                child: Stack(
                   children: [
-                    for (
-                      var section = 1;
-                      section <= sectionTimes.length;
-                      section++
-                    )
-                      SizedBox(
-                        height: rowHeight,
-                        child: _PeriodLabel(section: section),
+                    Column(
+                      children: [
+                        for (
+                          var section = 1;
+                          section <= sectionTimes.length;
+                          section++
+                        )
+                          SizedBox(
+                            height: rowHeight,
+                            child: _PeriodLabel(section: section),
+                          ),
+                      ],
+                    ),
+                    if (widget.todayColumn != null)
+                      ValueListenableBuilder<DateTime>(
+                        valueListenable: widget.currentTime,
+                        builder: (context, now, _) {
+                          final section = sectionOffsetAt(now);
+                          if (section == null) return const SizedBox.shrink();
+
+                          final height =
+                              MediaQuery.textScalerOf(context).scale(10) * 1.2 +
+                              2;
+                          return Positioned(
+                            left: 0,
+                            right: 0,
+                            top: (section * rowHeight - height / 2).clamp(
+                              0.0,
+                              gridHeight - height,
+                            ),
+                            child: IgnorePointer(
+                              child: ColoredBox(
+                                color: scheme.surface,
+                                child: Text(
+                                  clockText(now),
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    height: 1.2,
+                                    color: scheme.primary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                   ],
                 ),
@@ -318,19 +358,18 @@ class _TimetableBackground extends CustomPainter {
     final paint = Paint();
     const radius = Radius.circular(6);
 
-    for (var section = 0; section < sectionTimes.length; section++) {
-      paint.color = surfaceColor.withValues(
-        alpha: section.isEven ? 0.025 : 0.045,
+    for (var section = 1; section < sectionTimes.length; section += 2) {
+      paint.color = surfaceColor.withValues(alpha: 0.025);
+      final band = Rect.fromLTWH(
+        0,
+        section * rowHeight + 2,
+        size.width,
+        rowHeight - 4,
       );
-      for (var day = 0; day < 7; day++) {
-        final cell = Rect.fromLTWH(
-          day * columnWidth + 2,
-          section * rowHeight + 2,
-          columnWidth - 4,
-          rowHeight - 4,
-        );
-        canvas.drawRRect(RRect.fromRectAndRadius(cell, radius), paint);
-      }
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(band, const Radius.circular(4)),
+        paint,
+      );
     }
 
     if (todayColumn != null) {
@@ -376,14 +415,14 @@ class _PeriodLabel extends StatelessWidget {
           children: [
             Text(
               '$section',
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 2),
             Text(
               '${time.$1}\n${time.$2}',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 9,
+                fontSize: 10,
                 height: 1.2,
                 color: scheme.onSurfaceVariant,
               ),

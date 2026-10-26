@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
@@ -8,7 +6,7 @@ import '../schedule/selection.dart';
 import 'app_dropdown_field.dart';
 import 'course_period_fields.dart';
 import 'course_week_picker.dart';
-import 'course_week_range.dart';
+import 'week_range_dialog.dart';
 import 'editor_sheet.dart';
 
 Future<void> editCourse(
@@ -60,15 +58,9 @@ class _CourseEditorState extends State<_CourseEditor> {
       (widget.selection == null
           ? null
           : {widget.controller.schedule!.weekAt(widget.selection!.date)}) ??
-      (widget.controller.schedule?.weeks ?? academicWeeks(1, 20)).toSet();
-  late int _firstWeek = _weeks.fold(
-    widget.controller.schedule?.firstWeek ?? 1,
-    math.min,
-  );
-  late int _lastWeek = _weeks.fold(
-    math.max(25, widget.controller.schedule?.lastWeek ?? 25),
-    math.max,
-  );
+      (widget.controller.schedule?.weeks ?? academicWeeks(1, 25)).toSet();
+  late int _firstWeek = widget.controller.schedule?.firstWeek ?? 1;
+  late int _lastWeek = widget.controller.schedule?.lastWeek ?? 25;
   bool _saving = false;
   String? _error;
 
@@ -89,10 +81,11 @@ class _CourseEditorState extends State<_CourseEditor> {
   }
 
   Future<void> _manageWeeks() async {
-    final range = await manageCourseWeeks(
+    final range = await showWeekRangeDialog(
       context,
       first: _firstWeek,
       last: _lastWeek,
+      controller: widget.controller.schedule == null ? null : widget.controller,
     );
     if (range == null || !mounted) return;
     setState(() {
@@ -137,6 +130,8 @@ class _CourseEditorState extends State<_CourseEditor> {
           ? SemesterSchedule(
               term: _term.text.trim(),
               firstMonday: _monday,
+              firstWeek: _firstWeek,
+              lastWeek: _lastWeek,
               courses: [],
             )
           : null,
@@ -147,7 +142,6 @@ class _CourseEditorState extends State<_CourseEditor> {
     } else {
       setState(() {
         _saving = false;
-        _error = widget.controller.error;
       });
     }
   }
