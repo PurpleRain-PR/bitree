@@ -4,6 +4,7 @@ import '../agenda/model.dart';
 import '../app_controller.dart';
 import 'agenda_editor.dart';
 import 'agenda_operations.dart';
+import 'app_menu_anchor.dart';
 import 'external_link.dart';
 
 class AgendaMenu extends StatelessWidget {
@@ -13,7 +14,7 @@ class AgendaMenu extends StatelessWidget {
   final AgendaEntry entry;
 
   @override
-  Widget build(BuildContext context) => MenuAnchor(
+  Widget build(BuildContext context) => AppMenuAnchor(
     menuChildren: [
       if (entry.isDeadline)
         MenuItemButton(

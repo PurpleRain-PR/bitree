@@ -40,6 +40,7 @@ class TimetableGrid extends StatefulWidget {
 
 class _TimetableGridState extends State<TimetableGrid> {
   final _grid = GlobalKey();
+  final _addMenu = MenuController();
   ({int day, int anchor, int end})? _selection;
   Offset? _dragPosition;
   EdgeDraggingAutoScroller? _autoScroller;
@@ -138,25 +139,26 @@ class _TimetableGridState extends State<TimetableGrid> {
 
   void _cancelSelection() {
     _stopDrag();
-    setState(() => _selection = null);
+    if (mounted) setState(() => _selection = null);
   }
 
-  Future<void> _finishSelection(Offset position) async {
+  void _finishSelection(Offset position) {
     _stopDrag();
-    final selection = _selection;
-    if (selection == null) return;
+    if (_selection == null) return;
 
-    await showAddMenu(
-      context,
-      widget.controller,
-      position,
-      selection: TimetableSelection(
-        date: widget.monday.add(Duration(days: selection.day)),
-        startSection: math.min(selection.anchor, selection.end),
-        endSection: math.max(selection.anchor, selection.end),
-      ),
-    );
-    if (mounted) setState(() => _selection = null);
+    // Rebuild the menu with the selected date and sections before opening it.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _selection == null) return;
+      final box = _grid.currentContext!.findRenderObject()! as RenderBox;
+      _addMenu.open(position: box.globalToLocal(position));
+    });
+  }
+
+  void _menuClosed() {
+    // MenuItemButton runs its action after the frame, using this selection.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_addMenu.isOpen) _cancelSelection();
+    });
   }
 
   @override
@@ -164,6 +166,14 @@ class _TimetableGridState extends State<TimetableGrid> {
     final scheme = Theme.of(context).colorScheme;
     final rowHeight = widget.rowHeight;
     final gridHeight = rowHeight * sectionTimes.length;
+    final selection = _selection;
+    final menuSelection = selection == null
+        ? null
+        : TimetableSelection(
+            date: widget.monday.add(Duration(days: selection.day)),
+            startSection: math.min(selection.anchor, selection.end),
+            endSection: math.max(selection.anchor, selection.end),
+          );
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -191,85 +201,93 @@ class _TimetableGridState extends State<TimetableGrid> {
                 ),
               ),
               Expanded(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTapUp: (details) {
-                    _beginSelection(details.globalPosition);
-                    _finishSelection(details.globalPosition);
-                  },
-                  onLongPressStart: (details) =>
-                      _startDrag(details.globalPosition),
-                  onLongPressMoveUpdate: (details) =>
-                      _dragSelection(details.globalPosition),
-                  onLongPressEnd: (details) =>
-                      _finishSelection(details.globalPosition),
-                  onLongPressCancel: _cancelSelection,
-                  child: Stack(
-                    key: _grid,
-                    children: [
-                      Positioned.fill(
-                        child: CustomPaint(
-                          painter: _TimetableBackground(
-                            rowHeight: rowHeight,
-                            surfaceColor: scheme.onSurface,
-                            todayColumn: widget.todayColumn,
-                            todayBackground: widget.todayBackground,
-                          ),
-                        ),
-                      ),
-                      for (var day = 0; day < 7; day++)
-                        for (final block in widget.layouts[day])
-                          Positioned(
-                            key: ValueKey((day, block.start)),
-                            left: day * columnWidth + 2,
-                            width: columnWidth - 4,
-                            top: block.start * rowHeight + 2,
-                            height: (block.end - block.start) * rowHeight - 4,
-                            child: CalendarBlockTile(
-                              items: block.items,
-                              controller: widget.controller,
-                              isToday: day == widget.todayColumn,
-                            ),
-                          ),
-                      Positioned.fill(
-                        child: RepaintBoundary(
-                          child: ValueListenableBuilder<DateTime>(
-                            valueListenable: widget.currentTime,
-                            builder: (context, now, _) => CurrentTimeIndicator(
-                              now: now,
-                              monday: widget.monday,
-                              columnWidth: columnWidth,
+                child: AddMenu(
+                  controller: widget.controller,
+                  menuController: _addMenu,
+                  selection: menuSelection,
+                  onClose: _menuClosed,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTapUp: (details) {
+                      _beginSelection(details.globalPosition);
+                      _finishSelection(details.globalPosition);
+                    },
+                    onLongPressStart: (details) =>
+                        _startDrag(details.globalPosition),
+                    onLongPressMoveUpdate: (details) =>
+                        _dragSelection(details.globalPosition),
+                    onLongPressEnd: (details) =>
+                        _finishSelection(details.globalPosition),
+                    onLongPressCancel: _cancelSelection,
+                    child: Stack(
+                      key: _grid,
+                      children: [
+                        Positioned.fill(
+                          child: CustomPaint(
+                            painter: _TimetableBackground(
                               rowHeight: rowHeight,
+                              surfaceColor: scheme.onSurface,
+                              todayColumn: widget.todayColumn,
+                              todayBackground: widget.todayBackground,
                             ),
                           ),
                         ),
-                      ),
-                      if (_selection case final selection?)
-                        Positioned(
-                          left: selection.day * columnWidth + 2,
-                          width: columnWidth - 4,
-                          top:
-                              (math.min(selection.anchor, selection.end) - 1) *
-                                  rowHeight +
-                              2,
-                          height:
-                              ((selection.end - selection.anchor).abs() + 1) *
-                                  rowHeight -
-                              4,
-                          child: IgnorePointer(
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: scheme.primary.withValues(alpha: 0.18),
-                                border: Border.all(
-                                  color: scheme.primary,
-                                  width: 1.5,
+                        for (var day = 0; day < 7; day++)
+                          for (final block in widget.layouts[day])
+                            Positioned(
+                              key: ValueKey((day, block.start)),
+                              left: day * columnWidth + 2,
+                              width: columnWidth - 4,
+                              top: block.start * rowHeight + 2,
+                              height: (block.end - block.start) * rowHeight - 4,
+                              child: CalendarBlockTile(
+                                items: block.items,
+                                controller: widget.controller,
+                                isToday: day == widget.todayColumn,
+                              ),
+                            ),
+                        Positioned.fill(
+                          child: RepaintBoundary(
+                            child: ValueListenableBuilder<DateTime>(
+                              valueListenable: widget.currentTime,
+                              builder: (context, now, _) =>
+                                  CurrentTimeIndicator(
+                                    now: now,
+                                    monday: widget.monday,
+                                    columnWidth: columnWidth,
+                                    rowHeight: rowHeight,
+                                  ),
+                            ),
+                          ),
+                        ),
+                        if (_selection case final selection?)
+                          Positioned(
+                            left: selection.day * columnWidth + 2,
+                            width: columnWidth - 4,
+                            top:
+                                (math.min(selection.anchor, selection.end) -
+                                        1) *
+                                    rowHeight +
+                                2,
+                            height:
+                                ((selection.end - selection.anchor).abs() + 1) *
+                                    rowHeight -
+                                4,
+                            child: IgnorePointer(
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: scheme.primary.withValues(alpha: 0.18),
+                                  border: Border.all(
+                                    color: scheme.primary,
+                                    width: 1.5,
+                                  ),
+                                  borderRadius: BorderRadius.circular(6),
                                 ),
-                                borderRadius: BorderRadius.circular(6),
                               ),
                             ),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

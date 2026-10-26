@@ -4,92 +4,81 @@ import '../agenda/model.dart';
 import '../app_controller.dart';
 import '../schedule/selection.dart';
 import 'agenda_editor.dart';
+import 'app_menu_anchor.dart';
 import 'course_editor.dart';
 
-enum _AddAction { course, event, deadline, exam }
+class AddMenu extends StatelessWidget {
+  const AddMenu({
+    super.key,
+    required this.controller,
+    this.menuController,
+    this.selection,
+    this.date,
+    this.includeCourse = true,
+    this.onClose,
+    this.builder,
+    this.child,
+  });
 
-Future<void> showAddMenu(
-  BuildContext context,
-  AppController controller,
-  Offset position, {
-  TimetableSelection? selection,
-  DateTime? date,
-  bool includeCourse = true,
-}) async {
-  final overlay =
-      Navigator.of(context).overlay!.context.findRenderObject()! as RenderBox;
-  final local = overlay.globalToLocal(position);
-  final selected = await showMenu<_AddAction>(
-    context: context,
-    position: RelativeRect.fromRect(
-      Rect.fromLTWH(local.dx, local.dy, 1, 1),
-      Offset.zero & overlay.size,
-    ),
-    items: [
-      if (includeCourse)
-        PopupMenuItem(
-          value: _AddAction.course,
-          enabled: !controller.busy,
-          child: const Row(
-            children: [
-              Icon(Icons.school_outlined, size: 20),
-              SizedBox(width: 12),
-              Text('添加课程'),
-            ],
-          ),
-        ),
-      PopupMenuItem(
-        value: _AddAction.event,
-        enabled: controller.agenda.ready && !controller.agenda.busy,
-        child: const Row(
-          children: [
-            Icon(Icons.event_outlined, size: 20),
-            SizedBox(width: 12),
-            Text('添加活动'),
-          ],
-        ),
-      ),
-      if (selection == null)
-        PopupMenuItem(
-          value: _AddAction.deadline,
-          enabled: controller.agenda.ready && !controller.agenda.busy,
-          child: const Row(
-            children: [
-              Icon(Icons.flag_outlined, size: 20),
-              SizedBox(width: 12),
-              Text('添加 DDL'),
-            ],
-          ),
-        ),
-      if (!includeCourse)
-        PopupMenuItem(
-          value: _AddAction.exam,
-          enabled: controller.agenda.ready && !controller.agenda.busy,
-          child: const Row(
-            children: [
-              Icon(Icons.edit_note_rounded, size: 20),
-              SizedBox(width: 12),
-              Text('添加考试'),
-            ],
-          ),
-        ),
-    ],
+  final AppController controller;
+  final MenuController? menuController;
+  final TimetableSelection? selection;
+  final DateTime? date;
+  final bool includeCourse;
+  final VoidCallback? onClose;
+  final MenuAnchorChildBuilder? builder;
+  final Widget? child;
+
+  Future<void> _addAgenda(BuildContext context, AgendaKind kind) => editAgenda(
+    context,
+    controller,
+    selection: selection,
+    date: date,
+    term: includeCourse ? controller.schedule?.term : null,
+    kind: kind,
   );
-  if (!context.mounted || selected == null) return;
-  if (selected == _AddAction.course) {
-    await editCourse(context, controller, selection: selection);
-  } else {
-    await editAgenda(
-      context,
-      controller,
-      selection: selection,
-      date: date,
-      term: includeCourse ? controller.schedule?.term : null,
-      kind: switch (selected) {
-        _AddAction.deadline => AgendaKind.deadline,
-        _AddAction.exam => AgendaKind.exam,
-        _ => AgendaKind.event,
-      },
+
+  @override
+  Widget build(BuildContext context) {
+    final agendaEnabled = controller.agenda.ready && !controller.agenda.busy;
+    return AppMenuAnchor(
+      controller: menuController,
+      onClose: onClose,
+      menuChildren: [
+        if (includeCourse)
+          MenuItemButton(
+            onPressed: controller.busy
+                ? null
+                : () => editCourse(context, controller, selection: selection),
+            leadingIcon: const Icon(Icons.school_outlined),
+            child: const Text('添加课程'),
+          ),
+        MenuItemButton(
+          onPressed: agendaEnabled
+              ? () => _addAgenda(context, AgendaKind.event)
+              : null,
+          leadingIcon: const Icon(Icons.event_outlined),
+          child: const Text('添加活动'),
+        ),
+        if (selection == null)
+          MenuItemButton(
+            onPressed: agendaEnabled
+                ? () => _addAgenda(context, AgendaKind.deadline)
+                : null,
+            leadingIcon: const Icon(Icons.flag_outlined),
+            child: const Text('添加 DDL'),
+          ),
+        if (!includeCourse)
+          MenuItemButton(
+            onPressed: agendaEnabled
+                ? () => _addAgenda(context, AgendaKind.exam)
+                : null,
+            leadingIcon: const Icon(Icons.edit_note_rounded),
+            child: const Text('添加考试'),
+          ),
+      ],
+      builder: builder,
+      child: child,
     );
   }
 }
@@ -101,25 +90,22 @@ class AddButton extends StatelessWidget {
     this.date,
     this.includeCourse = true,
   });
+
   final AppController controller;
   final DateTime? date;
   final bool includeCourse;
 
   @override
-  Widget build(BuildContext context) => IconButton(
-    tooltip: '添加',
-    onPressed: controller.busy || controller.agenda.busy
-        ? null
-        : () {
-            final box = context.findRenderObject()! as RenderBox;
-            showAddMenu(
-              context,
-              controller,
-              box.localToGlobal(Offset(0, box.size.height)),
-              date: date,
-              includeCourse: includeCourse,
-            );
-          },
-    icon: const Icon(Icons.add_rounded),
+  Widget build(BuildContext context) => AddMenu(
+    controller: controller,
+    date: date,
+    includeCourse: includeCourse,
+    builder: (context, menu, _) => IconButton(
+      tooltip: '添加',
+      onPressed: controller.busy || controller.agenda.busy
+          ? null
+          : () => menu.isOpen ? menu.close() : menu.open(),
+      icon: const Icon(Icons.add_rounded),
+    ),
   );
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
+import 'app_menu_anchor.dart';
 import 'school_screen.dart';
 
 class SchoolImportButton extends StatelessWidget {
@@ -15,7 +16,7 @@ class SchoolImportButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final busy = controller.busy || controller.schoolBusy;
-    return MenuAnchor(
+    return AppMenuAnchor(
       menuChildren: [
         if (includeSchedule)
           MenuItemButton(
