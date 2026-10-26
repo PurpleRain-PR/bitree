@@ -111,13 +111,22 @@ class _TimetableState extends State<Timetable> with WidgetsBindingObserver {
 
   Future<void> _revealCurrentTime({bool force = false}) async {
     final schedule = widget.controller.schedule;
+    final now = _currentTime.value;
     if (!_active ||
         !_followingTime ||
         !_vertical.hasClients ||
         _rowHeight <= 0 ||
         schedule == null ||
-        schedule.weekAt(_currentTime.value) != widget.week ||
+        schedule.weekAt(now) != widget.week ||
         ModalRoute.of(context)?.isCurrent == false) {
+      return;
+    }
+
+    final section = sectionOffsetAt(now);
+    if (section == null ||
+        !schedule
+            .coursesAt(widget.week, weekday: now.weekday)
+            .any((course) => course.endSection! > section)) {
       return;
     }
 
@@ -128,7 +137,7 @@ class _TimetableState extends State<Timetable> with WidgetsBindingObserver {
       return;
     }
 
-    final line = sectionOffsetAt(_currentTime.value) * _rowHeight;
+    final line = section * _rowHeight;
     final viewport = position.viewportDimension;
     // Follow only when the line leaves this band, leaving more room ahead.
     if (!force &&

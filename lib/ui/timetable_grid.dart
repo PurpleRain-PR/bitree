@@ -207,14 +207,19 @@ class _TimetableGridState extends State<TimetableGrid> {
                       ValueListenableBuilder<DateTime>(
                         valueListenable: widget.currentTime,
                         builder: (context, now, _) {
+                          final section = sectionOffsetAt(now);
+                          if (section == null) return const SizedBox.shrink();
+
                           final height =
                               MediaQuery.textScalerOf(context).scale(10) * 1.2 +
                               2;
                           return Positioned(
                             left: 0,
                             right: 0,
-                            top: (sectionOffsetAt(now) * rowHeight - height / 2)
-                                .clamp(0.0, gridHeight - height),
+                            top: (section * rowHeight - height / 2).clamp(
+                              0.0,
+                              gridHeight - height,
+                            ),
                             child: IgnorePointer(
                               child: ColoredBox(
                                 color: scheme.surface,
