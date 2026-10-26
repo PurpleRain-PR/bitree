@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
+import '../diagnostics.dart';
+import 'app_notice.dart';
 import 'app_page.dart';
 import 'calendar_screen.dart';
 import 'home_screen.dart';
@@ -24,10 +26,14 @@ class _AppScreenState extends State<AppScreen> {
   int _tab = 0;
   bool _checkingUpdates = false;
   bool _started = false;
+  late final StreamSubscription<String> _errors;
 
   @override
   void initState() {
     super.initState();
+    _errors = AppDiagnostics.instance.messages.listen((message) {
+      if (mounted) showAppNotice(context, message);
+    });
     widget.controller.addListener(_onReady);
     _onReady();
   }
@@ -50,6 +56,7 @@ class _AppScreenState extends State<AppScreen> {
 
   @override
   void dispose() {
+    _errors.cancel();
     widget.controller.removeListener(_onReady);
     super.dispose();
   }

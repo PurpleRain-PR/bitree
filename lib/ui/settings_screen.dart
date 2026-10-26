@@ -5,6 +5,7 @@ import '../app_version.dart';
 import 'app_menu_anchor.dart';
 import 'app_page.dart';
 import 'external_link.dart';
+import 'logs_screen.dart';
 import 'school_account.dart';
 import 'school_screen.dart';
 import 'week_range_dialog.dart';
@@ -196,14 +197,6 @@ class SettingsScreen extends StatelessWidget {
         padding: const EdgeInsets.only(top: 8, bottom: 24),
         children: [
           SchoolAccount(controller: controller),
-          if (controller.error != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                controller.error!,
-                style: TextStyle(color: scheme.error),
-              ),
-            ),
           section('外观', [
             SegmentedButton<ThemeMode>(
               expandedInsets: EdgeInsets.zero,
@@ -307,6 +300,15 @@ class SettingsScreen extends StatelessWidget {
             ),
           ]),
           section('应用', [
+            ListTile(
+              contentPadding: tilePadding,
+              leading: const Icon(Icons.description_outlined),
+              title: const Text('导出日志'),
+              trailing: const Icon(Icons.chevron_right_rounded, size: 20),
+              onTap: () => Navigator.of(context).push<void>(
+                MaterialPageRoute(builder: (_) => const LogsScreen()),
+              ),
+            ),
             ListTile(
               contentPadding: tilePadding,
               leading: const Icon(Icons.system_update_outlined),

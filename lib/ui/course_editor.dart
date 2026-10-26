@@ -142,7 +142,6 @@ class _CourseEditorState extends State<_CourseEditor> {
     } else {
       setState(() {
         _saving = false;
-        _error = widget.controller.error;
       });
     }
   }

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../app_controller.dart';
+import '../diagnostics.dart';
 import '../schedule/ics.dart';
 import '../schedule/model.dart';
 import 'app_menu_anchor.dart';
@@ -54,12 +55,8 @@ class _ScheduleMenuState extends State<ScheduleMenu> {
           content: Text(skipped == 0 ? '已导出课表' : '已导出课表，跳过 $skipped 门时间待定的课程'),
         ),
       );
-    } catch (error) {
-      if (!mounted) return;
-      final message = error is PlatformException
-          ? error.message ?? error.code
-          : error.toString();
-      messenger.showSnackBar(SnackBar(content: Text('导出失败：$message')));
+    } catch (failure, stack) {
+      AppDiagnostics.instance.report('导出课表', failure, stack);
     } finally {
       if (mounted) setState(() => _exporting = false);
     }

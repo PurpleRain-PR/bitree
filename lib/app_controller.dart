@@ -18,7 +18,7 @@ import 'data/school_service.dart';
 import 'data/school_session.dart';
 import 'data/school_storage.dart';
 import 'data/school_verification.dart';
-import 'error_message.dart';
+import 'diagnostics.dart';
 import 'schedule/model.dart';
 
 enum AccountStatus { unverified, signedIn, signedOut, expired }
@@ -44,7 +44,6 @@ class AppController extends ChangeNotifier {
   SemesterSchedule? _schedule;
   bool ready = false;
   bool busy = false;
-  String? error;
   AccountStatus accountStatus = AccountStatus.unverified;
   String? username;
   Future<void>? _schoolFinished;
@@ -74,8 +73,8 @@ class AppController extends ChangeNotifier {
           ThemeMode.system;
       username = (await _schoolStorage.readCredentials())?.username;
       if (username == null) accountStatus = AccountStatus.signedOut;
-    } catch (failure) {
-      error = errorMessage(failure);
+    } catch (failure, stack) {
+      AppDiagnostics.instance.report('读取本地数据', failure, stack);
     }
 
     await agenda.load();
@@ -117,11 +116,6 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void dismissError() {
-    error = null;
-    notifyListeners();
-  }
-
   void requireLogin() {
     final next = username == null
         ? AccountStatus.signedOut
@@ -132,29 +126,33 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _handleSchoolError(Object failure) {
+  void _handleSchoolError(String operation, Object failure, StackTrace stack) {
     if (failure is SessionExpired || failure is SchoolCredentialsRequired) {
       requireLogin();
     }
-    error = errorMessage(failure);
+    AppDiagnostics.instance.report(operation, failure, stack);
   }
 
-  Future<bool> _runSchool(Future<void> Function() operation) async {
+  Future<bool> _runSchool(
+    String label,
+    Future<bool> Function() operation,
+  ) async {
     if (busy || schoolBusy) return false;
 
     final finished = Completer<void>();
     _schoolFinished = finished.future;
-    error = null;
     notifyListeners();
+    AppDiagnostics.instance.info('开始$label');
 
     try {
-      await operation();
+      final success = await operation();
       accountStatus = AccountStatus.signedIn;
-      return true;
+      if (success) AppDiagnostics.instance.info('$label完成');
+      return success;
     } on SchoolCancelled {
       return false;
-    } catch (failure) {
-      _handleSchoolError(failure);
+    } catch (failure, stack) {
+      _handleSchoolError(label, failure, stack);
       return false;
     } finally {
       _schoolFinished = null;
@@ -167,13 +165,14 @@ class AppController extends ChangeNotifier {
 
   Future<ClassroomDirectory?> classroomDirectory({
     required VerifySchoolLogin verify,
-  }) => _readSchool(fetchClassroomDirectory, verify);
+  }) => _readSchool('加载教学楼', fetchClassroomDirectory, verify);
 
   Future<List<ClassroomOccupancy>?> classroomOccupancy({
     required String buildingCode,
     required DateTime date,
     required VerifySchoolLogin verify,
   }) => _readSchool(
+    '查询空教室',
     (session) => fetchClassroomOccupancy(
       session,
       buildingCode: buildingCode,
@@ -183,12 +182,14 @@ class AppController extends ChangeNotifier {
   );
 
   Future<T?> _readSchool<T>(
+    String label,
     Future<T> Function(SchoolSession) read,
     VerifySchoolLogin verify,
   ) async {
     T? result;
-    final success = await _runSchool(() async {
+    final success = await _runSchool(label, () async {
       result = await _schoolAccess.read(verify, read);
+      return true;
     });
     return success ? result : null;
   }
@@ -197,20 +198,23 @@ class AppController extends ChangeNotifier {
     SchoolCredentials credentials,
     VerifySchoolLogin verify, {
     DeadlineSource? source,
-  }) => _runSchool(() async {
+  }) => _runSchool('登录学校账号', () async {
     await _schoolAccess.signIn(credentials, verify, source: source);
     username = credentials.username;
+    return true;
   });
 
   Future<bool> restoreAccount(VerifySchoolLogin verify) async {
     if (username == null) return true;
-    return _runSchool(
-      () => _schoolAccess.read(verify, (session) => session.checkLogin()),
-    );
+    return _runSchool('恢复学校登录', () async {
+      await _schoolAccess.read(verify, (session) => session.checkLogin());
+      return true;
+    });
   }
 
   Future<bool> synchronize({String? term, required VerifySchoolLogin verify}) =>
       _runSchool(
+        '导入课表',
         () => _schoolAccess.read(verify, (session) async {
           final result = await _school.synchronize(session, term: term);
 
@@ -226,6 +230,7 @@ class AppController extends ChangeNotifier {
             terms = {...await _store.terms(), ...result.terms}.toList();
             _goToCurrentWeek();
             await _updateWidget();
+            return true;
           } finally {
             busy = false;
             notifyListeners();
@@ -234,12 +239,11 @@ class AppController extends ChangeNotifier {
       );
 
   Future<bool> importExams({required VerifySchoolLogin verify}) => _runSchool(
+    '获取考试安排',
     () => _schoolAccess.read(verify, (session) async {
       final result = await fetchSchoolExams(session, term: schedule?.term);
       session.checkActive();
-      if (!await agenda.replaceExams(result.term, result.exams)) {
-        throw SchoolRequestError(agenda.error ?? '安排正在保存，请稍后重试。');
-      }
+      return agenda.replaceExams(result.term, result.exams);
     }),
   );
 
@@ -247,6 +251,7 @@ class AppController extends ChangeNotifier {
     DeadlineSource source, {
     required VerifySchoolLogin verify,
   }) => _runSchool(
+    '更新${source.label} DDL',
     () => _schoolAccess.readLearningPlatform(source, verify, (
       session,
       page,
@@ -256,9 +261,7 @@ class AppController extends ChangeNotifier {
         DeadlineSource.eclass => fetchEclassDeadlines(session),
       };
       session.checkActive();
-      if (!await agenda.mergeDeadlines(deadlines)) {
-        throw SchoolRequestError(agenda.error ?? '安排正在保存，请稍后重试。');
-      }
+      return agenda.mergeDeadlines(deadlines);
     }),
   );
 
@@ -300,8 +303,8 @@ class AppController extends ChangeNotifier {
       if (saved == null) return await importTerm(term);
 
       return await _save(saved);
-    } catch (failure) {
-      error = errorMessage(failure);
+    } catch (failure, stack) {
+      AppDiagnostics.instance.report('切换学期', failure, stack);
       notifyListeners();
       return false;
     }
@@ -319,7 +322,6 @@ class AppController extends ChangeNotifier {
 
   Future<bool> _save(SemesterSchedule next) async {
     busy = true;
-    error = null;
     notifyListeners();
 
     try {
@@ -335,8 +337,8 @@ class AppController extends ChangeNotifier {
       terms = {...terms, next.term}.toList();
       await _updateWidget();
       return true;
-    } catch (failure) {
-      error = errorMessage(failure);
+    } catch (failure, stack) {
+      AppDiagnostics.instance.report('保存课表', failure, stack);
       return false;
     } finally {
       busy = false;
@@ -348,8 +350,8 @@ class AppController extends ChangeNotifier {
     try {
       await _preferences.setString('theme', value.name);
       themeMode = value;
-    } catch (failure) {
-      error = errorMessage(failure);
+    } catch (failure, stack) {
+      AppDiagnostics.instance.report('保存外观设置', failure, stack);
     }
     notifyListeners();
   }
@@ -358,8 +360,8 @@ class AppController extends ChangeNotifier {
     try {
       await _preferences.setBool('confirmDelete', value);
       confirmDelete = value;
-    } catch (failure) {
-      error = errorMessage(failure);
+    } catch (failure, stack) {
+      AppDiagnostics.instance.report('保存删除设置', failure, stack);
     }
     notifyListeners();
   }
@@ -377,10 +379,9 @@ class AppController extends ChangeNotifier {
       await _schoolStorage.clear();
       username = null;
       accountStatus = AccountStatus.signedOut;
-      error = null;
       return true;
-    } catch (failure) {
-      error = errorMessage(failure);
+    } catch (failure, stack) {
+      AppDiagnostics.instance.report('退出学校账号', failure, stack);
       return false;
     } finally {
       busy = false;
@@ -398,12 +399,11 @@ class AppController extends ChangeNotifier {
       await _store.clear();
       _schedule = null;
       terms = [];
-      error = null;
       _goToCurrentWeek();
       await _updateWidget();
       return true;
-    } catch (failure) {
-      error = errorMessage(failure);
+    } catch (failure, stack) {
+      AppDiagnostics.instance.report('删除本地课表', failure, stack);
       return false;
     } finally {
       busy = false;
@@ -414,9 +414,8 @@ class AppController extends ChangeNotifier {
   Future<void> _updateWidget() async {
     try {
       await updateDesktopWidget();
-    } catch (failure) {
-      error = '桌面组件更新失败：${errorMessage(failure)}';
-      notifyListeners();
+    } catch (failure, stack) {
+      AppDiagnostics.instance.report('更新桌面组件', failure, stack);
     }
   }
 }

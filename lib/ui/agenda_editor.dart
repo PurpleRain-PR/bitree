@@ -166,7 +166,6 @@ class _AgendaEditorState extends State<_AgendaEditor> {
     } else {
       setState(() {
         _saving = false;
-        _error = widget.controller.agenda.error;
       });
     }
   }

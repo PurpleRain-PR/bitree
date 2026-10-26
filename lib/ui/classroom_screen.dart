@@ -6,6 +6,7 @@ import '../app_controller.dart';
 import '../classrooms/model.dart';
 import '../schedule/model.dart';
 import 'app_dropdown_field.dart';
+import 'app_notice.dart';
 import 'course_period_fields.dart';
 import 'school_screen.dart';
 import 'school_verification_dialog.dart';
@@ -27,7 +28,6 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
   late int _start = _nextSection();
   late int _end = _start;
   List<ClassroomOccupancy>? _rooms;
-  String? _error;
   bool _working = false;
   bool _requesting = false;
 
@@ -63,7 +63,7 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
   Future<T?> _withLogin<T>(Future<T?> Function() read) async {
     final controller = widget.controller;
     if (controller.busy || controller.schoolBusy) {
-      setState(() => _error = '学校请求正在进行，请稍后重试。');
+      showAppNotice(context, '学校请求正在进行，请稍后重试。');
       return null;
     }
 
@@ -94,9 +94,6 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
       if (!await signIn() || !mounted) return null;
       result = await request();
     }
-    if (mounted && result == null) {
-      setState(() => _error = controller.error);
-    }
     return result;
   }
 
@@ -104,7 +101,6 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
     if (_working) return;
     setState(() {
       _working = true;
-      _error = null;
     });
     final result = await _withLogin(
       () => widget.controller.classroomDirectory(
@@ -125,7 +121,6 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
     if (_working || _buildingCode == null) return;
     setState(() {
       _working = true;
-      _error = null;
       _rooms = null;
     });
     final result = await _withLogin(
@@ -153,7 +148,6 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
     setState(() {
       _date = calendarDate(date);
       _rooms = null;
-      _error = null;
     });
   }
 
@@ -216,7 +210,6 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
                       _campusCode = value;
                       _buildingCode = _buildings.firstOrNull?.code;
                       _rooms = null;
-                      _error = null;
                     }),
             ),
             second: _buildingCode == null
@@ -240,7 +233,6 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
                         : (value) => setState(() {
                             _buildingCode = value;
                             _rooms = null;
-                            _error = null;
                           }),
                   ),
           ),
@@ -276,14 +268,6 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
             ),
           ),
         ],
-        if (_error != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: Text(
-              _error!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-          ),
       ],
     );
   }

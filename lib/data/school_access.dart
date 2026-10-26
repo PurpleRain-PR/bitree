@@ -1,4 +1,5 @@
 import '../agenda/deadline_source.dart';
+import '../diagnostics.dart';
 import 'school_errors.dart';
 import 'school_login.dart';
 import 'school_network.dart';
@@ -71,6 +72,7 @@ class SchoolAccess {
       }
 
       // Retry once through WebVPN; don't repeat the failed campus route.
+      AppDiagnostics.instance.info('教学中心直连失败，切换 WebVPN（${failure.url.host}）');
       _network = SchoolNetwork.webvpn;
       return _withSession(_network, operation);
     }

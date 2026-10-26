@@ -96,7 +96,6 @@ class _SchoolScreenState extends State<_SchoolScreen> {
   final _password = TextEditingController();
   SchoolAction? _operation;
   bool _hidePassword = true;
-  String? _error;
 
   bool get _importing => widget.action != SchoolAction.signIn;
   bool get _running => _operation != null;
@@ -106,7 +105,6 @@ class _SchoolScreenState extends State<_SchoolScreen> {
     FocusScope.of(context).unfocus();
     setState(() {
       _operation = SchoolAction.signIn;
-      _error = null;
     });
     final controller = widget.controller;
     Future<String?> verify(SchoolVerification request) =>
@@ -118,10 +116,7 @@ class _SchoolScreenState extends State<_SchoolScreen> {
         source: widget.action.source,
       );
       if (!mounted) return;
-      if (!signedIn) {
-        setState(() => _error = controller.error);
-        return;
-      }
+      if (!signedIn) return;
       _password.clear();
       if (_importing) setState(() => _operation = widget.action);
       final success =
@@ -223,13 +218,6 @@ class _SchoolScreenState extends State<_SchoolScreen> {
             onFieldSubmitted: (_) => _run(),
           ),
           const SizedBox(height: 24),
-          if (_error != null) ...[
-            Text(
-              _error!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-            const SizedBox(height: 16),
-          ],
           FilledButton(
             onPressed: _running ? null : _run,
             child: Row(

@@ -6,7 +6,6 @@ import 'app_page.dart';
 import 'campus_time_builder.dart';
 import 'course_detail.dart';
 import 'course_editor.dart';
-import 'data_errors.dart';
 import 'schedule_menu.dart';
 import 'school_import_button.dart';
 import 'school_screen.dart';
@@ -47,7 +46,6 @@ class HomeScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          DataErrors(controller: controller),
           if (!controller.ready) const LinearProgressIndicator(minHeight: 3),
           if (controller.agenda.ready)
             TodayAgenda(controller: controller, entries: entries, now: now),

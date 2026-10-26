@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../diagnostics.dart';
+
 Future<bool> openExternalLink(
   BuildContext context,
   Uri url, {
@@ -10,7 +12,8 @@ Future<bool> openExternalLink(
   bool opened;
   try {
     opened = await launchUrl(url, mode: LaunchMode.externalApplication);
-  } on PlatformException {
+  } on PlatformException catch (failure, stack) {
+    AppDiagnostics.instance.error('打开外部链接', failure, stack);
     opened = false;
   }
 

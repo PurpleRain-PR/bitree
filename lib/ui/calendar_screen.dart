@@ -8,7 +8,6 @@ import 'agenda_list_tile.dart';
 import 'app_menu_anchor.dart';
 import 'app_page.dart';
 import 'campus_time_builder.dart';
-import 'data_errors.dart';
 import 'pull_to_reveal_list.dart';
 import 'school_import_button.dart';
 
@@ -108,7 +107,6 @@ class _CalendarScreenState extends State<CalendarScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          DataErrors(controller: controller),
           TabBar(
             controller: _status,
             isScrollable: true,
@@ -132,6 +130,12 @@ class _CalendarScreenState extends State<CalendarScreen>
           ),
           if (!controller.agenda.ready && controller.agenda.busy)
             const LinearProgressIndicator(minHeight: 3),
+          if (!controller.agenda.ready && !controller.agenda.busy)
+            TextButton.icon(
+              onPressed: controller.agenda.load,
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: const Text('重新加载日程'),
+            ),
           Expanded(
             child: PullToRevealList(
               key: ValueKey((_kind, completed)),

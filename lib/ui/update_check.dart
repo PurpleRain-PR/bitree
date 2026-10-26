@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../app_version.dart';
 import '../data/app_release.dart';
+import '../diagnostics.dart';
 import 'external_link.dart';
 
 const _lastCheckKey = 'updates.lastCheck';
@@ -130,11 +131,18 @@ Future<void> checkForUpdates(
         release.version,
       );
     }
-  } catch (error) {
-    if (silent || !context.mounted) return;
-
-    final message = error is HttpException ? error.message : '检查更新失败，请检查网络后重试。';
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+  } catch (failure, stack) {
+    if (silent || !context.mounted) {
+      AppDiagnostics.instance.error('检查更新', failure, stack);
+    } else {
+      AppDiagnostics.instance.report(
+        '检查更新',
+        failure,
+        stack,
+        message: failure is HttpException
+            ? failure.message
+            : '检查更新失败，请检查网络后重试。',
+      );
+    }
   }
 }

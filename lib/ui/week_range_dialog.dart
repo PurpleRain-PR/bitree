@@ -49,7 +49,6 @@ class _WeekRangeDialogState extends State<_WeekRangeDialog> {
   late final _first = TextEditingController(text: '${widget.first}');
   late final _last = TextEditingController(text: '${widget.last}');
   bool _saving = false;
-  String? _error;
 
   @override
   void dispose() {
@@ -74,7 +73,6 @@ class _WeekRangeDialogState extends State<_WeekRangeDialog> {
       text: '$next',
       selection: TextSelection.collapsed(offset: '$next'.length),
     );
-    setState(() => _error = null);
   }
 
   Future<void> _save() async {
@@ -87,7 +85,6 @@ class _WeekRangeDialogState extends State<_WeekRangeDialog> {
     if (controller != null) {
       setState(() {
         _saving = true;
-        _error = null;
       });
       final saved = await controller.setWeekRange(
         first: range.first,
@@ -97,7 +94,6 @@ class _WeekRangeDialogState extends State<_WeekRangeDialog> {
       if (!saved) {
         setState(() {
           _saving = false;
-          _error = controller.error ?? '未能保存，请重试';
         });
         return;
       }
@@ -203,15 +199,6 @@ class _WeekRangeDialogState extends State<_WeekRangeDialog> {
                   first,
                   const SizedBox(height: 16),
                   last,
-                ],
-                if (_error case final error?) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    error,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                  ),
                 ],
               ],
             ),

@@ -42,7 +42,6 @@ class _AgendaListTileState extends State<AgendaListTile> {
   Future<void> _complete({bool haptic = false}) {
     _cancelDelete();
     return toggleAgendaDone(
-      context,
       widget.controller.agenda,
       widget.entry,
       haptic: haptic,
