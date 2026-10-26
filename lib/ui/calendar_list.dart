@@ -44,6 +44,12 @@ class CalendarItemTile extends StatefulWidget {
 class _CalendarItemTileState extends State<CalendarItemTile> {
   bool _deleteArmed = false;
 
+  @override
+  void didUpdateWidget(covariant CalendarItemTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.controller.confirmDelete) _deleteArmed = false;
+  }
+
   void _cancelDelete() {
     if (_deleteArmed) setState(() => _deleteArmed = false);
   }

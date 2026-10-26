@@ -25,6 +25,8 @@ Future<bool> deleteAgendaEntry(
   AgendaEntry entry, {
   bool confirm = true,
 }) async {
+  // The originating sheet can close while the undo action remains visible.
+  final overlay = Overlay.of(context, rootOverlay: true);
   if (confirm && controller.confirmDelete) {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -50,8 +52,30 @@ Future<bool> deleteAgendaEntry(
     if (confirmed != true) return false;
   }
   final deleted = await controller.agenda.delete(entry);
-  if (!deleted && context.mounted) {
-    showAppNotice(context, controller.agenda.error ?? '未能删除，请重试');
+  if (!overlay.mounted) return deleted;
+  if (!deleted) {
+    showOverlayNotice(overlay, controller.agenda.error ?? '未能删除，请重试');
+    return false;
   }
-  return deleted;
+
+  Future<void> restore() async {
+    final restored = await controller.agenda.save(entry);
+    if (!overlay.mounted) return;
+    if (restored) {
+      showOverlayNotice(overlay, '已恢复“${entry.title}”');
+    } else {
+      showOverlayNotice(
+        overlay,
+        controller.agenda.error ?? '未能恢复，请重试',
+        action: (label: '重试', onPressed: restore),
+      );
+    }
+  }
+
+  showOverlayNotice(
+    overlay,
+    '已删除“${entry.title}”',
+    action: (label: '撤销', onPressed: restore),
+  );
+  return true;
 }

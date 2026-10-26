@@ -6,9 +6,23 @@ OverlayEntry? _notice;
 Timer? _dismissTimer;
 
 /// The root overlay keeps feedback visible above course detail sheets.
-void showAppNotice(BuildContext context, String message) {
+void showAppNotice(
+  BuildContext context,
+  String message, {
+  ({String label, VoidCallback onPressed})? action,
+}) => showOverlayNotice(
+  Overlay.of(context, rootOverlay: true),
+  message,
+  action: action,
+);
+
+/// Allows an undo action to outlive the route where it started.
+void showOverlayNotice(
+  OverlayState overlay,
+  String message, {
+  ({String label, VoidCallback onPressed})? action,
+}) {
   _dismissNotice();
-  final overlay = Overlay.of(context, rootOverlay: true);
   _notice = OverlayEntry(
     builder: (context) {
       final theme = Theme.of(context);
@@ -17,6 +31,7 @@ void showAppNotice(BuildContext context, String message) {
         left: 0,
         right: 0,
         child: IgnorePointer(
+          ignoring: action == null,
           child: SafeArea(
             bottom: false,
             minimum: const EdgeInsets.all(16),
@@ -31,15 +46,38 @@ void showAppNotice(BuildContext context, String message) {
                   child: Semantics(
                     liveRegion: true,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
+                      padding: EdgeInsets.symmetric(
                         horizontal: 16,
-                        vertical: 12,
+                        vertical: action == null ? 12 : 4,
                       ),
-                      child: Text(
-                        message,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onInverseSurface,
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              message,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onInverseSurface,
+                              ),
+                            ),
+                          ),
+                          if (action != null) ...[
+                            const SizedBox(width: 12),
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                foregroundColor:
+                                    theme.colorScheme.inversePrimary,
+                              ),
+                              onPressed: () {
+                                _dismissNotice();
+                                action.onPressed();
+                              },
+                              child: Text(action.label),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                   ),
@@ -52,7 +90,12 @@ void showAppNotice(BuildContext context, String message) {
     },
   );
   overlay.insert(_notice!);
-  _dismissTimer = Timer(const Duration(seconds: 4), _dismissNotice);
+  if (action == null || !MediaQuery.accessibleNavigationOf(overlay.context)) {
+    _dismissTimer = Timer(
+      Duration(seconds: action == null ? 4 : 8),
+      _dismissNotice,
+    );
+  }
 }
 
 void _dismissNotice() {
