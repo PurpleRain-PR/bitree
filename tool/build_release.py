@@ -17,7 +17,7 @@ def run(program, *arguments):
 
 
 def build_android(flags, prefix):
-    suffix = "-unsigned" if os.environ["GITHUB_EVENT_NAME"] == "pull_request" else ""
+    suffix = "" if Path("android/key.properties").exists() else "-unsigned"
 
     run("flutter", "build", "apk", "--split-per-abi", *flags)
     for apk in Path("build/app/outputs/flutter-apk").glob("*.apk"):

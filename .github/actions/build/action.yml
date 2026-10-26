@@ -15,7 +15,7 @@ inputs:
     description: Build number derived from the commit time
     required: true
   signing-password:
-    description: Password for the encrypted Android keystore
+    description: Optional Android keystore password; builds are unsigned when empty
     required: false
 
 runs:
@@ -92,7 +92,10 @@ runs:
       run: flutter analyze --no-pub
       shell: bash
     - name: Decrypt Android signing
-      if: ${{ inputs.target == 'android' && github.event_name != 'pull_request' }}
+      if: >-
+        ${{ inputs.target == 'android' &&
+            github.event_name != 'pull_request' &&
+            inputs.signing-password != '' }}
       env:
         ANDROID_SIGNING_PASSWORD: ${{ inputs.signing-password }}
       shell: python
