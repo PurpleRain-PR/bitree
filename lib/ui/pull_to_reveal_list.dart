@@ -128,32 +128,51 @@ class _PullToRevealListState extends State<PullToRevealList> {
                             : const ClampingScrollPhysics(),
                         slivers: [
                           if (_revealed && widget.hiddenChildren.isNotEmpty)
-                            // Short lists align to the bottom; long lists keep their full height.
-                            SliverFillRemaining(
-                              hasScrollBody: false,
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  ...widget.hiddenChildren,
-                                  Center(
-                                    child: TextButton(
-                                      onPressed: () => _setRevealed(false),
-                                      style: TextButton.styleFrom(
-                                        foregroundColor: scheme.error,
+                            SliverLayoutBuilder(
+                              builder: (context, constraints) =>
+                                  SliverToBoxAdapter(
+                                    child: ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                        minHeight:
+                                            constraints.viewportMainAxisExtent,
                                       ),
-                                      child: const Text('收回'),
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 24,
+                                        ),
+                                        // Include upcoming items before deciding whether there is spare space.
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.end,
+                                          children: [
+                                            ...widget.hiddenChildren,
+                                            Center(
+                                              child: TextButton(
+                                                onPressed: () =>
+                                                    _setRevealed(false),
+                                                style: TextButton.styleFrom(
+                                                  foregroundColor: scheme.error,
+                                                ),
+                                                child: const Text('收回'),
+                                              ),
+                                            ),
+                                            ...widget.children,
+                                          ],
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                ],
-                              ),
+                            )
+                          else ...[
+                            AnimatedSliverChildren(
+                              key: const ValueKey('current'),
+                              children: widget.children,
                             ),
-                          AnimatedSliverChildren(
-                            key: const ValueKey('current'),
-                            children: widget.children,
-                          ),
-                          const SliverPadding(
-                            padding: EdgeInsets.only(bottom: 24),
-                          ),
+                            const SliverPadding(
+                              padding: EdgeInsets.only(bottom: 24),
+                            ),
+                          ],
                         ],
                       ),
                       if (_canReveal && _pull > 0)
