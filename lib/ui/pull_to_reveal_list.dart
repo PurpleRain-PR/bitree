@@ -26,7 +26,6 @@ class PullToRevealList extends StatefulWidget {
 class _PullToRevealListState extends State<PullToRevealList> {
   static const _threshold = 64.0;
   final _scroll = ScrollController();
-  final _currentItems = UniqueKey();
   bool _revealed = false;
   bool _dragging = false;
   double _pull = 0;
@@ -71,19 +70,13 @@ class _PullToRevealListState extends State<PullToRevealList> {
       _revealed = value;
       _pull = 0;
     });
-    // The last hidden row ends at the center sliver's zero offset.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final position = _scroll.position;
-      final target = (value ? -position.viewportDimension : 0.0).clamp(
-        position.minScrollExtent,
-        position.maxScrollExtent,
-      );
       if (MediaQuery.disableAnimationsOf(context)) {
-        _scroll.jumpTo(target);
+        _scroll.jumpTo(0);
       } else {
         _scroll.animateTo(
-          target,
+          0,
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
         );
@@ -128,27 +121,20 @@ class _PullToRevealListState extends State<PullToRevealList> {
                     children: [
                       CustomScrollView(
                         controller: _scroll,
-                        center: _currentItems,
                         physics: _canReveal
                             ? const _TopPullPhysics(
                                 parent: AlwaysScrollableScrollPhysics(),
                               )
                             : const ClampingScrollPhysics(),
                         slivers: [
-                          // Slivers before the center grow upward, leaving the current items anchored.
-                          if (_revealed) ...[
-                            if (widget.hiddenChildren.isNotEmpty)
-                              const SliverFillRemaining(
-                                hasScrollBody: false,
-                                child: SizedBox.shrink(),
-                              ),
-                            AnimatedSliverChildren(
-                              key: const ValueKey('hidden'),
-                              children: widget.hiddenChildren.reversed.toList(),
-                            ),
-                          ],
                           AnimatedSliverChildren(
-                            key: _currentItems,
+                            key: const ValueKey('hidden'),
+                            children: _revealed
+                                ? widget.hiddenChildren
+                                : const [],
+                          ),
+                          AnimatedSliverChildren(
+                            key: const ValueKey('current'),
                             children: [
                               if (_revealed && widget.hiddenChildren.isNotEmpty)
                                 Center(
@@ -156,7 +142,7 @@ class _PullToRevealListState extends State<PullToRevealList> {
                                   child: TextButton(
                                     onPressed: () => _setRevealed(false),
                                     style: TextButton.styleFrom(
-                                      foregroundColor: scheme.onSurfaceVariant,
+                                      foregroundColor: scheme.error,
                                     ),
                                     child: const Text('收回'),
                                   ),
@@ -180,9 +166,7 @@ class _PullToRevealListState extends State<PullToRevealList> {
                               child: Text(
                                 '${_pull >= _threshold ? '松开查看' : '下拉查看'}'
                                 '${widget.hiddenLabel}',
-                                style: TextStyle(
-                                  color: scheme.onSurfaceVariant,
-                                ),
+                                style: TextStyle(color: scheme.error),
                               ),
                             ),
                           ),
