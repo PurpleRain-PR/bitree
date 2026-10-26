@@ -67,23 +67,14 @@ class SchoolStorage {
     ),
   );
 
-  Future<List<Cookie>> cookiesFor(SchoolNetwork network, Uri source) {
-    if (!isSchoolUrl(source)) {
-      throw ArgumentError('只接受学校网站的会话');
-    }
-
-    return _cookiesFor(network).loadForRequest(source);
-  }
+  Future<List<Cookie>> cookiesFor(SchoolNetwork network, Uri source) =>
+      _cookiesFor(network).loadForRequest(source);
 
   Future<void> saveCookies(
     SchoolNetwork network,
     Uri source,
     List<Cookie> cookies,
   ) async {
-    if (!isSchoolUrl(source)) {
-      throw ArgumentError('只接受学校网站的会话');
-    }
-
     for (final cookie in cookies) {
       final domain = cookie.domain?.replaceFirst(RegExp(r'^\.'), '');
       if (domain != null &&

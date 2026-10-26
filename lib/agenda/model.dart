@@ -22,6 +22,7 @@ class AgendaEntry {
     this.location = '',
     this.notes = '',
     this.done = false,
+    this.deleted = false,
     this.term,
     this.local = true,
     this.source,
@@ -53,6 +54,7 @@ class AgendaEntry {
   final String location;
   final String notes;
   final bool done;
+  final bool deleted;
   final String? term;
   final bool local;
   final DeadlineSource? source;
@@ -82,7 +84,7 @@ class AgendaEntry {
         '${sameDay ? '' : '${end.month}月${end.day}日 '}${clockText(end)}';
   }
 
-  AgendaEntry withDone(bool value) => AgendaEntry(
+  AgendaEntry copyWith({bool? done, bool? deleted}) => AgendaEntry(
     id: id,
     title: title,
     kind: kind,
@@ -91,7 +93,8 @@ class AgendaEntry {
     allDay: allDay,
     location: location,
     notes: notes,
-    done: value,
+    done: done ?? this.done,
+    deleted: deleted ?? this.deleted,
     term: term,
     local: local,
     source: source,
@@ -109,6 +112,7 @@ class AgendaEntry {
     'location': location,
     'notes': notes,
     'done': done,
+    'deleted': deleted,
     'term': term,
     'local': local,
     'source': source?.name,
@@ -128,6 +132,7 @@ class AgendaEntry {
     location: json['location'] as String,
     notes: json['notes'] as String,
     done: json['done'] as bool,
+    deleted: json['deleted'] as bool? ?? false,
     term: json['term'] as String?,
     local: json['local'] as bool,
     source: json['source'] == null

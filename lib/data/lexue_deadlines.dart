@@ -28,12 +28,10 @@ Future<List<AgendaEntry>> fetchLexueDeadlines(
   final address = block == null
       ? null
       : RegExp(r'https://\S+').firstMatch(block.text)?[0];
-  if (address == null) throw const SchoolRequestError('乐学没有返回日历导出地址。');
+  if (address == null) throw const SchoolRequestError('乐学没有返回日程导出地址。');
   final url = Uri.parse(address);
-  if (url.host != source.host ||
-      url.scheme != 'https' ||
-      url.userInfo.isNotEmpty) {
-    throw const SchoolRequestError('乐学返回的日历地址无效。');
+  if (url.host != source.host || url.userInfo.isNotEmpty) {
+    throw const SchoolRequestError('乐学返回的日程地址无效。');
   }
   final calendar = await session.request(url, stopAtLogin: true);
   return _parseLexueCalendar(calendar.text);
@@ -41,7 +39,7 @@ Future<List<AgendaEntry>> fetchLexueDeadlines(
 
 List<AgendaEntry> _parseLexueCalendar(String calendar) {
   if (!calendar.contains('BEGIN:VCALENDAR')) {
-    throw const SchoolRequestError('乐学没有返回日历，请重新获取。');
+    throw const SchoolRequestError('乐学没有返回日程数据，请重试。');
   }
   final unfolded = calendar.replaceAll(RegExp(r'\r?\n[ \t]'), '');
   final result = <AgendaEntry>[];
@@ -122,7 +120,7 @@ DateTime _calendarDate(String value, String parameters) {
     return date.add(const Duration(hours: 8));
   }
   if (timezone != null && timezone != 'Asia/Shanghai') {
-    throw FormatException('乐学日历使用了未支持的时区：$timezone');
+    throw FormatException('乐学日程使用了不支持的时区：$timezone');
   }
   return date;
 }

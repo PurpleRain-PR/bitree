@@ -101,20 +101,16 @@ class SchoolSession {
         ? 'application/x-www-form-urlencoded; charset=utf-8'
         : 'application/json; charset=utf-8';
 
+    checkActive();
     for (var redirects = 0; redirects <= 10; redirects++) {
-      checkActive();
       if (!isSchoolUrl(url)) {
         throw const SchoolRequestError('学校请求跳转到了未授权的网站。');
-      }
-      if (payload != null && url.origin != target.origin) {
-        throw const SchoolRequestError('学校请求尝试将登录信息发送到其他网站。');
       }
       if (stopAtLogin && isSchoolLogin(url)) throw const SessionExpired();
 
       final outgoing = await _client
           .openUrl(payload == null ? 'GET' : 'POST', url)
           .timeout(const Duration(seconds: 25));
-      checkActive();
       outgoing.followRedirects = false;
       outgoing.headers
         ..set(HttpHeaders.userAgentHeader, userAgent)
@@ -168,8 +164,11 @@ class SchoolSession {
 
       if (followRedirects &&
           [301, 302, 303, 307, 308].contains(result.status)) {
-        url = network.route(result.location!);
-        if ([301, 302, 303].contains(result.status)) payload = null;
+        final next = network.route(result.location!);
+        if ([301, 302, 303].contains(result.status)) {
+          payload = null;
+        }
+        url = next;
         continue;
       }
       if (checkStatus && result.status >= 400) {

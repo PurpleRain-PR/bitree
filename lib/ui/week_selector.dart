@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
 import '../schedule/model.dart';
+import 'app_menu_anchor.dart';
 
 class WeekSelector extends StatelessWidget {
   const WeekSelector({super.key, required this.controller});
@@ -22,15 +23,9 @@ class WeekSelector extends StatelessWidget {
     final columns = ((screen.width - 32) / (cellSize + 4)).floor().clamp(1, 5);
     final weeks = controller.weeks;
     final currentWeek = schedule?.weekAt(campusNow());
-    return MenuAnchor(
+    return AppMenuAnchor(
       style: MenuStyle(
-        maximumSize: WidgetStatePropertyAll(
-          Size(double.infinity, math.min(320, screen.height * 0.4)),
-        ),
         padding: const WidgetStatePropertyAll(EdgeInsets.all(8)),
-        shape: WidgetStatePropertyAll(
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
       ),
       menuChildren: [
         for (var row = 0; row < weeks.length; row += columns)

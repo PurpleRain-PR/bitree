@@ -22,6 +22,20 @@ class SchoolLogin {
   static final _sso = Uri.https('sso.bit.edu.cn');
   Uri _referer = _sso.resolve('/cas/login');
 
+  Future<SchoolCredentials> _credentials(SchoolCredentials? provided) async {
+    final account = provided ?? await session.storage.readCredentials();
+    if (account == null) throw const SchoolCredentialsRequired();
+    return account;
+  }
+
+  Future<void> restore() async {
+    try {
+      await session.checkLogin();
+    } on SessionExpired {
+      await signIn();
+    }
+  }
+
   Future<SchoolResponse> openLearningPlatform(
     DeadlineSource source, {
     SchoolCredentials? credentials,
@@ -36,19 +50,16 @@ class SchoolLogin {
       }
       service = Uri.parse(callback);
     }
-    final account = credentials ?? await session.storage.readCredentials();
-    if (account == null) throw const SchoolCredentialsRequired();
+    final account = await _credentials(credentials);
     final callback = await _authenticate(account, service);
     return _openCallback(callback);
   }
 
-  Future<void> signIn(SchoolCredentials credentials) async {
+  Future<void> signIn([SchoolCredentials? credentials]) async {
+    final account = await _credentials(credentials);
     if (session.network == SchoolNetwork.webvpn) {
       await _prepareWebVpn();
-      final vpnCallback = await _authenticate(
-        credentials,
-        SchoolNetwork.vpnLogin,
-      );
+      final vpnCallback = await _authenticate(account, SchoolNetwork.vpnLogin);
       await _openCallback(vpnCallback);
     }
 
@@ -59,7 +70,7 @@ class SchoolLogin {
       anonymous: true,
     );
     final service = preflight.location!.queryParameters['service']!;
-    final callback = await _authenticate(credentials, Uri.parse(service));
+    final callback = await _authenticate(account, Uri.parse(service));
     await _openCallback(callback);
     try {
       await session.checkLogin();
@@ -93,9 +104,6 @@ class SchoolLogin {
   );
 
   Future<Uri> _authenticate(SchoolCredentials credentials, Uri service) async {
-    if (!isSchoolUrl(service)) {
-      throw const SchoolRequestError('学校返回了无效的认证地址。');
-    }
     final pageResponse = await _request(
       _sso
           .resolve('/cas/login')
@@ -249,19 +257,15 @@ class SchoolLogin {
   }
 
   Uri _callback(SchoolResponse response) {
-    session.checkActive();
     if (response.location != null &&
         response.status >= 300 &&
         response.status < 400) {
-      if (!isSchoolUrl(response.location!)) {
-        throw const SchoolRequestError('学校返回了无效的认证地址。');
-      }
       return response.location!;
     }
     final page = _LoginPage(response);
     final code = page.field('login-error-code');
     final message = switch (code) {
-      '1030027' || '1030031' => '学号或密码错误，请重新输入。',
+      '1030027' || '1030031' => '账号或密码错误',
       '1030028' => '账号已被锁定，请先在学校统一身份认证平台解锁。',
       '1320007' || '1320010' => '验证码错误或已失效，请重试。',
       '1330001' => '学校要求进一步验证，请稍后重试。',

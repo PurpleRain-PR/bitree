@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 
 import '../schedule/ics.dart';
 import '../schedule/model.dart';
+import 'app_menu_anchor.dart';
 import 'widget_guide.dart';
 
 class ScheduleMenu extends StatefulWidget {
@@ -70,7 +71,7 @@ class _ScheduleMenuState extends State<ScheduleMenu> {
   @override
   Widget build(BuildContext context) {
     final schedule = widget.schedule;
-    return MenuAnchor(
+    return AppMenuAnchor(
       menuChildren: [
         if (Platform.isAndroid)
           MenuItemButton(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
 import '../app_version.dart';
+import 'app_menu_anchor.dart';
 import 'app_page.dart';
 import 'external_link.dart';
 import 'school_account.dart';
@@ -19,45 +20,20 @@ class SettingsScreen extends StatelessWidget {
   final bool checkingForUpdates;
   final VoidCallback onCheckForUpdates;
 
-  Future<void> _selectTerm(BuildContext pageContext) => showDialog<void>(
-    context: pageContext,
-    builder: (context) => SimpleDialog(
-      title: const Text('选择学期'),
-      children: [
-        for (final term in controller.terms)
-          SimpleDialogOption(
-            onPressed: controller.busy
-                ? null
-                : () {
-                    Navigator.pop(context);
-                    controller.selectTerm(
-                      term,
-                      importTerm: (term) async {
-                        if (!pageContext.mounted) return false;
-                        return await openSchoolPage(
-                              pageContext,
-                              controller,
-                              action: SchoolAction.importSchedule,
-                              term: term,
-                            ) ==
-                            true;
-                      },
-                    );
-                  },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Row(
-                children: [
-                  Expanded(child: Text(term)),
-                  if (controller.schedule?.term == term)
-                    const Icon(Icons.check_rounded, size: 18),
-                ],
-              ),
-            ),
-          ),
-      ],
-    ),
-  );
+  Future<bool> _selectTerm(BuildContext context, String term) =>
+      controller.selectTerm(
+        term,
+        importTerm: (term) async {
+          if (!context.mounted) return false;
+          return await openSchoolPage(
+                context,
+                controller,
+                action: SchoolAction.importSchedule,
+                term: term,
+              ) ==
+              true;
+        },
+      );
 
   Future<void> _clearSchedule(BuildContext context) async {
     final confirmed = await showDialog<bool>(
@@ -262,13 +238,37 @@ class SettingsScreen extends StatelessWidget {
           ]),
           if (controller.schedule != null)
             section('本地课表', [
-              ListTile(
-                contentPadding: tilePadding,
-                leading: const Icon(Icons.calendar_month_outlined),
-                title: const Text('学期'),
-                subtitle: Text(controller.schedule!.termLabel),
-                trailing: const Icon(Icons.chevron_right_rounded, size: 20),
-                onTap: controller.busy ? null : () => _selectTerm(context),
+              AppMenuAnchor(
+                menuChildren: [
+                  for (final term in controller.terms)
+                    Semantics(
+                      selected: controller.schedule!.term == term,
+                      child: MenuItemButton(
+                        onPressed: controller.busy
+                            ? null
+                            : () => _selectTerm(context, term),
+                        trailingIcon: controller.schedule!.term == term
+                            ? const Icon(Icons.check_rounded, size: 18)
+                            : const SizedBox(width: 18),
+                        child: Text(term),
+                      ),
+                    ),
+                ],
+                builder: (context, menu, _) => ListTile(
+                  contentPadding: tilePadding,
+                  leading: const Icon(Icons.calendar_month_outlined),
+                  title: const Text('学期'),
+                  subtitle: Text(controller.schedule!.termLabel),
+                  trailing: Icon(
+                    menu.isOpen
+                        ? Icons.expand_less_rounded
+                        : Icons.expand_more_rounded,
+                    size: 18,
+                  ),
+                  onTap: controller.busy
+                      ? null
+                      : () => menu.isOpen ? menu.close() : menu.open(),
+                ),
               ),
               ListTile(
                 contentPadding: tilePadding,
@@ -280,7 +280,7 @@ class SettingsScreen extends StatelessWidget {
                 onTap: controller.busy ? null : () => _clearSchedule(context),
               ),
             ]),
-          section('日历与待办', [
+          section('日程', [
             SwitchListTile(
               contentPadding: tilePadding,
               title: const Text('删除前确认'),

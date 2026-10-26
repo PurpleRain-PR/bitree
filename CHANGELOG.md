@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- feat(course): manage selectable week range ([e987147](https://github.com/so1ve/bitree/commit/e98714715c4ca4d5413109fd17da8ef4396195f2))
+- fix(course): replace week presets with direct selection actions ([20d1be6](https://github.com/so1ve/bitree/commit/20d1be68140526165f201862fffef5f0d1f702c3))
+- fix(ui): unify dropdown styling and Material menu animations ([aadbd83](https://github.com/so1ve/bitree/commit/aadbd8352f5363fbe3ab223bcb73655893269168))
+- feat(agenda): preserve deleted deadlines during updates and allow restoration ([3373ca3](https://github.com/so1ve/bitree/commit/3373ca38c9eaa796884a53da2bdaa72bc9a6fb38))
+- fix(auth): preserve upstream login error messages ([eadac62](https://github.com/so1ve/bitree/commit/eadac62d6b02642dd045aaaa20877b3c0209ed12))
+- refactor(http): remove cross-origin payload guard ([d6f363e](https://github.com/so1ve/bitree/commit/d6f363ec62fc0695cef87f17ca53a51d8155d10e))
+- refactor(auth): centralize request validation and session restoration ([6141025](https://github.com/so1ve/bitree/commit/61410250b6dae90f92f783d936734bf5b8d3ef62))
+- fix(auth): clarify invalid account or password message ([1546bf2](https://github.com/so1ve/bitree/commit/1546bf215898a8d457ed2c946ac4987e33445314))
+- style(course): redesign week selection shortcuts as compact segments ([05b090a](https://github.com/so1ve/bitree/commit/05b090ae211682d458b631e4d824ea7349ecd64d))
+- fix(timetable): show pinned item counts instead of truncated titles ([79721a8](https://github.com/so1ve/bitree/commit/79721a8ede2a112542b1ef1877d502e55acdf669))
+- fix(ui): unify anchored menus and enable Material animations ([ae0fdad](https://github.com/so1ve/bitree/commit/ae0fdade41e4b1bfa84b45e36ad9b2f9bbc3bd07))
+- refactor: unify agenda labels across the app ([3c04209](https://github.com/so1ve/bitree/commit/3c042096c5faf63250f5d109349ac2a52fe17dd5))
+- fix: group past calendar entries in pull-down history ([44dafba](https://github.com/so1ve/bitree/commit/44dafba46a92ac5d90820e5aa70863ba0ae2e868))
+- refactor: remove redundant calendar visibility toggles ([4e5dcb4](https://github.com/so1ve/bitree/commit/4e5dcb4ab08cdb1a1d0c832044a88af66e631087))
+- fix(android): keep app icon padding proportional across display sizes ([5ee9639](https://github.com/so1ve/bitree/commit/5ee963990bbb1a008d12ad110908dd68fc3428da))
+- feat: time indicator (#4) ([770ce71](https://github.com/so1ve/bitree/commit/770ce713ddf82a291ca3a091576935ea9d3886c3))
 - refactor(ci): centralize changelog updates on upstream main ([3bab24e](https://github.com/so1ve/bitree/commit/3bab24e27364ab5c1ad2c291738ccccf47fbe5f0))
 - fix(android): make PR builds installable with debug signing ([cebcab8](https://github.com/so1ve/bitree/commit/cebcab8b6009c6d37862932ab911cd787718c3b4))
 - fix(ci): upload build artifacts individually without zip wrappers ([d229980](https://github.com/so1ve/bitree/commit/d2299808fff9e76e92b741c131f3134bf260e9b5))

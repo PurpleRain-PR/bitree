@@ -21,15 +21,13 @@ class CalendarScreen extends StatefulWidget {
 
 class _CalendarScreenState extends State<CalendarScreen> {
   AgendaKind? _kind;
-  bool _showCompleted = true;
-  bool _showPast = false;
 
   @override
   Widget build(BuildContext context) {
     final controller = widget.controller;
     final now = campusNow();
     final today = calendarDate(now);
-    final overdue = <AgendaEntry>[];
+    final history = <AgendaEntry>[];
     final days = <DateTime, List<AgendaEntry>>{};
     final entries = controller.agenda.entries.toList()
       ..sort((a, b) {
@@ -39,15 +37,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     for (final entry in entries) {
       if (_kind != null && entry.kind != _kind) continue;
-      if (entry.done && !_showCompleted) continue;
-      if (entry.isDeadline && entry.dueAt.isBefore(now)) {
-        overdue.add(entry);
-        continue;
-      }
       final past = entry.isDeadline
           ? entry.dueAt.isBefore(now)
           : !entry.endsAt!.isAfter(now);
-      if (past && !_showPast && !entry.done) continue;
+      if (past) {
+        history.add(entry);
+        continue;
+      }
       final day = calendarDate(entry.startsAt);
       days.putIfAbsent(day, () => []).add(entry);
     }
@@ -67,29 +63,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
 
     return AppPage(
-      title: const Text('日历'),
+      title: const Text('日程'),
       actions: [
         AddButton(controller: controller, includeCourse: false),
         SchoolImportButton(controller: controller, includeSchedule: false),
-        MenuAnchor(
-          menuChildren: [
-            CheckboxMenuButton(
-              value: _showCompleted,
-              onChanged: (value) => setState(() => _showCompleted = value!),
-              child: const Text('显示已完成'),
-            ),
-            CheckboxMenuButton(
-              value: _showPast,
-              onChanged: (value) => setState(() => _showPast = value!),
-              child: const Text('显示已结束'),
-            ),
-          ],
-          builder: (context, menu, _) => IconButton(
-            tooltip: '更多',
-            onPressed: () => menu.isOpen ? menu.close() : menu.open(),
-            icon: const Icon(Icons.more_horiz_rounded),
-          ),
-        ),
       ],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -123,11 +100,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
           Expanded(
             child: PullToRevealList(
               key: ValueKey(_kind),
-              hiddenLabel: '已截止的 DDL',
+              hiddenLabel: '过去的日程',
               hiddenChildren: [
-                if (overdue.isNotEmpty) ...[
-                  heading(const ValueKey('overdue-heading'), '已截止的 DDL'),
-                  for (final entry in overdue)
+                if (history.isNotEmpty) ...[
+                  heading(const ValueKey('history-heading'), '过去的日程'),
+                  for (final entry in history)
                     CalendarItemTile(
                       key: ValueKey(entry.id),
                       controller: controller,
@@ -141,7 +118,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   const Padding(
                     key: ValueKey('empty-state'),
                     padding: EdgeInsets.symmetric(vertical: 64),
-                    child: Center(child: Text('没有待办安排')),
+                    child: Center(child: Text('暂无日程')),
                   ),
                 for (final day in days.entries) ...[
                   heading(

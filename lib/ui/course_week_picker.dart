@@ -4,6 +4,24 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+enum _WeekSelection {
+  all('全选'),
+  none('全不选'),
+  summer('小学期'),
+  regular('非小学期');
+
+  const _WeekSelection(this.label);
+
+  final String label;
+
+  Set<int> weeksIn(List<int> weeks) => switch (this) {
+    all => weeks.toSet(),
+    none => {},
+    summer => weeks.where((week) => week < 0).toSet(),
+    regular => weeks.where((week) => week > 0).toSet(),
+  };
+}
+
 class CourseWeekPicker extends StatefulWidget {
   const CourseWeekPicker({
     super.key,
@@ -11,14 +29,14 @@ class CourseWeekPicker extends StatefulWidget {
     required this.selectedWeeks,
     required this.enabled,
     required this.onChanged,
-    required this.onAddEarlierWeek,
+    required this.onManageRange,
   });
 
   final List<int> weeks;
   final Set<int> selectedWeeks;
   final bool enabled;
   final ValueChanged<Set<int>> onChanged;
-  final VoidCallback onAddEarlierWeek;
+  final VoidCallback onManageRange;
 
   @override
   State<CourseWeekPicker> createState() => _CourseWeekPickerState();
@@ -136,46 +154,65 @@ class _CourseWeekPickerState extends State<CourseWeekPicker> {
     final selectedWeeks = widget.selectedWeeks;
     final enabled = widget.enabled;
     final onChanged = widget.onChanged;
-    final allSelected = weeks.every(selectedWeeks.contains);
+    final hasSummerWeeks = weeks.any((week) => week < 0);
+    final hasRegularWeeks = weeks.any((week) => week > 0);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Wrap(
-          crossAxisAlignment: WrapCrossAlignment.center,
-          spacing: 8,
+        Row(
           children: [
-            const Text('上课周次', style: TextStyle(fontWeight: FontWeight.w600)),
-            TextButton(
-              onPressed: enabled && !allSelected
-                  ? () => onChanged(weeks.toSet())
-                  : null,
-              child: const Text('全选'),
-            ),
-            TextButton(
-              onPressed: enabled && selectedWeeks.isNotEmpty
-                  ? () => onChanged({})
-                  : null,
-              child: const Text('全不选'),
-            ),
-            TextButton(
-              onPressed: enabled
-                  ? () => onChanged(weeks.where((week) => week.isOdd).toSet())
-                  : null,
-              child: const Text('单周'),
-            ),
-            TextButton(
-              onPressed: enabled
-                  ? () => onChanged(weeks.where((week) => week.isEven).toSet())
-                  : null,
-              child: const Text('双周'),
+            const Expanded(
+              child: Text(
+                '上课周次',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
             ),
             TextButton.icon(
-              onPressed: enabled ? widget.onAddEarlierWeek : null,
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('增加小学期周次'),
+              onPressed: enabled ? widget.onManageRange : null,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                textStyle: theme.textTheme.labelMedium,
+              ),
+              icon: const Icon(Icons.tune_rounded, size: 18),
+              label: const Text('周数管理'),
             ),
           ],
         ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final minimumWidth =
+                MediaQuery.textScalerOf(context).scale(14) * 4 + 16;
+            final columns = constraints.maxWidth >= minimumWidth * 4 ? 4 : 2;
+            final width = constraints.maxWidth / columns;
+
+            return Wrap(
+              children: [
+                for (final selection in _WeekSelection.values)
+                  SizedBox(
+                    width: width,
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        minimumSize: const Size(48, 36),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        textStyle: theme.textTheme.labelMedium,
+                      ),
+                      onPressed:
+                          !enabled ||
+                              (selection == _WeekSelection.summer &&
+                                  !hasSummerWeeks) ||
+                              (selection == _WeekSelection.regular &&
+                                  !hasRegularWeeks)
+                          ? null
+                          : () => onChanged(selection.weeksIn(weeks)),
+                      child: Text(selection.label),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 8),
         LayoutBuilder(
           builder: (context, constraints) {
             final dimensions = _dimensions(constraints.maxWidth);

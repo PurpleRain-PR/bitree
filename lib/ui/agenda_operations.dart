@@ -12,7 +12,7 @@ Future<void> toggleAgendaDone(
   AgendaEntry entry, {
   bool haptic = true,
 }) async {
-  final saved = await controller.save(entry.withDone(!entry.done));
+  final saved = await controller.save(entry.copyWith(done: !entry.done));
   if (saved && haptic) {
     HapticFeedback.selectionClick();
   } else if (!saved && context.mounted) {
@@ -60,7 +60,7 @@ Future<bool> deleteAgendaEntry(
   }
 
   Future<void> restore() async {
-    final restored = await controller.agenda.save(entry);
+    final restored = await controller.agenda.restore(entry);
     if (!overlay.mounted) return;
     if (restored) {
       showOverlayNotice(overlay, '已恢复“${entry.title}”');

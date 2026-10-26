@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 import '../app_controller.dart';
 import '../schedule/model.dart';
 import '../schedule/selection.dart';
+import 'app_dropdown_field.dart';
 import 'course_period_fields.dart';
 import 'course_week_picker.dart';
+import 'course_week_range.dart';
 import 'editor_sheet.dart';
 
 Future<void> editCourse(
@@ -59,7 +61,14 @@ class _CourseEditorState extends State<_CourseEditor> {
           ? null
           : {widget.controller.schedule!.weekAt(widget.selection!.date)}) ??
       (widget.controller.schedule?.weeks ?? academicWeeks(1, 20)).toSet();
-  late int _firstWeek = widget.controller.weeks.firstOrNull ?? 1;
+  late int _firstWeek = _weeks.fold(
+    widget.controller.schedule?.firstWeek ?? 1,
+    math.min,
+  );
+  late int _lastWeek = _weeks.fold(
+    math.max(25, widget.controller.schedule?.lastWeek ?? 25),
+    math.max,
+  );
   bool _saving = false;
   String? _error;
 
@@ -77,6 +86,22 @@ class _CourseEditorState extends State<_CourseEditor> {
     _teacher.dispose();
     _term.dispose();
     super.dispose();
+  }
+
+  Future<void> _manageWeeks() async {
+    final range = await manageCourseWeeks(
+      context,
+      first: _firstWeek,
+      last: _lastWeek,
+    );
+    if (range == null || !mounted) return;
+    setState(() {
+      _firstWeek = range.first;
+      _lastWeek = range.last;
+      _weeks = _weeks
+          .where((week) => week >= range.first && week <= range.last)
+          .toSet();
+    });
   }
 
   Future<void> _save() async {
@@ -129,12 +154,7 @@ class _CourseEditorState extends State<_CourseEditor> {
 
   @override
   Widget build(BuildContext context) {
-    final weeks = academicWeeks(
-      _firstWeek,
-      widget.controller.weeks.lastOrNull ?? 20,
-    );
-    final menuHeight = math.min(320.0, MediaQuery.sizeOf(context).height * 0.4);
-
+    final weeks = academicWeeks(_firstWeek, _lastWeek);
     return EditorSheet(
       title: widget.course == null ? '添加课程' : '编辑课程',
       saveLabel: Text(_saving ? '保存中…' : '保存课程'),
@@ -216,21 +236,14 @@ class _CourseEditorState extends State<_CourseEditor> {
             },
           ),
           const SizedBox(height: 12),
-          DropdownMenu<int>(
-            initialSelection: _day,
-            label: const Text('星期'),
-            expandedInsets: EdgeInsets.zero,
-            menuHeight: menuHeight,
-            selectOnly: true,
-            enableSearch: false,
-            enabled: !_saving,
-            dropdownMenuEntries: [
+          AppDropdownField<int>(
+            value: _day,
+            label: '星期',
+            entries: [
               for (var i = 1; i <= 7; i++)
                 DropdownMenuEntry(value: i, label: weekdays[i - 1]),
             ],
-            onSelected: (value) {
-              if (value != null) setState(() => _day = value);
-            },
+            onChanged: _saving ? null : (value) => setState(() => _day = value),
           ),
           const SizedBox(height: 12),
           CoursePeriodFields(
@@ -250,9 +263,7 @@ class _CourseEditorState extends State<_CourseEditor> {
             selectedWeeks: _weeks,
             enabled: !_saving,
             onChanged: (weeks) => setState(() => _weeks = weeks),
-            onAddEarlierWeek: () => setState(() {
-              _firstWeek = weekFromOffset(weekOffset(_firstWeek) - 1);
-            }),
+            onManageRange: _manageWeeks,
           ),
         ],
       ),
