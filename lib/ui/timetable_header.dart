@@ -108,9 +108,7 @@ class _PinnedItems extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final label = items.length == 1
-        ? '${items.single.kindLabel} ${items.single.title}'
-        : '${items.length} 项';
+    final label = '${items.length} 项';
 
     return Padding(
       padding: const EdgeInsets.all(2),
