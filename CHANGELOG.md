@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- feat: add native secure storage for school credentials ([0e14ba3](https://github.com/so1ve/bitree/commit/0e14ba38a5a641920098b1062d1458826329c120))
+- docs: unify BITree project description ([cbe95b7](https://github.com/so1ve/bitree/commit/cbe95b73a3312b010d35bfc62acb01a0e0a95d14))
+- fix(android): unify timetable widget names ([f6e756f](https://github.com/so1ve/bitree/commit/f6e756f0134ac7c3a50a163ad32cc014cf92b401))
+- ci: add manual release workflow ([0b21be9](https://github.com/so1ve/bitree/commit/0b21be90ef7ea1d820755cebac92b482d88713b5))
 - fix(ui): compact timetable rows ([3777966](https://github.com/so1ve/bitree/commit/3777966cce2616793234bf043432f6350fa6a930))
 - refactor: separate school parsing and simplify workflows ([9e35e9e](https://github.com/so1ve/bitree/commit/9e35e9e5fe697907fb2a17228e999425db00d330))
 - fix: streamline account actions and prevent login black screens ([4ada7a1](https://github.com/so1ve/bitree/commit/4ada7a1b269dedbec36ac4c7df09939a01d1b7c4))
