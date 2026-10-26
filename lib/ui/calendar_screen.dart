@@ -27,7 +27,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final controller = widget.controller;
     final now = campusNow();
     final today = calendarDate(now);
-    final overdue = <AgendaEntry>[];
+    final history = <AgendaEntry>[];
     final days = <DateTime, List<AgendaEntry>>{};
     final entries = controller.agenda.entries.toList()
       ..sort((a, b) {
@@ -37,11 +37,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     for (final entry in entries) {
       if (_kind != null && entry.kind != _kind) continue;
-      if (entry.isDeadline && entry.dueAt.isBefore(now)) {
-        overdue.add(entry);
-        continue;
-      }
-      if (!entry.isDeadline && !entry.done && !entry.endsAt!.isAfter(now)) {
+      final past = entry.isDeadline
+          ? entry.dueAt.isBefore(now)
+          : !entry.endsAt!.isAfter(now);
+      if (past) {
+        history.add(entry);
         continue;
       }
       final day = calendarDate(entry.startsAt);
@@ -100,11 +100,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
           Expanded(
             child: PullToRevealList(
               key: ValueKey(_kind),
-              hiddenLabel: '已截止的 DDL',
+              hiddenLabel: '过去的日程',
               hiddenChildren: [
-                if (overdue.isNotEmpty) ...[
-                  heading(const ValueKey('overdue-heading'), '已截止的 DDL'),
-                  for (final entry in overdue)
+                if (history.isNotEmpty) ...[
+                  heading(const ValueKey('history-heading'), '过去的日程'),
+                  for (final entry in history)
                     CalendarItemTile(
                       key: ValueKey(entry.id),
                       controller: controller,
