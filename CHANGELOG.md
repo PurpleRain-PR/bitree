@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- chore: use `--release --split-per-abi` for `just apk` builds ([be8856e](https://github.com/so1ve/bitree/commit/be8856ea7ee6a199332dee60e021dd4d266166eb))
+- feat: organize courses, events and deadlines in a unified calendar ([b463f07](https://github.com/so1ve/bitree/commit/b463f07f84efb565ff1a1bb4f1fe57dcc6652256))
+- perf(schedule): reduce rebuild and repaint overhead ([bb669bc](https://github.com/so1ve/bitree/commit/bb669bc474dad976168dc203edcfaeda47ea4b74))
+- style(schedule): make timetable more compact ([7455acc](https://github.com/so1ve/bitree/commit/7455accad2db5ba8c041fce25de3b135e5f2c820))
 - fix: match the weekday font weight to the week selector ([f76b2bd](https://github.com/so1ve/bitree/commit/f76b2bd34bc7f5b64c5c3b6ba1e4fb1f0fa9e9d2))
 - fix(update): limit automatic checks and repeated prompts ([98fdc8a](https://github.com/so1ve/bitree/commit/98fdc8aefa861b2be23ed3cff60b4a7e93b52f6f))
 - feat: show the weekday beside the week selector ([2de4aaf](https://github.com/so1ve/bitree/commit/2de4aaf936dc8184f240b01904a75708041693f4))
