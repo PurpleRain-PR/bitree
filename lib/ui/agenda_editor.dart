@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../agenda/controller.dart';
 import '../agenda/model.dart';
+import '../app_controller.dart';
 import '../schedule/model.dart';
 import '../schedule/selection.dart';
 import 'sheet_layout.dart';
@@ -10,7 +10,7 @@ import 'agenda_operations.dart';
 
 Future<void> editAgenda(
   BuildContext context,
-  AgendaController controller, {
+  AppController controller, {
   AgendaEntry? entry,
   AgendaKind kind = AgendaKind.event,
   TimetableSelection? selection,
@@ -41,7 +41,7 @@ class _AgendaEditor extends StatefulWidget {
     this.term,
   });
 
-  final AgendaController controller;
+  final AppController controller;
   final AgendaEntry? entry;
   final AgendaKind kind;
   final DateTime startsAt;
@@ -141,7 +141,7 @@ class _AgendaEditorState extends State<_AgendaEditor> {
       _saving = true;
       _error = null;
     });
-    final success = await widget.controller.save(
+    final success = await widget.controller.agenda.save(
       AgendaEntry(
         id:
             widget.entry?.id ??
@@ -166,7 +166,7 @@ class _AgendaEditorState extends State<_AgendaEditor> {
     } else {
       setState(() {
         _saving = false;
-        _error = widget.controller.error;
+        _error = widget.controller.agenda.error;
       });
     }
   }

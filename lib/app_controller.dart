@@ -50,6 +50,7 @@ class AppController extends ChangeNotifier {
 
   int week = 1;
   ThemeMode themeMode = ThemeMode.system;
+  bool confirmDelete = true;
   SchoolNetwork network = SchoolNetwork.campus;
   List<String> terms = [];
 
@@ -84,6 +85,7 @@ class AppController extends ChangeNotifier {
       terms = await _store.terms();
 
       final theme = await _preferences.getString('theme');
+      confirmDelete = await _preferences.getBool('confirmDelete') ?? true;
       themeMode =
           ThemeMode.values.where((value) => value.name == theme).firstOrNull ??
           ThemeMode.system;
@@ -406,6 +408,16 @@ class AppController extends ChangeNotifier {
     try {
       await _preferences.setString('theme', value.name);
       themeMode = value;
+    } catch (failure) {
+      error = errorMessage(failure);
+    }
+    notifyListeners();
+  }
+
+  Future<void> setConfirmDelete(bool value) async {
+    try {
+      await _preferences.setBool('confirmDelete', value);
+      confirmDelete = value;
     } catch (failure) {
       error = errorMessage(failure);
     }

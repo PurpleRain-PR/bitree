@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../agenda/controller.dart';
 import '../agenda/model.dart';
+import '../app_controller.dart';
 import '../schedule/model.dart';
 import 'agenda_editor.dart';
 import 'agenda_operations.dart';
@@ -10,7 +10,7 @@ import 'sheet_layout.dart';
 
 Future<void> showAgendaEntry(
   BuildContext pageContext,
-  AgendaController controller,
+  AppController controller,
   AgendaEntry entry,
 ) => showModalBottomSheet<void>(
   context: pageContext,
@@ -18,11 +18,11 @@ Future<void> showAgendaEntry(
   isScrollControlled: true,
   constraints: const BoxConstraints(maxWidth: 560),
   builder: (sheetContext) => ListenableBuilder(
-    listenable: controller,
+    listenable: controller.agenda,
     builder: (context, _) {
       // Keep the closing sheet readable after its entry has been deleted.
       final current =
-          controller.entries
+          controller.agenda.entries
               .where((value) => value.id == entry.id)
               .firstOrNull ??
           entry;
@@ -47,7 +47,7 @@ Future<void> showAgendaEntry(
                 ),
                 IconButton(
                   tooltip: '删除',
-                  onPressed: controller.busy
+                  onPressed: controller.agenda.busy
                       ? null
                       : () async {
                           if (await deleteAgendaEntry(
@@ -139,11 +139,11 @@ Future<void> showAgendaEntry(
                   if (current.isDeadline) ...[
                     Expanded(
                       child: FilledButton(
-                        onPressed: controller.busy
+                        onPressed: controller.agenda.busy
                             ? null
                             : () => toggleAgendaDone(
                                 context,
-                                controller,
+                                controller.agenda,
                                 current,
                               ),
                         child: Text(
@@ -155,7 +155,7 @@ Future<void> showAgendaEntry(
                     const SizedBox(width: 12),
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: controller.busy ? null : edit,
+                        onPressed: controller.agenda.busy ? null : edit,
                         icon: const Icon(Icons.edit_outlined, size: 18),
                         label: const Text('编辑'),
                       ),
@@ -163,7 +163,7 @@ Future<void> showAgendaEntry(
                   ] else
                     Expanded(
                       child: FilledButton.icon(
-                        onPressed: controller.busy ? null : edit,
+                        onPressed: controller.agenda.busy ? null : edit,
                         icon: const Icon(Icons.edit_outlined, size: 18),
                         label: const Text('编辑'),
                       ),

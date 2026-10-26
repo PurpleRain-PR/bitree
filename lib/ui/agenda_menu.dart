@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../agenda/controller.dart';
 import '../agenda/model.dart';
+import '../app_controller.dart';
 import 'agenda_editor.dart';
 import 'agenda_operations.dart';
 import 'external_link.dart';
@@ -9,7 +9,7 @@ import 'external_link.dart';
 class AgendaMenu extends StatelessWidget {
   const AgendaMenu({super.key, required this.controller, required this.entry});
 
-  final AgendaController controller;
+  final AppController controller;
   final AgendaEntry entry;
 
   @override
@@ -20,7 +20,7 @@ class AgendaMenu extends StatelessWidget {
           leadingIcon: Icon(
             entry.done ? Icons.undo_rounded : Icons.check_rounded,
           ),
-          onPressed: () => toggleAgendaDone(context, controller, entry),
+          onPressed: () => toggleAgendaDone(context, controller.agenda, entry),
           child: Text(entry.done ? '标为未完成' : '标记完成'),
         ),
       MenuItemButton(
@@ -50,7 +50,7 @@ class AgendaMenu extends StatelessWidget {
     ],
     builder: (context, menu, _) => IconButton(
       tooltip: '${entry.kind.label}操作',
-      onPressed: controller.busy
+      onPressed: controller.agenda.busy
           ? null
           : () => menu.isOpen ? menu.close() : menu.open(),
       icon: const Icon(Icons.more_horiz_rounded, size: 20),

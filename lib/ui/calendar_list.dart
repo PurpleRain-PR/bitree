@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../agenda/calendar.dart';
 import '../agenda/model.dart';
@@ -22,9 +23,9 @@ Future<void> openCalendarItem(
   CalendarItem item,
 ) => item.course != null
     ? showCourse(context, controller, item.course!)
-    : showAgendaEntry(context, controller.agenda, item.entry!);
+    : showAgendaEntry(context, controller, item.entry!);
 
-class CalendarItemTile extends StatelessWidget {
+class CalendarItemTile extends StatefulWidget {
   const CalendarItemTile({
     super.key,
     required this.controller,
@@ -37,17 +38,50 @@ class CalendarItemTile extends StatelessWidget {
   final bool showDate;
 
   @override
+  State<CalendarItemTile> createState() => _CalendarItemTileState();
+}
+
+class _CalendarItemTileState extends State<CalendarItemTile> {
+  bool _deleteArmed = false;
+
+  void _cancelDelete() {
+    if (_deleteArmed) setState(() => _deleteArmed = false);
+  }
+
+  Future<bool> _swipe(DismissDirection direction, AgendaEntry entry) async {
+    final controller = widget.controller;
+    if (direction == DismissDirection.startToEnd) {
+      _cancelDelete();
+      await toggleAgendaDone(context, controller.agenda, entry);
+      return false;
+    }
+    if (controller.confirmDelete && !_deleteArmed) {
+      setState(() => _deleteArmed = true);
+      HapticFeedback.selectionClick();
+      return false;
+    }
+    return deleteAgendaEntry(context, controller, entry, confirm: false);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final controller = widget.controller;
+    final item = widget.item;
+    final showDate = widget.showDate;
     final entry = item.entry;
     final scheme = Theme.of(context).colorScheme;
     final overdue = entry?.overdue(campusNow()) ?? false;
     final when = [
-      item.kindLabel,
-      if (showDate) agendaDateLabel(item.startsAt),
-      item.timeLabel,
-      if (item.location.isNotEmpty) item.location,
-      if (overdue) '已逾期',
-      if (entry?.done == true) '已完成',
+      if (_deleteArmed)
+        '再次左滑删除'
+      else ...[
+        item.kindLabel,
+        if (showDate) agendaDateLabel(item.startsAt),
+        item.timeLabel,
+        if (item.location.isNotEmpty) item.location,
+        if (overdue) '已逾期',
+        if (entry?.done == true) '已完成',
+      ],
     ].join('  ');
     final course = [
       if (entry?.source != null) entry!.source!.label,
@@ -55,6 +89,7 @@ class CalendarItemTile extends StatelessWidget {
     ].join('  ');
     final tile = ListTile(
       contentPadding: const EdgeInsets.symmetric(vertical: 2),
+      tileColor: _deleteArmed ? scheme.errorContainer : null,
       leading: entry?.isDeadline == true
           ? Tooltip(
               message: entry!.done ? '标为未完成' : '标记完成',
@@ -63,8 +98,10 @@ class CalendarItemTile extends StatelessWidget {
                 shape: const CircleBorder(),
                 onChanged: controller.agenda.busy
                     ? null
-                    : (_) =>
-                          toggleAgendaDone(context, controller.agenda, entry),
+                    : (_) {
+                        _cancelDelete();
+                        toggleAgendaDone(context, controller.agenda, entry);
+                      },
               ),
             )
           : Icon(
@@ -82,52 +119,86 @@ class CalendarItemTile extends StatelessWidget {
       ),
       subtitle: Text(
         [when, if (course.isNotEmpty) course].join('\n'),
-        style: overdue ? TextStyle(color: scheme.error) : null,
+        style: overdue || _deleteArmed ? TextStyle(color: scheme.error) : null,
       ),
-      trailing: entry == null
+      trailing: _deleteArmed
+          ? IconButton(
+              tooltip: '取消删除',
+              onPressed: _cancelDelete,
+              icon: const Icon(Icons.close_rounded, size: 20),
+            )
+          : entry == null
           ? const Icon(Icons.chevron_right_rounded, size: 20)
-          : AgendaMenu(controller: controller.agenda, entry: entry),
-      onTap: () => openCalendarItem(context, controller, item),
+          : AgendaMenu(controller: controller, entry: entry),
+      onTap: () {
+        if (_deleteArmed) {
+          _cancelDelete();
+        } else {
+          openCalendarItem(context, controller, item);
+        }
+      },
     );
-    if (entry?.isDeadline != true) return tile;
+    if (entry == null) return tile;
+
+    final deleteBackground = ColoredBox(
+      color: scheme.error,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Align(
+          alignment: Alignment.centerRight,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                controller.confirmDelete && !_deleteArmed ? '再次左滑删除' : '松手删除',
+                style: TextStyle(color: scheme.onError),
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.delete_outline, color: scheme.onError),
+            ],
+          ),
+        ),
+      ),
+    );
 
     return Dismissible(
-      key: ValueKey(entry!.id),
+      key: ValueKey(entry.id),
       direction: controller.agenda.busy
           ? DismissDirection.none
-          : DismissDirection.startToEnd,
-      confirmDismiss: (_) async {
-        await toggleAgendaDone(context, controller.agenda, entry);
-        // Completing a task changes its state, not its place in the list.
-        return false;
-      },
+          : entry.isDeadline
+          ? DismissDirection.horizontal
+          : DismissDirection.endToStart,
+      confirmDismiss: (direction) => _swipe(direction, entry),
       movementDuration: MediaQuery.disableAnimationsOf(context)
           ? Duration.zero
           : const Duration(milliseconds: 200),
       resizeDuration: null,
-      background: ColoredBox(
-        color: scheme.primaryContainer,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  entry.done ? Icons.undo_rounded : Icons.check_rounded,
-                  color: scheme.onPrimaryContainer,
+      secondaryBackground: entry.isDeadline ? deleteBackground : null,
+      background: !entry.isDeadline
+          ? deleteBackground
+          : ColoredBox(
+              color: scheme.primaryContainer,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        entry.done ? Icons.undo_rounded : Icons.check_rounded,
+                        color: scheme.onPrimaryContainer,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        entry.done ? '标为未完成' : '标记完成',
+                        style: TextStyle(color: scheme.onPrimaryContainer),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  entry.done ? '标为未完成' : '标记完成',
-                  style: TextStyle(color: scheme.onPrimaryContainer),
-                ),
-              ],
+              ),
             ),
-          ),
-        ),
-      ),
       child: tile,
     );
   }

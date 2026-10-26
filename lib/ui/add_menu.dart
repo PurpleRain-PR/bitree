@@ -81,7 +81,7 @@ Future<void> showAddMenu(
   } else {
     await editAgenda(
       context,
-      controller.agenda,
+      controller,
       selection: selection,
       date: date,
       term: controller.schedule?.term,
