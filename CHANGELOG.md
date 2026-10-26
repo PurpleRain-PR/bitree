@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- fix: name eclass as the new Yanhe classroom ([bfe2d3c](https://github.com/so1ve/bitree/commit/bfe2d3cde358c364752e5d4d748c4ad73e86e27d))
 - refactor: share feedback for imports and course name copying ([9dfbe17](https://github.com/so1ve/bitree/commit/9dfbe17a7fc38dc6ae7ec28db7384828c65fdee2))
 - refactor: unify page layout and restore the timetable home ([c6187cf](https://github.com/so1ve/bitree/commit/c6187cfbf4a3b620e537413cfbbdbb1c7904f3b5))
 - feat: add deadline imports and school task links ([3b2839c](https://github.com/so1ve/bitree/commit/3b2839cab5d6a193fb3ac428284e10b3d4c5ca7f))
