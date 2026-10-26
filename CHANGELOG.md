@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- fix(agenda): top-align overdue entries and restore red controls ([a3e2c67](https://github.com/so1ve/bitree/commit/a3e2c67c5b44d56e83b52288dfafcd3fe84824b9))
 - fix(agenda): sync automatic completion from Lexue ([c5ddae2](https://github.com/so1ve/bitree/commit/c5ddae2b14f9c224974396035825423cf4fc2ab4))
 - fix(agenda): compact header and hide idle overdue prompt ([2becf8d](https://github.com/so1ve/bitree/commit/2becf8d3943c2e82723cf0020152dc4ad8e4e2b9))
 - fix(timetable): stop auto-follow after classes end ([4a944c6](https://github.com/so1ve/bitree/commit/4a944c62b6aa51ad2e4c4eb70ea47b73c7468f38))
