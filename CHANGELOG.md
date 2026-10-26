@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- fix: match the weekday font weight to the week selector ([f76b2bd](https://github.com/so1ve/bitree/commit/f76b2bd34bc7f5b64c5c3b6ba1e4fb1f0fa9e9d2))
+- fix(update): limit automatic checks and repeated prompts ([98fdc8a](https://github.com/so1ve/bitree/commit/98fdc8aefa861b2be23ed3cff60b4a7e93b52f6f))
+- feat: show the weekday beside the week selector ([2de4aaf](https://github.com/so1ve/bitree/commit/2de4aaf936dc8184f240b01904a75708041693f4))
 - fix: finish WebVPN setup before teaching center login ([ddb1b3e](https://github.com/so1ve/bitree/commit/ddb1b3e9ed6922242f28c20304c5f56ae48f29ee))
 - feat(ui): copy course names on long press ([98f3597](https://github.com/so1ve/bitree/commit/98f3597a9b979e7be27d4da48440f9a95b2c580c))
 - fix: register the WebVPN device before authentication ([fe81575](https://github.com/so1ve/bitree/commit/fe815757e9358b2b3f8a2f2dee53c5a091fb4f60))
