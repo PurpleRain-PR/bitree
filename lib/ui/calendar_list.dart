@@ -4,7 +4,9 @@ import '../agenda/calendar.dart';
 import '../agenda/model.dart';
 import '../app_controller.dart';
 import '../schedule/model.dart';
-import 'agenda_editor.dart';
+import 'agenda_detail.dart';
+import 'agenda_menu.dart';
+import 'agenda_operations.dart';
 import 'course_detail.dart';
 import 'sheet_layout.dart';
 
@@ -20,7 +22,7 @@ Future<void> openCalendarItem(
   CalendarItem item,
 ) => item.course != null
     ? showCourse(context, controller, item.course!)
-    : editAgenda(context, controller.agenda, entry: item.entry!);
+    : showAgendaEntry(context, controller.agenda, item.entry!);
 
 class CalendarItemTile extends StatelessWidget {
   const CalendarItemTile({
@@ -39,39 +41,94 @@ class CalendarItemTile extends StatelessWidget {
     final entry = item.entry;
     final scheme = Theme.of(context).colorScheme;
     final overdue = entry?.overdue(campusNow()) ?? false;
-    return ListTile(
+    final when = [
+      item.kindLabel,
+      if (showDate) agendaDateLabel(item.startsAt),
+      item.timeLabel,
+      if (item.location.isNotEmpty) item.location,
+      if (overdue) '已逾期',
+      if (entry?.done == true) '已完成',
+    ].join('  ');
+    final course = [
+      if (entry?.source != null) entry!.source!.label,
+      if (entry?.course.isNotEmpty == true) entry!.course,
+    ].join('  ');
+    final tile = ListTile(
       contentPadding: const EdgeInsets.symmetric(vertical: 2),
-      leading: Icon(
-        entry == null ? Icons.school_outlined : agendaIcon(entry.kind),
-        color: overdue ? scheme.error : scheme.onSurfaceVariant,
-      ),
+      leading: entry?.isDeadline == true
+          ? Tooltip(
+              message: entry!.done ? '标为未完成' : '标记完成',
+              child: Checkbox(
+                value: entry.done,
+                shape: const CircleBorder(),
+                onChanged: controller.agenda.busy
+                    ? null
+                    : (_) =>
+                          toggleAgendaDone(context, controller.agenda, entry),
+              ),
+            )
+          : Icon(
+              entry == null ? Icons.school_outlined : agendaIcon(entry.kind),
+            ),
       title: Text(
         item.title,
         style: TextStyle(
           fontWeight: FontWeight.w500,
           decoration: entry?.done == true ? TextDecoration.lineThrough : null,
+          color: entry?.done == true ? scheme.onSurfaceVariant : null,
         ),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
       ),
       subtitle: Text(
-        [
-          item.kindLabel,
-          if (entry?.source != null) entry!.source!.label,
-          if (entry?.course.isNotEmpty == true) entry!.course,
-          if (showDate) agendaDateLabel(item.startsAt),
-          item.timeLabel,
-          if (item.location.isNotEmpty) item.location,
-          if (overdue) '已逾期',
-        ].join('  '),
+        [when, if (course.isNotEmpty) course].join('\n'),
+        style: overdue ? TextStyle(color: scheme.error) : null,
       ),
-      trailing: entry?.isDeadline == true
-          ? Checkbox(
-              value: entry!.done,
-              onChanged: controller.agenda.busy
-                  ? null
-                  : (value) => controller.agenda.save(entry.withDone(value!)),
-            )
-          : const Icon(Icons.chevron_right_rounded, size: 20),
+      trailing: entry == null
+          ? const Icon(Icons.chevron_right_rounded, size: 20)
+          : AgendaMenu(controller: controller.agenda, entry: entry),
       onTap: () => openCalendarItem(context, controller, item),
+    );
+    if (entry?.isDeadline != true) return tile;
+
+    return Dismissible(
+      key: ValueKey(entry!.id),
+      direction: controller.agenda.busy
+          ? DismissDirection.none
+          : DismissDirection.startToEnd,
+      confirmDismiss: (_) async {
+        await toggleAgendaDone(context, controller.agenda, entry);
+        // Completing a task changes its state, not its place in the list.
+        return false;
+      },
+      movementDuration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 200),
+      resizeDuration: null,
+      background: ColoredBox(
+        color: scheme.primaryContainer,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  entry.done ? Icons.undo_rounded : Icons.check_rounded,
+                  color: scheme.onPrimaryContainer,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  entry.done ? '标为未完成' : '标记完成',
+                  style: TextStyle(color: scheme.onPrimaryContainer),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      child: tile,
     );
   }
 }

@@ -6,6 +6,7 @@ import '../schedule/model.dart';
 import '../schedule/selection.dart';
 import 'sheet_layout.dart';
 import 'external_link.dart';
+import 'agenda_operations.dart';
 
 Future<void> editAgenda(
   BuildContext context,
@@ -171,34 +172,17 @@ class _AgendaEditorState extends State<_AgendaEditor> {
   }
 
   Future<void> _delete() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('删除${_kind.label}？'),
-        content: Text(widget.entry!.title),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('删除'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
     setState(() => _saving = true);
-    final success = await widget.controller.delete(widget.entry!);
+    final success = await deleteAgendaEntry(
+      context,
+      widget.controller,
+      widget.entry!,
+    );
     if (!mounted) return;
     if (success) {
       Navigator.pop(context);
     } else {
-      setState(() {
-        _saving = false;
-        _error = widget.controller.error;
-      });
+      setState(() => _saving = false);
     }
   }
 

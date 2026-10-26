@@ -20,7 +20,7 @@ class CalendarScreen extends StatefulWidget {
 
 class _CalendarScreenState extends State<CalendarScreen> {
   AgendaKind? _kind;
-  bool _showCompleted = false;
+  bool _showCompleted = true;
   bool _showPast = false;
 
   @override
@@ -31,12 +31,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final overdue = <AgendaEntry>[];
     final days = <DateTime, List<AgendaEntry>>{};
     final entries = controller.agenda.entries.toList()
-      ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
+      ..sort((a, b) {
+        final time = a.startsAt.compareTo(b.startsAt);
+        return time == 0 ? a.id.compareTo(b.id) : time;
+      });
 
     for (final entry in entries) {
       if (_kind != null && entry.kind != _kind) continue;
       if (entry.done && !_showCompleted) continue;
-      if (entry.overdue(now)) {
+      if (entry.isDeadline && entry.dueAt.isBefore(now)) {
         overdue.add(entry);
         continue;
       }
@@ -122,7 +125,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     padding: const EdgeInsets.only(bottom: 24),
                     children: [
                       if (overdue.isNotEmpty) ...[
-                        heading('逾期 DDL'),
+                        heading('已截止的 DDL'),
                         for (final entry in overdue)
                           CalendarItemTile(
                             controller: controller,
