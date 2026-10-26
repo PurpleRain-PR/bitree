@@ -12,23 +12,6 @@ class SchoolImportButton extends StatelessWidget {
   final AppController controller;
   final bool includeSchedule;
 
-  Future<void> _import(BuildContext context, SchoolAction action) async {
-    final success = await openSchoolPage(context, controller, action: action);
-    if (success == true &&
-        action != SchoolAction.importSchedule &&
-        context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            action.source == null
-                ? '已更新考试安排'
-                : '已更新${action.source!.label} DDL',
-          ),
-        ),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final busy = controller.busy || controller.schoolBusy;
@@ -39,14 +22,22 @@ class SchoolImportButton extends StatelessWidget {
             leadingIcon: const Icon(Icons.input_rounded),
             onPressed: busy
                 ? null
-                : () => _import(context, SchoolAction.importSchedule),
+                : () => openSchoolPage(
+                    context,
+                    controller,
+                    action: SchoolAction.importSchedule,
+                  ),
             child: const Text('导入课表'),
           ),
         MenuItemButton(
           leadingIcon: const Icon(Icons.edit_note_rounded),
           onPressed: busy || !controller.agenda.ready
               ? null
-              : () => _import(context, SchoolAction.importExams),
+              : () => openSchoolPage(
+                  context,
+                  controller,
+                  action: SchoolAction.importExams,
+                ),
           child: const Text('获取考试安排'),
         ),
         const Divider(),
@@ -58,7 +49,7 @@ class SchoolImportButton extends StatelessWidget {
             leadingIcon: const Icon(Icons.flag_outlined),
             onPressed: busy || !controller.agenda.ready
                 ? null
-                : () => _import(context, action),
+                : () => openSchoolPage(context, controller, action: action),
             child: Text(action.label),
           ),
       ],

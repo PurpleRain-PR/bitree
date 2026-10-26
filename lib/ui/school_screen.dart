@@ -5,6 +5,7 @@ import '../agenda/deadline_source.dart';
 import '../data/school_network.dart';
 import '../data/school_storage.dart';
 import '../data/school_verification.dart';
+import 'app_notice.dart';
 import 'school_network_picker.dart';
 import 'school_verification_dialog.dart';
 
@@ -50,28 +51,40 @@ Future<bool?> openSchoolPage(
 }) async {
   if (controller.busy || controller.schoolBusy) return null;
   final using = network ?? controller.network;
-
+  bool? success;
   if (action != SchoolAction.signIn && controller.username != null) {
-    final success = await _fetchSchoolData(
+    success = await _fetchSchoolData(
       controller,
       action,
       using,
       term,
       (request) => verifySchoolLogin(context, request),
     );
-    if (success || !controller.loginExpired || !context.mounted) return success;
+    if (!context.mounted || (!success && !controller.loginExpired)) {
+      return success;
+    }
   }
 
-  return Navigator.of(context).push<bool>(
-    MaterialPageRoute(
-      builder: (_) => _SchoolScreen(
-        controller: controller,
-        action: action,
-        network: using,
-        term: term,
+  if (success != true) {
+    success = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => _SchoolScreen(
+          controller: controller,
+          action: action,
+          network: using,
+          term: term,
+        ),
       ),
-    ),
-  );
+    );
+  }
+  if (success == true && action != SchoolAction.signIn && context.mounted) {
+    showAppNotice(context, switch (action) {
+      SchoolAction.importSchedule => '已更新课表',
+      SchoolAction.importExams => '已更新考试安排',
+      _ => '已更新${action.source!.label} DDL',
+    });
+  }
+  return success;
 }
 
 class _SchoolScreen extends StatefulWidget {

@@ -1,10 +1,9 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../app_controller.dart';
 import '../schedule/model.dart';
+import 'app_notice.dart';
 import 'course_editor.dart';
 import 'sheet_layout.dart';
 import 'theme.dart';
@@ -163,63 +162,28 @@ class _CourseDetails extends StatelessWidget {
   }
 }
 
-class _CopyableCourseName extends StatefulWidget {
+class _CopyableCourseName extends StatelessWidget {
   const _CopyableCourseName({required this.name});
 
   final String name;
 
-  @override
-  State<_CopyableCourseName> createState() => _CopyableCourseNameState();
-}
-
-class _CopyableCourseNameState extends State<_CopyableCourseName> {
-  final _tooltipKey = GlobalKey<TooltipState>();
-  Timer? _dismissTimer;
-  String? _message;
-
-  Future<void> _copy() async {
+  Future<void> _copy(BuildContext context) async {
     String message;
     try {
-      await Clipboard.setData(ClipboardData(text: widget.name));
+      await Clipboard.setData(ClipboardData(text: name));
       message = '已复制课程名称';
     } on PlatformException {
       message = '复制失败，请重试';
     }
-    if (!mounted) return;
-
-    _dismissTimer?.cancel();
-    setState(() => _message = message);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _tooltipKey.currentState?.ensureTooltipVisible();
-    });
-    _dismissTimer = Timer(const Duration(seconds: 2), () {
-      setState(() => _message = null);
-    });
+    if (context.mounted) showAppNotice(context, message);
   }
 
   @override
-  void dispose() {
-    _dismissTimer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final title = GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onLongPress: _copy,
-      child: Text(widget.name, style: Theme.of(context).textTheme.titleLarge),
-    );
-    if (_message == null) return title;
-
-    return Tooltip(
-      key: _tooltipKey,
-      message: _message!,
-      triggerMode: TooltipTriggerMode.manual,
-      preferBelow: false,
-      child: title,
-    );
-  }
+  Widget build(BuildContext context) => GestureDetector(
+    behavior: HitTestBehavior.opaque,
+    onLongPress: () => _copy(context),
+    child: Text(name, style: Theme.of(context).textTheme.titleLarge),
+  );
 }
 
 Future<void> _deleteCourse(
