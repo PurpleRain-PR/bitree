@@ -101,18 +101,18 @@ open class TimetableWidget : AppWidgetProvider() {
 
                 views.setViewVisibility(
                     R.id.widget_message,
-                    if (content.courses.isEmpty()) View.GONE else View.VISIBLE,
+                    if (content.entries.isEmpty()) View.GONE else View.VISIBLE,
                 )
-                if (content.courses.isNotEmpty()) {
+                if (content.entries.isNotEmpty()) {
                     views.setTextViewText(
                         R.id.widget_message,
-                        context.getString(R.string.widget_course_count, content.courses.size),
+                        context.getString(R.string.widget_entry_count, content.entries.size),
                     )
                 }
 
                 val columns = if (layout == R.layout.timetable_widget_wide) 2 else 1
                 val widthPx = widgetWidthPx(context, manager, id)
-                val items = courseItems(context, content.courses, widthPx, columns)
+                val items = entryItems(context, content.entries, widthPx, columns)
 
                 RemoteViewsCompat.setRemoteAdapter(
                     context, views, id, R.id.widget_courses, items,
@@ -139,9 +139,9 @@ open class TimetableWidget : AppWidgetProvider() {
             }
         }
 
-        private fun courseItems(
+        private fun entryItems(
             context: Context,
-            courses: List<WidgetCourse>,
+            entries: List<WidgetEntry>,
             widthPx: Float,
             columns: Int,
         ): RemoteViewsCompat.RemoteCollectionItems {
@@ -158,35 +158,41 @@ open class TimetableWidget : AppWidgetProvider() {
 
             val items = RemoteViewsCompat.RemoteCollectionItems.Builder()
                 .setViewTypeCount(1)
-            courses.forEachIndexed { index, course ->
-                val details = "${course.startTimeLabel} ${course.room}".trimEnd()
+            entries.forEachIndexed { index, entry ->
+                val details = "${entry.startTimeLabel} ${entry.location}".trimEnd()
                 val label = if (paint.measureText(details) <= textWidth) {
                     details
                 } else {
-                    course.startTimeLabel
+                    entry.startTimeLabel
                 }
-                items.addItem(index.toLong(), courseView(context, course, label))
+                items.addItem(index.toLong(), entryView(context, entry, label))
             }
 
             return items.build()
         }
 
-        private fun courseView(
+        private fun entryView(
             context: Context,
-            course: WidgetCourse,
+            entry: WidgetEntry,
             details: String,
         ): RemoteViews {
-            val color = course.name.codePoints().sum() % cardBackgrounds.size
+            val color = when (entry.kind) {
+                WidgetEntryKind.COURSE -> entry.title.codePoints().sum() % cardBackgrounds.size
+                WidgetEntryKind.EXAM -> 1
+                WidgetEntryKind.DEADLINE -> 4
+                WidgetEntryKind.EVENT -> 5
+            }
             val textColor = context.getColor(cardTextColors[color])
             return RemoteViews(context.packageName, R.layout.widget_course).apply {
                 setInt(R.id.widget_course, "setBackgroundResource", cardBackgrounds[color])
-                setTextViewText(R.id.widget_course_name, course.name)
+                setTextViewText(R.id.widget_course_name, entry.titleLabel)
                 setTextViewText(R.id.widget_course_details, details)
                 setTextColor(R.id.widget_course_name, textColor)
                 setTextColor(R.id.widget_course_details, textColor)
                 setContentDescription(
                     R.id.widget_course,
-                    "${course.name}，${course.timeLabel}，${course.room}",
+                    listOf(entry.kind.label, entry.title, entry.timeLabel, entry.location)
+                        .filter { it.isNotEmpty() }.joinToString("，"),
                 )
                 setOnClickFillInIntent(R.id.widget_course, Intent())
             }

@@ -9,12 +9,13 @@ import 'app_notice.dart';
 Future<void> toggleAgendaDone(
   BuildContext context,
   AgendaController controller,
-  AgendaEntry entry,
-) async {
+  AgendaEntry entry, {
+  bool haptic = true,
+}) async {
   final saved = await controller.save(entry.withDone(!entry.done));
-  if (saved) {
+  if (saved && haptic) {
     HapticFeedback.selectionClick();
-  } else if (context.mounted) {
+  } else if (!saved && context.mounted) {
     showAppNotice(context, controller.error ?? '未能保存，请重试');
   }
 }

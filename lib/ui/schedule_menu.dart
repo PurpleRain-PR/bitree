@@ -76,7 +76,7 @@ class _ScheduleMenuState extends State<ScheduleMenu> {
           MenuItemButton(
             onPressed: () => showWidgetGuide(context),
             leadingIcon: const Icon(Icons.widgets_outlined),
-            child: const Text('桌面小组件'),
+            child: const Text('桌面日程表'),
           ),
         MenuItemButton(
           onPressed: schedule == null || !widget.enabled || _exporting

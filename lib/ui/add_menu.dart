@@ -84,7 +84,7 @@ Future<void> showAddMenu(
       controller,
       selection: selection,
       date: date,
-      term: controller.schedule?.term,
+      term: includeCourse ? controller.schedule?.term : null,
       kind: switch (selected) {
         _AddAction.deadline => AgendaKind.deadline,
         _AddAction.exam => AgendaKind.exam,

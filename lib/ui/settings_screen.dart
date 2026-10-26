@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../app_controller.dart';
 import '../app_version.dart';
 import 'app_page.dart';
-import 'course_editor.dart';
 import 'external_link.dart';
 import 'school_account.dart';
 import 'school_screen.dart';
@@ -261,17 +260,8 @@ class SettingsScreen extends StatelessWidget {
                   controller.setTheme(selection.single),
             ),
           ]),
-          section('本地课表', [
-            ListTile(
-              contentPadding: tilePadding,
-              leading: const Icon(Icons.add_rounded),
-              title: const Text('添加课程'),
-              trailing: const Icon(Icons.chevron_right_rounded, size: 20),
-              onTap: controller.busy
-                  ? null
-                  : () => editCourse(context, controller),
-            ),
-            if (controller.schedule != null) ...[
+          if (controller.schedule != null)
+            section('本地课表', [
               ListTile(
                 contentPadding: tilePadding,
                 leading: const Icon(Icons.calendar_month_outlined),
@@ -289,8 +279,7 @@ class SettingsScreen extends StatelessWidget {
                 title: Text('删除本地课表', style: TextStyle(color: scheme.error)),
                 onTap: controller.busy ? null : () => _clearSchedule(context),
               ),
-            ],
-          ]),
+            ]),
           section('日历与待办', [
             SwitchListTile(
               contentPadding: tilePadding,
