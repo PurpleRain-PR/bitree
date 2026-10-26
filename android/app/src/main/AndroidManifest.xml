@@ -28,7 +28,7 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <receiver android:name=".TimetableWidget" android:exported="false" android:label="@string/widget_single_name">
+        <receiver android:name=".TimetableWidget" android:exported="false" android:label="@string/widget_name">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="android.intent.action.DATE_CHANGED" />
@@ -38,7 +38,7 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/timetable_widget_info" />
         </receiver>
-        <receiver android:name=".WideTimetableWidget" android:exported="false" android:label="@string/widget_wide_name">
+        <receiver android:name=".WideTimetableWidget" android:exported="false" android:label="@string/widget_name">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>

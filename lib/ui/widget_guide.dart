@@ -67,7 +67,7 @@ Future<void> showWidgetGuide(BuildContext context) =>
                   ),
                   const SizedBox(height: 8),
                   step(1, '长按桌面空白处，打开“小组件”。'),
-                  step(2, '找到 BITree，选择单列或双列样式，拖到桌面。'),
+                  step(2, '找到 BITree 课程表，选择单列或双列样式，拖到桌面。'),
                   step(3, '上下滑动课程列表，查看后面的课程。'),
                   const SizedBox(height: 8),
                   Text(

@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="widget_single_name">课表 2×2 单列</string>
-    <string name="widget_wide_name">课表 2×4 双列</string>
+    <string name="widget_name">BITree 课程表</string>
     <string name="widget_description">上下滑动查看课程</string>
     <string name="widget_title">今日课程</string>
     <string name="widget_course_count">%1$d门</string>
