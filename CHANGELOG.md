@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- feat: animate agenda insertion and removal ([549f736](https://github.com/so1ve/bitree/commit/549f736e00e1b2c8afcc78bbc1173323dae25590))
 - fix: position notices above the bottom navigation bar ([781bac1](https://github.com/so1ve/bitree/commit/781bac1dc123fcaf06ab8c7cf7f852df8834f488))
 - feat: allow undoing deleted agenda items ([b200ce2](https://github.com/so1ve/bitree/commit/b200ce2fd0a2d4795d8dffdb551872c72cb7ecab))
 - feat: add configurable confirmation for agenda deletion ([e0a3e30](https://github.com/so1ve/bitree/commit/e0a3e3076248a7fa935586b15c1b46f7bd291c98))
