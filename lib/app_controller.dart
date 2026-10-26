@@ -117,6 +117,7 @@ class AppController extends ChangeNotifier {
       week = week.clamp(available.first, available.last);
     }
     notifyListeners();
+    if (agenda.ready && !agenda.busy) unawaited(_updateWidget());
   }
 
   void _goToCurrentWeek() {
@@ -476,6 +477,7 @@ class AppController extends ChangeNotifier {
       await updateDesktopWidget();
     } catch (failure) {
       error = '桌面组件更新失败：${errorMessage(failure)}';
+      notifyListeners();
     }
   }
 }

@@ -39,7 +39,7 @@ Future<void> showWidgetGuide(BuildContext context) =>
               child: Row(
                 children: [
                   Expanded(
-                    child: Text('桌面小组件', style: theme.textTheme.titleLarge),
+                    child: Text('桌面日程表', style: theme.textTheme.titleLarge),
                   ),
                   IconButton(
                     tooltip: '关闭',
@@ -67,11 +67,11 @@ Future<void> showWidgetGuide(BuildContext context) =>
                   ),
                   const SizedBox(height: 8),
                   step(1, '长按桌面空白处，打开“小组件”。'),
-                  step(2, '找到 BITree 课程表，选择单列或双列样式，拖到桌面。'),
-                  step(3, '上下滑动课程列表，查看后面的课程。'),
+                  step(2, '找到 BITree 日程表，选择单列或双列样式，拖到桌面。'),
+                  step(3, '上下滑动，查看课程、考试、DDL 和活动。'),
                   const SizedBox(height: 8),
                   Text(
-                    '当天课程上完后，21:00 起显示明天的课程。',
+                    '当天安排结束后，21:00 起显示明天的日程。',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),

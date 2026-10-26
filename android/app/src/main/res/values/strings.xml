@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="widget_name">BITree 课程表</string>
-    <string name="widget_description">上下滑动查看课程</string>
-    <string name="widget_title">今日课程</string>
-    <string name="widget_course_count">%1$d门</string>
-    <string name="widget_no_schedule">打开 BITree\n添加或导入课表</string>
-    <string name="widget_read_error">课表读取失败\n点击打开 BITree</string>
-    <string name="widget_today_empty">今天没有课</string>
-    <string name="widget_finished">今天的课已上完</string>
-    <string name="widget_tomorrow_empty">今天的课已上完\n明天没有课</string>
+    <string name="widget_name">BITree 日程表</string>
+    <string name="widget_description">上下滑动查看课程、考试、DDL 和活动</string>
+    <string name="widget_title">今日日程</string>
+    <string name="widget_entry_count">%1$d项</string>
+    <string name="widget_read_error">日程读取失败\n点击打开 BITree</string>
+    <string name="widget_today_empty">今天没有安排</string>
+    <string name="widget_finished">今天的安排已结束</string>
+    <string name="widget_tomorrow_empty">今天的安排已结束\n明天没有安排</string>
 </resources>
