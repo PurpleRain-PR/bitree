@@ -1,12 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'data/desktop_widget.dart';
 import 'data/schedule_store.dart';
 import 'data/school_errors.dart';
+import 'data/school_login.dart';
 import 'data/school_network.dart';
 import 'data/school_service.dart';
 import 'data/school_session.dart';
+import 'data/school_storage.dart';
+import 'data/school_verification.dart';
 import 'error_message.dart';
 import 'schedule/model.dart';
 
@@ -16,11 +21,13 @@ class AppController extends ChangeNotifier {
   AppController({
     required this._store,
     required this._school,
+    required this._schoolStorage,
     required this._preferences,
   });
 
   final ScheduleStore _store;
   final SchoolService _school;
+  final SchoolStorage _schoolStorage;
   final SharedPreferencesAsync _preferences;
 
   SemesterSchedule? _schedule;
@@ -28,17 +35,20 @@ class AppController extends ChangeNotifier {
   bool busy = false;
   String? error;
   AccountStatus accountStatus = AccountStatus.unverified;
+  String? username;
+  SchoolSession? _activeSchoolSession;
+  Future<void>? _schoolFinished;
 
   int week = 1;
   ThemeMode themeMode = ThemeMode.system;
   SchoolNetwork network = SchoolNetwork.campus;
   List<String> terms = [];
 
-  SchoolSession get schoolSession => _school.session;
-
   SemesterSchedule? get schedule => _schedule;
 
   bool get loginExpired => accountStatus == AccountStatus.expired;
+
+  bool get schoolBusy => _activeSchoolSession != null;
 
   Future<void> initialize() async {
     try {
@@ -53,6 +63,8 @@ class AppController extends ChangeNotifier {
           ? SchoolNetwork.webvpn
           : SchoolNetwork.campus;
       _goToCurrentWeek();
+      username = (await _schoolStorage.readCredentials())?.username;
+      if (username == null) accountStatus = AccountStatus.signedOut;
     } catch (failure) {
       error = errorMessage(failure);
     }
@@ -84,11 +96,9 @@ class AppController extends ChangeNotifier {
   }
 
   void requireLogin() {
-    final next = switch (accountStatus) {
-      AccountStatus.signedIn => AccountStatus.expired,
-      AccountStatus.unverified => AccountStatus.signedOut,
-      _ => accountStatus,
-    };
+    final next = username == null
+        ? AccountStatus.signedOut
+        : AccountStatus.expired;
     if (next == accountStatus) return;
 
     accountStatus = next;
@@ -103,25 +113,101 @@ class AppController extends ChangeNotifier {
   }
 
   void _handleSchoolError(Object failure) {
-    if (failure is SessionExpired) requireLogin();
+    if (failure is SessionExpired || failure is SchoolCredentialsRequired) {
+      requireLogin();
+    }
     error = errorMessage(failure);
   }
 
-  Future<bool> completeSignIn(SchoolNetwork using) async {
-    if (busy) return false;
+  Future<bool> _runSchool(
+    SchoolNetwork using,
+    Future<void> Function(SchoolSession) operation,
+  ) async {
+    if (busy || schoolBusy) return false;
 
-    busy = true;
+    final session = SchoolSession(network: using, storage: _schoolStorage);
+    final finished = Completer<void>();
+    _activeSchoolSession = session;
+    _schoolFinished = finished.future;
     error = null;
     notifyListeners();
 
     try {
+      await operation(session);
+      session.checkActive();
       await _saveLoginState(using);
       return true;
+    } on SchoolCancelled {
+      return false;
     } catch (failure) {
-      _handleSchoolError(failure);
+      if (!session.cancelled) _handleSchoolError(failure);
       return false;
     } finally {
-      busy = false;
+      session.close();
+      _activeSchoolSession = null;
+      _schoolFinished = null;
+      finished.complete();
+      notifyListeners();
+    }
+  }
+
+  void cancelSchoolRequest() => _activeSchoolSession?.close();
+
+  Future<T> _authenticated<T>(
+    SchoolSession session,
+    VerifySchoolLogin verify,
+    Future<T> Function() operation,
+  ) async {
+    try {
+      return await operation();
+    } on SessionExpired {
+      final credentials = await _schoolStorage.readCredentials();
+      if (credentials == null) throw const SchoolCredentialsRequired();
+      await SchoolLogin(session, verify).signIn(credentials);
+      return operation();
+    }
+  }
+
+  Future<bool> signIn(
+    SchoolCredentials credentials,
+    SchoolNetwork using,
+    VerifySchoolLogin verify,
+  ) => _runSchool(using, (session) async {
+    await _schoolStorage.clearSession(using);
+    await SchoolLogin(session, verify).signIn(credentials);
+    session.checkActive();
+    await _schoolStorage.saveCredentials(credentials);
+    username = credentials.username;
+  });
+
+  Future<bool> restoreAccount(VerifySchoolLogin verify) async {
+    if (username == null) return true;
+    return _runSchool(
+      network,
+      (session) => _authenticated(session, verify, session.checkLogin),
+    );
+  }
+
+  Future<bool> changeNetwork(
+    SchoolNetwork value,
+    VerifySchoolLogin verify,
+  ) async {
+    if (busy || schoolBusy || value == network) return false;
+    if (username != null) {
+      return _runSchool(
+        value,
+        (session) => _authenticated(session, verify, session.checkLogin),
+      );
+    }
+    try {
+      await _preferences.setString('network', value.name);
+      network = value;
+      error = null;
+      return true;
+    } catch (failure) {
+      error = errorMessage(failure);
+      return false;
+    } finally {
       notifyListeners();
     }
   }
@@ -129,42 +215,33 @@ class AppController extends ChangeNotifier {
   Future<bool> synchronize({
     SchoolNetwork? using,
     String? term,
-    SchoolJsonRequest? request,
-  }) async {
-    if (busy) return false;
+    required VerifySchoolLogin verify,
+  }) => _runSchool(using ?? network, (session) async {
+    final result = await _authenticated(
+      session,
+      verify,
+      () => _school.synchronize(session, term: term),
+    );
 
+    if (busy) throw const SchoolRequestError('课程正在保存，请稍后重新导入。');
     busy = true;
-    error = null;
     notifyListeners();
-
     try {
-      final selectedNetwork = using ?? network;
-      final result = await _school.synchronize(
-        selectedNetwork,
-        term: term,
-        request: request,
-      );
-      await _saveLoginState(selectedNetwork);
-
       final previous = await _store.readTerm(result.schedule.term);
+      session.checkActive();
       final next = result.schedule.mergeLocalCourses(
         previous?.courses ?? const [],
       );
-
       await _store.write(next);
       _schedule = next;
       terms = {...await _store.terms(), ...result.terms}.toList();
       _goToCurrentWeek();
       await _updateWidget();
-      return true;
-    } catch (failure) {
-      _handleSchoolError(failure);
-      return false;
     } finally {
       busy = false;
       notifyListeners();
     }
-  }
+  });
 
   Future<bool> saveCourse(
     Course course, {
@@ -186,13 +263,16 @@ class AppController extends ChangeNotifier {
     );
   }
 
-  Future<bool> selectTerm(String term) async {
+  Future<bool> selectTerm(
+    String term, {
+    required Future<bool> Function(String term) importTerm,
+  }) async {
     if (busy) return false;
 
     try {
       final saved = await _store.readTerm(term);
       if (busy) return false;
-      if (saved == null) return await synchronize(term: term);
+      if (saved == null) return await importTerm(term);
 
       final success = await _save(saved);
       if (success) showCurrentWeek();
@@ -248,11 +328,15 @@ class AppController extends ChangeNotifier {
   Future<bool> signOut() async {
     if (busy) return false;
 
+    final finished = _schoolFinished;
+    cancelSchoolRequest();
+    await finished;
     busy = true;
     notifyListeners();
 
     try {
-      await _school.session.clear();
+      await _schoolStorage.clear();
+      username = null;
       accountStatus = AccountStatus.signedOut;
       error = null;
       return true;

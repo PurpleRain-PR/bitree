@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../app_controller.dart';
 import 'schedule_screen.dart';
 import 'settings_screen.dart';
+import 'school_verification_dialog.dart';
 import 'update_check.dart';
 
 class AppScreen extends StatefulWidget {
@@ -19,13 +20,35 @@ class AppScreen extends StatefulWidget {
 class _AppScreenState extends State<AppScreen> {
   int _tab = 0;
   bool _checkingUpdates = false;
+  bool _started = false;
 
   @override
   void initState() {
     super.initState();
+    widget.controller.addListener(_onReady);
+    _onReady();
+  }
+
+  void _onReady() {
+    if (_started || !widget.controller.ready) return;
+    _started = true;
+    widget.controller.removeListener(_onReady);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) unawaited(_checkUpdates(silent: true));
+      if (mounted) unawaited(_restoreAccount());
     });
+  }
+
+  Future<void> _restoreAccount() async {
+    await widget.controller.restoreAccount(
+      (request) => verifySchoolLogin(context, request),
+    );
+    if (mounted) await _checkUpdates(silent: true);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onReady);
+    super.dispose();
   }
 
   Future<void> _checkUpdates({bool silent = false}) async {
@@ -41,17 +64,29 @@ class _AppScreenState extends State<AppScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    body: IndexedStack(
-      index: _tab,
+    body: Stack(
+      fit: StackFit.expand,
       children: [
-        ScheduleScreen(controller: widget.controller),
-        const _PendingPage(title: '日程'),
-        const _PendingPage(title: '工具'),
-        SettingsScreen(
-          controller: widget.controller,
-          checkingForUpdates: _checkingUpdates,
-          onCheckForUpdates: () => _checkUpdates(),
+        IndexedStack(
+          index: _tab,
+          children: [
+            ScheduleScreen(controller: widget.controller),
+            const _PendingPage(title: '日程'),
+            const _PendingPage(title: '工具'),
+            SettingsScreen(
+              controller: widget.controller,
+              checkingForUpdates: _checkingUpdates,
+              onCheckForUpdates: () => _checkUpdates(),
+            ),
+          ],
         ),
+        if (widget.controller.schoolBusy)
+          Positioned(
+            top: MediaQuery.paddingOf(context).top,
+            left: 0,
+            right: 0,
+            child: const LinearProgressIndicator(minHeight: 3),
+          ),
       ],
     ),
     bottomNavigationBar: DecoratedBox(

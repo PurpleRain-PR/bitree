@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'app_controller.dart';
 import 'data/schedule_store.dart';
 import 'data/school_service.dart';
-import 'data/school_session.dart';
+import 'data/school_storage.dart';
 import 'ui/app_screen.dart';
 import 'ui/theme.dart';
 
@@ -13,7 +13,8 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   final controller = AppController(
     store: ScheduleStore(),
-    school: SchoolService(SchoolSession()),
+    school: SchoolService(),
+    schoolStorage: SchoolStorage(),
     preferences: SharedPreferencesAsync(),
   );
   runApp(BitreeApp(controller: controller));

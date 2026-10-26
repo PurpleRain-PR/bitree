@@ -1,0 +1,356 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:html/dom.dart';
+import 'package:html/parser.dart';
+
+import 'school_crypto.dart';
+import 'school_errors.dart';
+import 'school_network.dart';
+import 'school_session.dart';
+import 'school_storage.dart';
+import 'school_verification.dart';
+
+/// The school's CAS protocol, also implemented by BIT101-dev/BIT-Login.
+class SchoolLogin {
+  SchoolLogin(this.session, this.verify);
+
+  final SchoolSession session;
+  final VerifySchoolLogin verify;
+  static final _sso = Uri.https('sso.bit.edu.cn');
+  Uri _referer = _sso.resolve('/cas/login');
+
+  Future<void> signIn(SchoolCredentials credentials) async {
+    if (session.network == SchoolNetwork.webvpn) {
+      final callback = await _authenticate(credentials, SchoolNetwork.vpnLogin);
+      await _openCallback(callback);
+    }
+    final preflight = await session.request(
+      session.network.route(SchoolNetwork.teachingLogin),
+      followRedirects: false,
+    );
+    final service = preflight.location!.queryParameters['service']!;
+    final callback = await _authenticate(credentials, Uri.parse(service));
+    await _openCallback(callback);
+    await session.checkLogin();
+  }
+
+  Future<SchoolResponse> _openCallback(Uri callback) => session.request(
+    session.network.route(callback),
+    headers: {'Referer': _referer.toString()},
+  );
+
+  Future<Uri> _authenticate(SchoolCredentials credentials, Uri service) async {
+    if (!isSchoolUrl(service)) {
+      throw const SchoolRequestError('学校返回了无效的认证地址。');
+    }
+    final pageResponse = await _request(
+      _sso
+          .resolve('/cas/login')
+          .replace(queryParameters: {'service': service.toString()}),
+      followRedirects: false,
+    );
+    if (pageResponse.location != null) return _callback(pageResponse);
+    final page = _LoginPage(pageResponse);
+    _referer = pageResponse.url;
+
+    final captchaInfo = await _json(
+      '/cas/api/protected/user/findCaptchaCount/${Uri.encodeComponent(credentials.username)}',
+    );
+    var captcha = captchaInfo['data'] as Map<String, dynamic>;
+    Future<Uint8List> loadCaptcha() async {
+      final result = await _json(
+        '/cas/api/protected/user/findCaptchaCount/${Uri.encodeComponent(credentials.username)}',
+      );
+      captcha = result['data'] as Map<String, dynamic>;
+      return _captchaImage(captcha);
+    }
+
+    final captchaRequired = captcha['captchaInvisible'] == true;
+    final captchaCode = captchaRequired
+        ? await verify(
+            SchoolImageVerification(
+              image: await _captchaImage(captcha),
+              reload: loadCaptcha,
+            ),
+          )
+        : '';
+    if (captchaCode == null) throw const SchoolCancelled();
+    session.checkActive();
+
+    final key = base64Decode(page.cryptoKey);
+    final form = {
+      'type': 'UsernamePassword',
+      '_eventId': 'submit',
+      'geolocation': '',
+      'execution': page.execution,
+      'username': credentials.username,
+      'croypto': page.cryptoKey,
+      'password': encryptSchoolValue(credentials.password, key),
+      'captcha_code': captchaCode,
+      'captcha_payload': encryptSchoolValue(
+        jsonEncode(captcha['captchaPayload'] ?? {}),
+        key,
+      ),
+    };
+    if (page.field('riskSystemSwitch').toUpperCase() == 'USTC') {
+      form.addAll({
+        'risk_payload': encryptSchoolValue(
+          jsonEncode(await _riskPayload()),
+          key,
+        ),
+        'targetSystem': page.field('targetSystem').isEmpty
+            ? 'sso'
+            : page.field('targetSystem'),
+        'siteId': page.field('siteId').isEmpty
+            ? 'sourceId'
+            : page.field('siteId'),
+        'riskEngine': 'true',
+      });
+    }
+    final response = await _request(
+      page.action,
+      form: form,
+      followRedirects: false,
+      checkStatus: false,
+    );
+    final secondFactor = _LoginPage(response);
+    if (secondFactor.field('user-object-id').isNotEmpty &&
+        (response.text.contains('secondSmsLoginForm') ||
+            response.text.contains('cas-gateway'))) {
+      return _secondFactor(credentials.username, secondFactor);
+    }
+    return _callback(response);
+  }
+
+  Future<Uri> _secondFactor(String username, _LoginPage page) async {
+    _referer = _sso.resolve('/cas/');
+    final key = schoolRandomBytes(16);
+    final encrypted = await _request(
+      _sso.resolve('/cas/api/protected/sms/getPhoneNumberByUserId'),
+      body: encryptSchoolValue(
+        jsonEncode({'userId': page.field('user-object-id')}),
+        key,
+      ),
+      headers: {'hasCrypto': 'true', 'privateKey': encryptSchoolKey(key)},
+    );
+    final data =
+        (jsonDecode(decryptSchoolValue(encrypted.text, key)) as Map)['data']
+            as Map;
+    final phoneId = data['tel'] as String;
+    final maskedPhone = data['maskTel'] as String;
+    final code = await verify(
+      SchoolSmsVerification(
+        phone: maskedPhone,
+        sendCode: () async {
+          final result = await _json(
+            '/cas/api/protected/sms/publicNoToken/sendSmsCode',
+            body: {'phone': phoneId, 'businessNo': '0008'},
+          );
+          final message = _message(result);
+          if (result['code'] != 200 &&
+              !(message.contains('验证码') &&
+                  message.contains('有效期内') &&
+                  message.contains('重复发送'))) {
+            throw SchoolRequestError(
+              message.isEmpty ? '验证码发送失败，请重试。' : message,
+            );
+          }
+        },
+        checkCode: (code) async {
+          final result = await _json(
+            '/cas/api/protected/sms/checkToken',
+            body: {
+              'phone': phoneId,
+              'token': code,
+              'delete': false,
+              'trustDevice': true,
+            },
+          );
+          if (result['code'] != 200) {
+            throw SchoolRequestError(
+              _message(result).isEmpty ? '验证码错误或已失效。' : _message(result),
+            );
+          }
+        },
+      ),
+    );
+    if (code == null) throw const SchoolCancelled();
+    session.checkActive();
+    return _callback(
+      await _request(
+        page.action,
+        form: {
+          'username': username,
+          'password': code,
+          'type': 'smsLogin',
+          '_eventId': 'submit',
+          'geolocation': '',
+          'execution': page.execution,
+          'captcha_code': '',
+          'trustDevice': 'true',
+        },
+        followRedirects: false,
+        checkStatus: false,
+      ),
+    );
+  }
+
+  Uri _callback(SchoolResponse response) {
+    session.checkActive();
+    if (response.location != null &&
+        response.status >= 300 &&
+        response.status < 400) {
+      if (!isSchoolUrl(response.location!)) {
+        throw const SchoolRequestError('学校返回了无效的认证地址。');
+      }
+      return response.location!;
+    }
+    final page = _LoginPage(response);
+    final code = page.field('login-error-code');
+    final message = switch (code) {
+      '1030027' || '1030031' => '学号或密码错误，请重新输入。',
+      '1030028' => '账号已被锁定，请先在学校统一身份认证平台解锁。',
+      '1320007' || '1320010' => '验证码错误或已失效，请重试。',
+      '1330001' => '学校要求进一步验证，请稍后重试。',
+      '1410040' || '1410041' => '学校账号状态异常，请联系学校处理。',
+      '3910001' => '账号已休眠，请先在学校统一身份认证平台激活。',
+      _ => page.field('login-error-msg'),
+    };
+    if (code == '1030027' || code == '1030031') {
+      throw SchoolCredentialsRequired(message);
+    }
+    if (response.status == 429) throw const SchoolRequestError('登录过于频繁，请稍后重试。');
+    if (response.status >= 500) {
+      throw const SchoolRequestError('学校认证服务暂时不可用，请稍后重试。');
+    }
+    throw SchoolRequestError(message.isEmpty ? '学校未完成登录，请重试。' : message);
+  }
+
+  Future<Uint8List> _captchaImage(Map<String, dynamic> captcha) async {
+    final url = captcha['captchaUrl'] as String;
+    if (url.startsWith('data:')) return UriData.parse(url).contentAsBytes();
+    return (await _request(_sso.resolve('/cas/').resolve(url))).bytes;
+  }
+
+  Future<Map<String, dynamic>> _riskPayload() async {
+    final cookies = await session.storage.cookiesFor(session.network, _sso);
+    var device = cookies
+        .where((cookie) => cookie.name == 'device')
+        .firstOrNull
+        ?.value;
+    if (device == null) {
+      device = schoolSha256(base64Encode(schoolRandomBytes(32)));
+      await session.storage.saveCookies(session.network, _sso, [
+        Cookie('device', device)
+          ..path = '/'
+          ..secure = true,
+      ]);
+    }
+    final group =
+        cookies
+            .where((cookie) => cookie.name == 'riskSystemGroupId')
+            .firstOrNull
+            ?.value ??
+        '';
+    final values = {
+      'fonts': jsonEncode([
+        'Arial',
+        'Helvetica Neue',
+        'PingFang SC',
+        'Times New Roman',
+      ]),
+      'deviceMemory': '16',
+      'hardwareConcurrency': '10',
+      'timezone': jsonEncode('Asia/Shanghai'),
+      'cpuClass': jsonEncode('not available'),
+      'platform': jsonEncode('MacIntel'),
+      'language': jsonEncode('zh-CN'),
+      'screenResolution': '[956,1470]',
+    };
+    final result = await _json(
+      '/ustc-rba-front/fp',
+      body: {
+        for (final entry in values.entries)
+          entry.key:
+              [
+                'fonts',
+                'deviceMemory',
+                'hardwareConcurrency',
+                'cpuClass',
+              ].contains(entry.key)
+              ? schoolSha256(entry.value)
+              : entry.value,
+        'localgroupId': group,
+        'fingerprint': schoolSha256(values.values.join()),
+        'cookieValue': device,
+        'userAgent': SchoolSession.userAgent,
+        'platformAuthenticator': 'support',
+      },
+    );
+    final token = result['responsetoken'] as String;
+    return {'token': token, 'groupId': group};
+  }
+
+  Future<Map<String, dynamic>> _json(String path, {Object? body}) async =>
+      (await _request(_sso.resolve(path), jsonBody: body)).json;
+
+  Future<SchoolResponse> _request(
+    Uri url, {
+    Map<String, String>? form,
+    Object? jsonBody,
+    String? body,
+    Map<String, String> headers = const {},
+    bool followRedirects = true,
+    bool checkStatus = true,
+  }) => session.request(
+    url,
+    form: form,
+    jsonBody: jsonBody,
+    body: body,
+    followRedirects: followRedirects,
+    checkStatus: checkStatus,
+    headers: {
+      'Referer': _referer.toString(),
+      if (form != null || jsonBody != null || body != null)
+        'Origin': _sso.origin,
+      if (url.path.contains('/protected/')) ...{
+        ...schoolCsrfHeaders(),
+        'Sid-Language': 'zh_CN',
+      },
+      ...headers,
+    },
+  );
+
+  String _message(Map<String, dynamic> result) =>
+      (result['message'] ?? result['msg'] ?? result['errorMessage'] ?? '')
+          .toString();
+}
+
+class _LoginPage {
+  _LoginPage(SchoolResponse response)
+    : document = parse(response.text),
+      url = response.url;
+
+  final Document document;
+  final Uri url;
+
+  String field(String id) {
+    final element = document.getElementById(id);
+    return (element?.attributes['value'] ?? element?.text ?? '').trim();
+  }
+
+  String get execution =>
+      document.getElementById('login-page-flowkey')!.text.trim();
+  String get cryptoKey => document.getElementById('login-croypto')!.text.trim();
+  Uri get action {
+    final action = url.resolve(
+      document.querySelector('form')!.attributes['action'] ?? 'login',
+    );
+    if (action.origin != 'https://sso.bit.edu.cn') {
+      throw const SchoolRequestError('学校登录表单的地址异常。');
+    }
+    return action;
+  }
+}

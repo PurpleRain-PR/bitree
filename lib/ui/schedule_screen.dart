@@ -76,10 +76,18 @@ class ScheduleScreen extends StatelessWidget {
                           ),
                           IconButton(
                             tooltip: '导入课表',
-                            onPressed: controller.busy
+                            onPressed: controller.busy || controller.schoolBusy
                                 ? null
                                 : () => _import(context),
-                            icon: const Icon(Icons.input_rounded),
+                            icon: controller.schoolBusy
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.input_rounded),
                           ),
                           ScheduleMenu(
                             schedule: schedule,
@@ -105,7 +113,8 @@ class ScheduleScreen extends StatelessWidget {
                             ),
                             if (controller.loginExpired)
                               TextButton(
-                                onPressed: controller.busy
+                                onPressed:
+                                    controller.busy || controller.schoolBusy
                                     ? null
                                     : () => _import(context),
                                 child: const Text('继续导入'),
@@ -125,8 +134,13 @@ class ScheduleScreen extends StatelessWidget {
                     else if (schedule == null)
                       Expanded(
                         child: _EmptySchedule(
-                          onImport: () => _import(context),
-                          onAdd: () => editCourse(context, controller),
+                          importing: controller.schoolBusy,
+                          onImport: controller.busy || controller.schoolBusy
+                              ? null
+                              : () => _import(context),
+                          onAdd: controller.busy
+                              ? null
+                              : () => editCourse(context, controller),
                         ),
                       )
                     else ...[
@@ -188,10 +202,15 @@ class ScheduleScreen extends StatelessWidget {
 }
 
 class _EmptySchedule extends StatelessWidget {
-  const _EmptySchedule({required this.onImport, required this.onAdd});
+  const _EmptySchedule({
+    required this.importing,
+    required this.onImport,
+    required this.onAdd,
+  });
 
-  final VoidCallback onImport;
-  final VoidCallback onAdd;
+  final bool importing;
+  final VoidCallback? onImport;
+  final VoidCallback? onAdd;
 
   @override
   Widget build(BuildContext context) {
@@ -218,9 +237,15 @@ class _EmptySchedule extends StatelessWidget {
               const SizedBox(height: 28),
               SizedBox(
                 width: double.infinity,
-                child: FilledButton(
+                child: FilledButton.icon(
                   onPressed: onImport,
-                  child: const Text('导入课表'),
+                  icon: importing
+                      ? const SizedBox.square(
+                          dimension: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.input_rounded, size: 18),
+                  label: const Text('导入课表'),
                 ),
               ),
               const SizedBox(height: 8),

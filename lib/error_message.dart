@@ -8,6 +8,7 @@ import 'data/school_storage.dart';
 
 String errorMessage(Object error) => switch (error) {
   SessionExpired() => error.toString(),
+  SchoolCredentialsRequired() => error.message,
   SchoolRequestError() => error.message,
   SchoolStorageError() => error.message,
   SocketException() => '无法连接学校网站，请检查网络或更换登录方式。',

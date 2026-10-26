@@ -45,8 +45,8 @@
       ninja
       pkg-config
       gtk3
+      libgcrypt
       libsecret
-      webkitgtk_4_1
     ];
 
   env = {
@@ -57,7 +57,6 @@
       pkgs.mesa
       pkgs.libGL
       pkgs.libsecret
-      pkgs.webkitgtk_4_1
     ];
     __EGL_VENDOR_LIBRARY_FILENAMES = "${pkgs.mesa}/share/glvnd/egl_vendor.d/50_mesa.json";
     LIBGL_DRIVERS_PATH = "${pkgs.mesa}/lib/dri";
@@ -78,7 +77,6 @@
           pkgs.mesa
           pkgs.libGL
           pkgs.libsecret
-          pkgs.webkitgtk_4_1
         ]
       }:/run/opengl-driver/lib'
     ''

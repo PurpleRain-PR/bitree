@@ -1,14 +1,11 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
-import '../data/school_errors.dart';
 import '../data/school_network.dart';
-import '../data/school_page.dart';
-import '../error_message.dart';
+import '../data/school_storage.dart';
+import '../data/school_verification.dart';
 import 'school_network_picker.dart';
-import 'school_webview.dart';
+import 'school_verification_dialog.dart';
 
 enum SchoolAction { signIn, importSchedule }
 
@@ -16,27 +13,28 @@ Future<bool?> openSchoolPage(
   BuildContext context,
   AppController controller, {
   required SchoolAction action,
+  SchoolNetwork? network,
+  String? term,
 }) async {
-  if (controller.busy) return null;
-  final switching =
-      action == SchoolAction.signIn &&
-      controller.accountStatus == AccountStatus.signedIn;
-  final title = switch (action) {
-    SchoolAction.importSchedule => '导入课表',
-    SchoolAction.signIn => switching ? '切换登录方式' : '登录账号',
-  };
-  final network = await pickSchoolNetwork(
-    context,
-    title: title,
-    current: switching ? controller.network : null,
-  );
-  if (network == null || !context.mounted || controller.busy) return null;
+  if (controller.busy || controller.schoolBusy) return null;
+  final using = network ?? controller.network;
+
+  if (action == SchoolAction.importSchedule && controller.username != null) {
+    final success = await controller.synchronize(
+      using: using,
+      term: term,
+      verify: (request) => verifySchoolLogin(context, request),
+    );
+    if (success || !controller.loginExpired || !context.mounted) return success;
+  }
+
   return Navigator.of(context).push<bool>(
     MaterialPageRoute(
       builder: (_) => _SchoolScreen(
         controller: controller,
-        network: network,
         action: action,
+        network: using,
+        term: term,
       ),
     ),
   );
@@ -45,298 +43,190 @@ Future<bool?> openSchoolPage(
 class _SchoolScreen extends StatefulWidget {
   const _SchoolScreen({
     required this.controller,
-    required this.network,
     required this.action,
+    required this.network,
+    this.term,
   });
 
   final AppController controller;
-  final SchoolNetwork network;
   final SchoolAction action;
+  final SchoolNetwork network;
+  final String? term;
 
   @override
   State<_SchoolScreen> createState() => _SchoolScreenState();
 }
 
 class _SchoolScreenState extends State<_SchoolScreen> {
-  SchoolNetwork get _network => widget.network;
-
-  bool get _active => mounted && ModalRoute.of(context)!.isCurrent;
-
-  bool get _importing => widget.action == SchoolAction.importSchedule;
-  late SchoolAction _step;
-  late final Uri _initialUrl;
-  bool _sessionRestored = false;
-  final _browser = SchoolBrowser();
-  late final _page = SchoolPage(network: _network, evaluate: _browser.run);
-  bool _busy = false;
-  bool _gatewayOpened = false;
-  bool _courseOpened = false;
-  double _progress = 0;
+  final _form = GlobalKey<FormState>();
+  late final _username = TextEditingController(
+    text: widget.controller.username,
+  );
+  final _password = TextEditingController();
+  late SchoolNetwork _network = widget.network;
+  SchoolAction? _operation;
+  bool _hidePassword = true;
   String? _error;
 
-  @override
-  void initState() {
-    super.initState();
-    final signedIn =
-        widget.controller.accountStatus == AccountStatus.signedIn &&
-        widget.controller.network == _network;
-    _step = _importing && signedIn
-        ? SchoolAction.importSchedule
-        : SchoolAction.signIn;
-    _initialUrl = _step == SchoolAction.signIn
-        ? _network.loginEntry
-        : _network.app;
-    unawaited(_restoreSession());
-  }
+  bool get _importing => widget.action == SchoolAction.importSchedule;
+  bool get _running => _operation != null;
 
-  Future<void> _restoreSession() async {
-    if (_busy) return;
+  Future<void> _run() async {
+    if (_running || !_form.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
     setState(() {
-      _busy = true;
+      _operation = SchoolAction.signIn;
       _error = null;
     });
+    final controller = widget.controller;
+    Future<String?> verify(SchoolVerification request) =>
+        verifySchoolLogin(context, request);
     try {
-      await _browser.restoreSession(
-        widget.controller.schoolSession.storage,
+      final signedIn = await controller.signIn(
+        SchoolCredentials(username: _username.text, password: _password.text),
         _network,
+        verify,
       );
-      if (mounted) setState(() => _sessionRestored = true);
-    } catch (error) {
-      if (mounted) setState(() => _error = errorMessage(error));
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  void _loadStarted(Uri url) {
-    if (!_active) return;
-    setState(() {
-      _progress = 0;
-      _error = null;
-      if (isSchoolLogin(url)) _step = SchoolAction.signIn;
-    });
-    if (isSchoolLogin(url) && widget.controller.network == _network) {
-      widget.controller.requireLogin();
-    }
-  }
-
-  Future<void> _pageLoaded(Uri url) async {
-    if (!_active) return;
-    try {
-      if (_step == SchoolAction.signIn) {
-        if (_network.isLoginLanding(url)) await _finish();
+      if (!mounted) return;
+      if (!signedIn) {
+        setState(() => _error = controller.error);
         return;
       }
-      if (_network.isGatewayHome(url) && !_gatewayOpened) {
-        _gatewayOpened = true;
-        await _browser.navigate(SchoolNetwork.webvpnTeachingLogin);
-      } else if (_network.isAuthLanding(url) && !_courseOpened) {
-        _courseOpened = true;
-        await _browser.navigate(_network.app);
-      }
-      // Course data is read only when the user presses the import button.
-    } catch (error) {
-      if (mounted) setState(() => _error = errorMessage(error));
-    }
-  }
-
-  Future<void> _restart() async {
-    setState(() {
-      _gatewayOpened = false;
-      _courseOpened = false;
-      _error = null;
-    });
-    if (!_sessionRestored) {
-      await _restoreSession();
-      return;
-    }
-    try {
-      await _browser.load(
-        _step == SchoolAction.signIn ? _network.loginEntry : _network.app,
-      );
-    } catch (error) {
-      if (mounted) setState(() => _error = errorMessage(error));
-    }
-  }
-
-  Future<void> _finish() async {
-    if (_busy || !_sessionRestored || !_active) return;
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
-    try {
-      final signingIn = _step == SchoolAction.signIn;
-      if (signingIn) {
-        await _page.checkLogin();
-      } else {
-        await _page.checkSchedule();
-      }
-      await _browser.captureSession(
-        widget.controller.schoolSession.storage,
-        _network,
-      );
-      if (!_active) return;
-      final success = signingIn
-          ? await widget.controller.completeSignIn(_network)
-          : await widget.controller.synchronize(
-              using: _network,
-              request: _page.json,
-            );
-      if (!mounted || !ModalRoute.of(context)!.isCurrent) return;
-      if (success) {
-        if (signingIn && _importing) {
-          setState(() {
-            _step = SchoolAction.importSchedule;
-            _gatewayOpened = false;
-            _courseOpened = false;
-          });
-          await _browser.navigate(
-            _network == SchoolNetwork.webvpn
-                ? SchoolNetwork.webvpnTeachingLogin
-                : _network.app,
+      _password.clear();
+      if (_importing) setState(() => _operation = SchoolAction.importSchedule);
+      final success =
+          !_importing ||
+          await controller.synchronize(
+            using: _network,
+            term: widget.term,
+            verify: verify,
           );
-        } else {
-          Navigator.of(context).pop(true);
-        }
-      } else if (!signingIn && widget.controller.loginExpired) {
-        await _loginAgain();
-      } else {
-        setState(() => _error = widget.controller.error);
-      }
-    } on SessionExpired {
-      if (widget.controller.network == _network) {
-        widget.controller.requireLogin();
-      }
-      if (mounted) {
-        if (_step == SchoolAction.importSchedule) {
-          await _loginAgain();
-        } else {
-          setState(() => _error = schoolLoginNotReady);
-        }
-      }
-    } catch (error) {
-      if (mounted) setState(() => _error = errorMessage(error));
+      if (!mounted) return;
+      _operation = null;
+      Navigator.of(context).pop(success);
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) setState(() => _operation = null);
     }
-  }
-
-  Future<void> _loginAgain() async {
-    setState(() {
-      _step = SchoolAction.signIn;
-      _gatewayOpened = false;
-      _courseOpened = false;
-      _error = '登录已过期，请重新登录。';
-    });
-    try {
-      await _browser.load(_network.loginEntry);
-    } catch (error) {
-      if (mounted) setState(() => _error = errorMessage(error));
-    }
-  }
-
-  String get _actionLabel {
-    if (!_sessionRestored && _busy) return '正在恢复登录…';
-    if (_step == SchoolAction.importSchedule) {
-      return _busy ? '正在导入…' : '导入课表';
-    }
-    if (_busy) return '保存中…';
-
-    return _importing ? '登录并继续' : '完成登录';
-  }
-
-  Widget _buildBrowser() {
-    if (!_sessionRestored) {
-      return Center(
-        child: _error == null
-            ? const CircularProgressIndicator()
-            : TextButton(onPressed: _restoreSession, child: const Text('重试')),
-      );
-    }
-
-    return SchoolWebView(
-      controller: _browser,
-      initialUrl: _initialUrl,
-      onLoadStart: _loadStarted,
-      onLoadStop: _pageLoaded,
-      onProgress: (value) {
-        if (mounted) setState(() => _progress = value);
-      },
-      onError: (value) {
-        if (mounted) setState(() => _error = value);
-      },
-    );
   }
 
   @override
-  Widget build(BuildContext context) => PopScope(
-    canPop: !_busy,
-    child: Scaffold(
-      appBar: AppBar(
-        title: Text(_step == SchoolAction.signIn ? '登录账号' : '导入课表'),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            if (_error != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                child: Text(
-                  _error!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              ),
-            SizedBox(
-              height: 4,
-              child: _progress > 0 && _progress < 1
-                  ? LinearProgressIndicator(value: _progress)
-                  : null,
-            ),
-            Expanded(child: _buildBrowser()),
-            const Divider(height: 1),
-            Center(
-              heightFactor: 1,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 680),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        tooltip: '重新打开网页',
-                        onPressed: _busy ? null : _restart,
-                        icon: const Icon(Icons.refresh_rounded),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: _busy || !_sessionRestored
-                              ? null
-                              : _finish,
-                          icon: _busy
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : Icon(
-                                  _step == SchoolAction.signIn
-                                      ? Icons.login_rounded
-                                      : Icons.input_rounded,
-                                ),
-                          label: Text(_actionLabel),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
+  void dispose() {
+    if (_running) widget.controller.cancelSchoolRequest();
+    _username.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: Text(_importing ? '导入课表' : '登录学校账号'),
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(3),
+        child: SizedBox(
+          height: 3,
+          child: _running ? const LinearProgressIndicator(minHeight: 3) : null,
         ),
+      ),
+    ),
+    body: SafeArea(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: _buildForm(),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  Widget _buildForm() => AutofillGroup(
+    child: Form(
+      key: _form,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SchoolNetworkSelector(
+            selected: _network,
+            onChanged: _running
+                ? null
+                : (network) => setState(() => _network = network),
+          ),
+          const SizedBox(height: 24),
+          TextFormField(
+            controller: _username,
+            enabled: !_running,
+            readOnly: widget.controller.username != null,
+            decoration: const InputDecoration(labelText: '学号'),
+            keyboardType: TextInputType.text,
+            textInputAction: TextInputAction.next,
+            autofillHints: const [AutofillHints.username],
+            autocorrect: false,
+            enableSuggestions: false,
+            validator: (value) =>
+                value == null || value.isEmpty ? '请输入学号' : null,
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _password,
+            enabled: !_running,
+            autofocus: widget.controller.username != null,
+            obscureText: _hidePassword,
+            decoration: InputDecoration(
+              labelText: '密码',
+              suffixIcon: IconButton(
+                tooltip: _hidePassword ? '显示密码' : '隐藏密码',
+                icon: Icon(
+                  _hidePassword
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                ),
+                onPressed: _running
+                    ? null
+                    : () => setState(() => _hidePassword = !_hidePassword),
+              ),
+            ),
+            textInputAction: TextInputAction.done,
+            autofillHints: const [AutofillHints.password],
+            autocorrect: false,
+            enableSuggestions: false,
+            enableIMEPersonalizedLearning: false,
+            validator: (value) =>
+                value == null || value.isEmpty ? '请输入密码' : null,
+            onFieldSubmitted: (_) => _run(),
+          ),
+          const SizedBox(height: 24),
+          if (_error != null) ...[
+            Text(
+              _error!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+            const SizedBox(height: 16),
+          ],
+          FilledButton(
+            onPressed: _running ? null : _run,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_running) ...[
+                  const SizedBox.square(
+                    dimension: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  const SizedBox(width: 10),
+                ],
+                Text(switch (_operation) {
+                  SchoolAction.signIn => '登录中…',
+                  SchoolAction.importSchedule => '导入中…',
+                  null => _importing ? '登录并导入' : '登录',
+                }),
+              ],
+            ),
+          ),
+        ],
       ),
     ),
   );

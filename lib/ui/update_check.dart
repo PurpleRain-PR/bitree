@@ -18,6 +18,7 @@ Future<void> checkForUpdates(
       builtAt: appBuildTime,
     );
     if (!context.mounted) return;
+    if (silent && !ModalRoute.of(context)!.isCurrent) return;
 
     if (releases.isEmpty) {
       if (!silent) {

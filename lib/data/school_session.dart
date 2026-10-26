@@ -1,143 +1,187 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
-import 'browser_session.dart';
 import 'school_errors.dart';
 import 'school_network.dart';
 import 'school_storage.dart';
 
-/// The browser and native HTTP requests share only school-scoped session cookies.
+class SchoolResponse {
+  const SchoolResponse({
+    required this.url,
+    required this.status,
+    required this.location,
+    required this.bytes,
+  });
+
+  final Uri url;
+  final int status;
+  final Uri? location;
+  final Uint8List bytes;
+
+  String get text => utf8.decode(bytes);
+
+  Map<String, dynamic> get json {
+    return jsonDecode(text) as Map<String, dynamic>;
+  }
+}
+
 class SchoolSession {
+  SchoolSession({required this.network, required this.storage});
+
+  final SchoolNetwork network;
+  final SchoolStorage storage;
   final _client = HttpClient()..connectionTimeout = const Duration(seconds: 20);
-  final storage = SchoolStorage();
+  bool _closed = false;
+
+  bool get cancelled => _closed;
 
   static const userAgent =
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-      '(KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36';
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 '
+      '(KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36';
 
-  Future<void> clear() async {
-    await storage.clear();
-    await clearBrowserSession();
+  void checkActive() {
+    if (_closed) throw const SchoolCancelled();
   }
 
-  Future<void> initializeApp(SchoolNetwork network) async {
-    await _request(network.app, document: true);
+  Future<void> checkLogin() async {
+    await request(network.accountPage, stopAtLogin: true);
+    await request(network.accountConfig, stopAtLogin: true);
   }
 
   Future<Map<String, dynamic>> json(
-    SchoolNetwork network,
     String path, {
     Map<String, String>? form,
   }) async {
-    final text = await _request(
+    final response = await request(
       network.endpoint(path),
       form: form,
-      referer: network.app,
+      headers: {
+        'Accept': 'application/json, text/javascript, */*; q=0.01',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-origin',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+      },
+      stopAtLogin: true,
     );
-    if (text.trimLeft().startsWith('<')) {
-      throw const SchoolRequestError('学校返回了网页，无法读取课表。请重新打开学校网页。');
+    if (response.text.trimLeft().startsWith('<')) {
+      if (response.text.contains('login-page-flowkey') ||
+          response.text.contains('authserver/login')) {
+        throw const SessionExpired();
+      }
+      throw SchoolRequestError(
+        schoolPageError(response.text) ?? '学校接口暂时未返回数据，请稍后重试。',
+      );
     }
-
-    final value = jsonDecode(text);
-    if (value is! Map<String, dynamic>) {
-      throw const FormatException('学校接口返回了无法识别的数据');
-    }
-
-    return value;
+    return response.json;
   }
 
-  Future<String> _request(
+  Future<SchoolResponse> request(
     Uri target, {
     Map<String, String>? form,
-    Uri? referer,
-    bool document = false,
+    Object? jsonBody,
+    String? body,
+    Map<String, String> headers = const {},
+    bool followRedirects = true,
+    bool stopAtLogin = false,
+    bool checkStatus = true,
   }) async {
-    var uri = target;
-    var body = form == null ? null : Uri(queryParameters: form).query;
+    var url = target;
+    var payload = form != null
+        ? Uri(queryParameters: form).query
+        : jsonBody != null
+        ? jsonEncode(jsonBody)
+        : body;
+    final contentType = form != null
+        ? 'application/x-www-form-urlencoded; charset=utf-8'
+        : 'application/json; charset=utf-8';
 
-    for (var redirect = 0; redirect <= 10; redirect++) {
-      if (!isSchoolUrl(uri)) {
-        throw const SchoolRequestError('学校接口重定向到了未授权的网站');
+    for (var redirects = 0; redirects <= 10; redirects++) {
+      checkActive();
+      if (!isSchoolUrl(url)) {
+        throw const SchoolRequestError('学校请求跳转到了未授权的网站。');
       }
-      if (isSchoolLogin(uri)) throw const SessionExpired();
+      if (payload != null && url.origin != target.origin) {
+        throw const SchoolRequestError('学校请求尝试将登录信息发送到其他网站。');
+      }
+      if (stopAtLogin && isSchoolLogin(url)) throw const SessionExpired();
 
-      final request = await _client
-          .openUrl(body == null ? 'GET' : 'POST', uri)
+      final outgoing = await _client
+          .openUrl(payload == null ? 'GET' : 'POST', url)
           .timeout(const Duration(seconds: 25));
-      request.followRedirects = false;
-      request.headers
+      checkActive();
+      outgoing.followRedirects = false;
+      outgoing.headers
         ..set(HttpHeaders.userAgentHeader, userAgent)
+        ..set(HttpHeaders.acceptLanguageHeader, 'zh-CN,zh;q=0.9,en;q=0.7')
+        ..set(HttpHeaders.acceptHeader, '*/*')
         ..set(
-          HttpHeaders.acceptHeader,
-          document
-              ? 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-              : 'application/json, text/javascript, */*; q=0.01',
+          'sec-ch-ua',
+          '"Not;A=Brand";v="8", "Chromium";v="150", "Google Chrome";v="150"',
         )
-        ..set(HttpHeaders.acceptLanguageHeader, 'zh-CN,zh;q=0.9');
-      if (!document) request.headers.set('X-Requested-With', 'XMLHttpRequest');
-
-      if (referer != null) {
-        request.headers.set(
-          HttpHeaders.refererHeader,
-          uri.origin == referer.origin
-              ? referer.toString()
-              : '${referer.origin}/',
-        );
+        ..set('sec-ch-ua-mobile', '?0')
+        ..set('sec-ch-ua-platform', '"macOS"');
+      for (final entry in headers.entries) {
+        if (redirects == 0 || entry.key.toLowerCase() == 'referer') {
+          var value = entry.value;
+          if (entry.key.toLowerCase() == 'referer') {
+            final referer = Uri.parse(value);
+            if (url.origin != referer.origin) value = '${referer.origin}/';
+          }
+          outgoing.headers.set(entry.key, value);
+        }
       }
-      request.cookies.addAll(await storage.cookiesFor(uri));
-
-      if (body != null) {
-        request.headers.contentType = ContentType(
-          'application',
-          'x-www-form-urlencoded',
-          charset: 'utf-8',
-        );
-        request.write(body);
+      outgoing.cookies.addAll(await storage.cookiesFor(network, url));
+      checkActive();
+      if (payload != null) {
+        outgoing.headers.set(HttpHeaders.contentTypeHeader, contentType);
+        outgoing.write(payload);
       }
-
-      final response = await request.close().timeout(
+      final response = await outgoing.close().timeout(
         const Duration(seconds: 25),
       );
-      await storage.saveCookies(uri, response.cookies);
-      final text = await response
-          .transform(utf8.decoder)
-          .join()
+      checkActive();
+      await storage.saveCookies(network, url, response.cookies);
+      final bytes = await response
+          .fold<BytesBuilder>(
+            BytesBuilder(copy: false),
+            (buffer, chunk) => buffer..add(chunk),
+          )
           .timeout(const Duration(seconds: 25));
+      checkActive();
+      final location = response.headers.value(HttpHeaders.locationHeader);
+      final result = SchoolResponse(
+        url: url,
+        status: response.statusCode,
+        location: location == null ? null : url.resolve(location),
+        bytes: bytes.takeBytes(),
+      );
 
-      if (response.statusCode == 401) throw const SessionExpired();
-
-      if ([301, 302, 303, 307, 308].contains(response.statusCode)) {
-        final location = response.headers.value(HttpHeaders.locationHeader);
-        if (location == null) {
-          throw const SchoolRequestError('学校接口的重定向地址缺失');
-        }
-
-        uri = uri.resolve(location);
-        if (response.statusCode == 303 ||
-            response.statusCode == 301 ||
-            response.statusCode == 302) {
-          body = null;
-        }
+      if (followRedirects &&
+          [301, 302, 303, 307, 308].contains(result.status)) {
+        url = network.route(result.location!);
+        if ([301, 302, 303].contains(result.status)) payload = null;
         continue;
       }
-
-      if (text.trimLeft().startsWith('<')) {
-        final pageError = schoolPageError(text);
-        if (pageError != null) throw SchoolRequestError(pageError);
+      if (checkStatus && result.status >= 400) {
+        if (stopAtLogin && result.status == 401) throw const SessionExpired();
+        final message = switch (result.status) {
+          403 => '请求被拒绝（403）：${url.host}${url.path}',
+          429 => '请求过于频繁，请稍后重试。',
+          _ => '学校服务出错（${result.status}），请稍后重试。',
+        };
+        throw SchoolRequestError(message);
       }
-      if (response.statusCode == 403) {
-        throw const SchoolRequestError('学校拒绝访问（403），请检查登录方式和账号权限。');
-      }
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw SchoolRequestError('学校服务出错（${response.statusCode}），请稍后重试。');
-      }
-
-      return text;
+      return result;
     }
-
-    throw const SchoolRequestError('学校登录反复跳转，请重新登录。');
+    throw const SchoolRequestError('学校登录反复跳转，请稍后重试。');
   }
 
-  void close() => _client.close(force: true);
+  void close() {
+    _closed = true;
+    _client.close(force: true);
+  }
 }

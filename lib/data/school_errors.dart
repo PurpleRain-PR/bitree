@@ -1,6 +1,15 @@
-const schoolPageNotReady = '学校网页还在加载，请稍后重试。';
-const schoolScheduleNotReady = '还未识别到课表，请等页面加载完成后重试。';
-const schoolLoginNotReady = '请先在学校网页中完成登录。';
+class SchoolCancelled implements Exception {
+  const SchoolCancelled();
+}
+
+class SchoolCredentialsRequired implements Exception {
+  const SchoolCredentialsRequired([this.message = '请登录学校账号。']);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
 
 class SessionExpired implements Exception {
   const SessionExpired();
@@ -19,10 +28,10 @@ class SchoolRequestError implements Exception {
 
 String? schoolPageError(String text) {
   if (text.contains('Illegal referrer')) {
-    return '教学中心拒绝此页面来源，请返回后重新打开学校网页。';
+    return '教学中心拒绝了请求来源，请稍后重试。';
   }
   if (text.contains('Access Denied') || text.contains('您没有权限访问该资源')) {
-    return 'WebVPN 拒绝访问此页面，请从 WebVPN 首页确认教学中心入口。';
+    return 'WebVPN 拒绝访问教学中心，请检查学校端的资源权限。';
   }
   return null;
 }

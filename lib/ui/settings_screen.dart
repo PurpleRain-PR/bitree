@@ -5,6 +5,7 @@ import '../app_version.dart';
 import 'course_editor.dart';
 import 'external_link.dart';
 import 'school_account.dart';
+import 'school_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({
@@ -18,8 +19,8 @@ class SettingsScreen extends StatelessWidget {
   final bool checkingForUpdates;
   final VoidCallback onCheckForUpdates;
 
-  Future<void> _selectTerm(BuildContext context) => showDialog<void>(
-    context: context,
+  Future<void> _selectTerm(BuildContext pageContext) => showDialog<void>(
+    context: pageContext,
     builder: (context) => SimpleDialog(
       title: const Text('选择学期'),
       children: [
@@ -29,7 +30,19 @@ class SettingsScreen extends StatelessWidget {
                 ? null
                 : () {
                     Navigator.pop(context);
-                    controller.selectTerm(term);
+                    controller.selectTerm(
+                      term,
+                      importTerm: (term) async {
+                        if (!pageContext.mounted) return false;
+                        return await openSchoolPage(
+                              pageContext,
+                              controller,
+                              action: SchoolAction.importSchedule,
+                              term: term,
+                            ) ==
+                            true;
+                      },
+                    );
                   },
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),

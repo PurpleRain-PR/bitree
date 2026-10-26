@@ -17,8 +17,7 @@ const _secureStorage = FlutterSecureStorage(
 );
 
 const _credentialsKey = 'bitree.school.credentials';
-// Keep the existing keys so an upgrade preserves saved sessions.
-const _cookiePrefix = 'cubit.school.cookie.';
+const _cookiePrefix = 'bitree.school.cookie.';
 
 class SchoolCredentials {
   const SchoolCredentials({required this.username, required this.password});
@@ -28,11 +27,14 @@ class SchoolCredentials {
 }
 
 class SchoolStorage {
-  PersistCookieJar _cookies = _createCookieJar();
+  final _cookies = <SchoolNetwork, PersistCookieJar>{};
 
-  static PersistCookieJar _createCookieJar() => PersistCookieJar(
-    storage: const _SecureCookieStorage(),
-    persistSession: true,
+  PersistCookieJar _cookiesFor(SchoolNetwork network) => _cookies.putIfAbsent(
+    network,
+    () => PersistCookieJar(
+      storage: _SecureCookieStorage(network),
+      persistSession: true,
+    ),
   );
 
   Future<SchoolCredentials?> readCredentials() async {
@@ -65,15 +67,19 @@ class SchoolStorage {
     ),
   );
 
-  Future<List<Cookie>> cookiesFor(Uri source) {
+  Future<List<Cookie>> cookiesFor(SchoolNetwork network, Uri source) {
     if (!isSchoolUrl(source)) {
       throw ArgumentError('只接受学校网站的会话');
     }
 
-    return _cookies.loadForRequest(source);
+    return _cookiesFor(network).loadForRequest(source);
   }
 
-  Future<void> saveCookies(Uri source, List<Cookie> cookies) async {
+  Future<void> saveCookies(
+    SchoolNetwork network,
+    Uri source,
+    List<Cookie> cookies,
+  ) async {
     if (!isSchoolUrl(source)) {
       throw ArgumentError('只接受学校网站的会话');
     }
@@ -88,20 +94,32 @@ class SchoolStorage {
       }
     }
 
-    await _cookies.saveFromResponse(source, cookies);
+    await _cookiesFor(network).saveFromResponse(source, cookies);
   }
 
-  Future<void> clear() async {
+  Future<void> _deleteWhere(bool Function(String) matches) async {
     await _accessStorage(() async {
       final saved = await _secureStorage.readAll();
       for (final key in saved.keys) {
-        if (key == _credentialsKey || key.startsWith(_cookiePrefix)) {
+        if (matches(key)) {
           await _secureStorage.delete(key: key);
         }
       }
     });
+  }
 
-    _cookies = _createCookieJar();
+  Future<void> clearSession(SchoolNetwork network) async {
+    await _deleteWhere(
+      (key) => key.startsWith('$_cookiePrefix${network.name}.'),
+    );
+    _cookies.remove(network);
+  }
+
+  Future<void> clear() async {
+    await _deleteWhere(
+      (key) => key == _credentialsKey || key.startsWith(_cookiePrefix),
+    );
+    _cookies.clear();
   }
 }
 
@@ -127,23 +145,26 @@ Future<T> _accessStorage<T>(Future<T> Function() operation) async {
 }
 
 class _SecureCookieStorage implements Storage {
-  const _SecureCookieStorage();
+  const _SecureCookieStorage(this.network);
+
+  final SchoolNetwork network;
+
+  String _key(String key) => '$_cookiePrefix${network.name}.$key';
 
   @override
   Future<void> init(bool persistSession, bool ignoreExpires) async {}
 
   @override
   Future<String?> read(String key) =>
-      _accessStorage(() => _secureStorage.read(key: '$_cookiePrefix$key'));
+      _accessStorage(() => _secureStorage.read(key: _key(key)));
 
   @override
-  Future<void> write(String key, String value) => _accessStorage(
-    () => _secureStorage.write(key: '$_cookiePrefix$key', value: value),
-  );
+  Future<void> write(String key, String value) =>
+      _accessStorage(() => _secureStorage.write(key: _key(key), value: value));
 
   @override
   Future<void> delete(String key) =>
-      _accessStorage(() => _secureStorage.delete(key: '$_cookiePrefix$key'));
+      _accessStorage(() => _secureStorage.delete(key: _key(key)));
 
   @override
   Future<void> deleteAll(List<String> keys) async {
