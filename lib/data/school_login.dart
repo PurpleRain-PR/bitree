@@ -271,7 +271,7 @@ class SchoolLogin {
       '1330001' => '学校要求进一步验证，请稍后重试。',
       '1410040' || '1410041' => '学校账号状态异常，请联系学校处理。',
       '3910001' => '账号已休眠，请先在学校统一身份认证平台激活。',
-      _ => _loginErrorMessage(page.field('login-error-msg')),
+      _ => page.field('login-error-msg'),
     };
     if (code == '1030027' || code == '1030031') {
       throw SchoolCredentialsRequired(message);
@@ -387,13 +387,9 @@ class SchoolLogin {
     },
   );
 
-  String _message(Map<String, dynamic> result) => _loginErrorMessage(
-    (result['message'] ?? result['msg'] ?? result['errorMessage'] ?? '')
-        .toString(),
-  );
-
-  String _loginErrorMessage(String message) =>
-      message.replaceAll('认证信息无效', '账号或密码错误');
+  String _message(Map<String, dynamic> result) =>
+      (result['message'] ?? result['msg'] ?? result['errorMessage'] ?? '')
+          .toString();
 }
 
 class _LoginPage {
