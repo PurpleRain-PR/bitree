@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- fix(licenses): remove duplicate project license registration ([3832cbd](https://github.com/so1ve/bitree/commit/3832cbd712e2ef122785b529d59aa2b32a816559))
 - fix(ui): adapt menus and share persistent week range controls ([ab19f5f](https://github.com/so1ve/bitree/commit/ab19f5f624211926e9e621f5d44553d48888577c))
 - feat(course): manage selectable week range ([e987147](https://github.com/so1ve/bitree/commit/e98714715c4ca4d5413109fd17da8ef4396195f2))
 - fix(course): replace week presets with direct selection actions ([20d1be6](https://github.com/so1ve/bitree/commit/20d1be68140526165f201862fffef5f0d1f702c3))
