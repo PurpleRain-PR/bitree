@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- fix: align revealed deadlines with the bottom of the list ([d4988da](https://github.com/so1ve/bitree/commit/d4988da40406a79e815d6bc5cd06c77f092f83ad))
 - feat: refine agenda swipe and completion feedback ([fc6afd3](https://github.com/so1ve/bitree/commit/fc6afd3e6a38067979361947a2e58b2a07f8e324))
 - feat: animate agenda insertion and removal ([549f736](https://github.com/so1ve/bitree/commit/549f736e00e1b2c8afcc78bbc1173323dae25590))
 - fix: position notices above the bottom navigation bar ([781bac1](https://github.com/so1ve/bitree/commit/781bac1dc123fcaf06ab8c7cf7f852df8834f488))
