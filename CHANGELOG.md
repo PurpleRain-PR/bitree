@@ -2,8 +2,7 @@
 
 ## Unreleased
 
-- feat: reveal current time on timetable entry and dock indicator ([6f6c86f](https://github.com/so1ve/bitree/commit/6f6c86f969d3053a9aee902977a2a1241ab54a5f))
-- feat: add current time indicator to timetable ([b4564eb](https://github.com/so1ve/bitree/commit/b4564eb95fcfebbd91123e3938a4f6117a7fe336))
+- merge: resolve PR #4 conflicts with main ([03d8404](https://github.com/so1ve/bitree/commit/03d8404adf9f101cda0f92fc5670f982bb86e5c3))
 - refactor: separate timetable layout and selection ([5604a06](https://github.com/so1ve/bitree/commit/5604a060757c07efe5fad251a78f6a6d1c8c1f97))
 - refactor: share course and agenda editor layout ([a981596](https://github.com/so1ve/bitree/commit/a9815962c9873ec376fc7054df6d09ca83f2c6ef))
 - refactor: share atomic JSON persistence ([d889196](https://github.com/so1ve/bitree/commit/d889196ad8c0cc986682c902baa8370a1c04750a))
@@ -14,6 +13,8 @@
 - fix: align revealed deadlines with the bottom of the list ([d4988da](https://github.com/so1ve/bitree/commit/d4988da40406a79e815d6bc5cd06c77f092f83ad))
 - feat: refine agenda swipe and completion feedback ([fc6afd3](https://github.com/so1ve/bitree/commit/fc6afd3e6a38067979361947a2e58b2a07f8e324))
 - feat: animate agenda insertion and removal ([549f736](https://github.com/so1ve/bitree/commit/549f736e00e1b2c8afcc78bbc1173323dae25590))
+- feat: reveal current time on timetable entry and dock indicator ([6f6c86f](https://github.com/so1ve/bitree/commit/6f6c86f969d3053a9aee902977a2a1241ab54a5f))
+- feat: add current time indicator to timetable ([b4564eb](https://github.com/so1ve/bitree/commit/b4564eb95fcfebbd91123e3938a4f6117a7fe336))
 - fix: position notices above the bottom navigation bar ([781bac1](https://github.com/so1ve/bitree/commit/781bac1dc123fcaf06ab8c7cf7f852df8834f488))
 - feat: allow undoing deleted agenda items ([b200ce2](https://github.com/so1ve/bitree/commit/b200ce2fd0a2d4795d8dffdb551872c72cb7ecab))
 - feat: add configurable confirmation for agenda deletion ([e0a3e30](https://github.com/so1ve/bitree/commit/e0a3e3076248a7fa935586b15c1b46f7bd291c98))
