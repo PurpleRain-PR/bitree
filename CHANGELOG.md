@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- refactor: separate timetable layout and selection ([5604a06](https://github.com/so1ve/bitree/commit/5604a060757c07efe5fad251a78f6a6d1c8c1f97))
 - refactor: share course and agenda editor layout ([a981596](https://github.com/so1ve/bitree/commit/a9815962c9873ec376fc7054df6d09ca83f2c6ef))
 - refactor: share atomic JSON persistence ([d889196](https://github.com/so1ve/bitree/commit/d889196ad8c0cc986682c902baa8370a1c04750a))
 - feat: select course week ranges by dragging ([b55c90e](https://github.com/so1ve/bitree/commit/b55c90ea5017170f6bc4a50dee664f02021b4389))
