@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- feat: add configurable confirmation for agenda deletion ([e0a3e30](https://github.com/so1ve/bitree/commit/e0a3e3076248a7fa935586b15c1b46f7bd291c98))
 - fix: reveal overdue deadlines by pulling down at the top ([ab7da74](https://github.com/so1ve/bitree/commit/ab7da7425a4ab4483ee09f417f2f49a6608a1701))
 - feat: reveal overdue deadlines with a resisted upward pull ([5df2a43](https://github.com/so1ve/bitree/commit/5df2a43db21993b66a5762babc12795bf87da803))
 - feat: make agenda tasks easy to review and complete ([fee0ac0](https://github.com/so1ve/bitree/commit/fee0ac0da3d7618f4b11ab5e7c75c8d79dc5140f))
