@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- feat(course): manage selectable week range ([e987147](https://github.com/so1ve/bitree/commit/e98714715c4ca4d5413109fd17da8ef4396195f2))
 - fix(course): replace week presets with direct selection actions ([20d1be6](https://github.com/so1ve/bitree/commit/20d1be68140526165f201862fffef5f0d1f702c3))
 - fix(ui): unify dropdown styling and Material menu animations ([aadbd83](https://github.com/so1ve/bitree/commit/aadbd8352f5363fbe3ab223bcb73655893269168))
 - feat(agenda): preserve deleted deadlines during updates and allow restoration ([3373ca3](https://github.com/so1ve/bitree/commit/3373ca38c9eaa796884a53da2bdaa72bc9a6fb38))
