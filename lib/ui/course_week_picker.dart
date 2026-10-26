@@ -1,25 +1,24 @@
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-enum _WeekPreset {
+enum _WeekSelection {
   all('全选'),
   none('全不选'),
-  odd('单周'),
-  even('双周');
+  summer('小学期'),
+  regular('非小学期');
 
-  const _WeekPreset(this.label);
+  const _WeekSelection(this.label);
 
   final String label;
 
   Set<int> weeksIn(List<int> weeks) => switch (this) {
     all => weeks.toSet(),
     none => {},
-    odd => weeks.where((week) => week.isOdd).toSet(),
-    even => weeks.where((week) => week.isEven).toSet(),
+    summer => weeks.where((week) => week < 0).toSet(),
+    regular => weeks.where((week) => week > 0).toSet(),
   };
 }
 
@@ -155,9 +154,7 @@ class _CourseWeekPickerState extends State<CourseWeekPicker> {
     final selectedWeeks = widget.selectedWeeks;
     final enabled = widget.enabled;
     final onChanged = widget.onChanged;
-    final selectedPreset = _WeekPreset.values
-        .where((preset) => setEquals(preset.weeksIn(weeks), selectedWeeks))
-        .firstOrNull;
+    final hasSummerWeeks = weeks.any((week) => week < 0);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,36 +179,35 @@ class _CourseWeekPickerState extends State<CourseWeekPicker> {
           ],
         ),
         LayoutBuilder(
-          builder: (context, constraints) => SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minWidth: constraints.maxWidth),
-              child: SegmentedButton<_WeekPreset>(
-                segments: [
-                  for (final preset in _WeekPreset.values)
-                    ButtonSegment(value: preset, label: Text(preset.label)),
-                ],
-                selected: {?selectedPreset},
-                emptySelectionAllowed: selectedPreset == null,
-                showSelectedIcon: false,
-                style: SegmentedButton.styleFrom(
-                  minimumSize: const Size(48, 36),
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  textStyle: theme.textTheme.labelMedium,
-                  foregroundColor: theme.colorScheme.onSurfaceVariant,
-                  selectedForegroundColor: theme.colorScheme.onPrimaryContainer,
-                  selectedBackgroundColor: theme.colorScheme.primaryContainer,
-                  side: BorderSide(color: theme.colorScheme.outlineVariant),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+          builder: (context, constraints) {
+            final minimumWidth =
+                MediaQuery.textScalerOf(context).scale(14) * 4 + 16;
+            final columns = constraints.maxWidth >= minimumWidth * 4 ? 4 : 2;
+            final width = constraints.maxWidth / columns;
+
+            return Wrap(
+              children: [
+                for (final selection in _WeekSelection.values)
+                  SizedBox(
+                    width: width,
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        minimumSize: const Size(48, 36),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        textStyle: theme.textTheme.labelMedium,
+                      ),
+                      onPressed:
+                          !enabled ||
+                              (selection == _WeekSelection.summer &&
+                                  !hasSummerWeeks)
+                          ? null
+                          : () => onChanged(selection.weeksIn(weeks)),
+                      child: Text(selection.label),
+                    ),
                   ),
-                ),
-                onSelectionChanged: enabled
-                    ? (selection) => onChanged(selection.single.weeksIn(weeks))
-                    : null,
-              ),
-            ),
-          ),
+              ],
+            );
+          },
         ),
         const SizedBox(height: 8),
         LayoutBuilder(
