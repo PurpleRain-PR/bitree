@@ -7,6 +7,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart' as browser;
 import '../data/school_errors.dart';
 import '../data/school_network.dart';
 import '../data/school_session.dart';
+import '../data/school_storage.dart';
 import 'linux_school_webview.dart';
 
 class SchoolBrowser {
@@ -14,11 +15,11 @@ class SchoolBrowser {
   browser.InAppWebViewController? _web;
 
   Future<void> restoreSession(
-    SchoolSession session,
+    SchoolStorage storage,
     SchoolNetwork network,
   ) async {
     for (final source in network.sessionUrls) {
-      final cookies = await session.cookiesFor(source);
+      final cookies = await storage.cookiesFor(source);
       for (final cookie in cookies) {
         if (io.Platform.isLinux) {
           await _linux.restoreCookie(source, cookie);
@@ -42,12 +43,12 @@ class SchoolBrowser {
   }
 
   Future<void> captureSession(
-    SchoolSession session,
+    SchoolStorage storage,
     SchoolNetwork network,
   ) async {
     for (final source in network.sessionUrls) {
       if (io.Platform.isLinux) {
-        await session.importCookies(source, await _linux.cookies(source));
+        await storage.saveCookies(source, await _linux.cookies(source));
       } else {
         final values = await browser.CookieManager.instance().getCookies(
           url: browser.WebUri(source.toString()),
@@ -66,7 +67,7 @@ class SchoolBrowser {
           }
           return cookie;
         }).toList();
-        await session.importCookies(source, cookies);
+        await storage.saveCookies(source, cookies);
       }
     }
   }

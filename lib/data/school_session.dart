@@ -2,54 +2,23 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:cookie_jar/cookie_jar.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-
 import 'browser_session.dart';
 import 'school_errors.dart';
 import 'school_network.dart';
+import 'school_storage.dart';
 
 /// The browser and native HTTP requests share only school-scoped session cookies.
 class SchoolSession {
   final _client = HttpClient()..connectionTimeout = const Duration(seconds: 20);
-  final _cookies = PersistCookieJar(
-    storage: const _SecureCookieStorage(),
-    persistSession: true,
-  );
+  final storage = SchoolStorage();
 
   static const userAgent =
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
       '(KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36';
 
-  Future<List<Cookie>> cookiesFor(Uri source) {
-    if (!isSchoolUrl(source)) {
-      throw ArgumentError('只接受学校网站的会话');
-    }
-
-    return _cookies.loadForRequest(source);
-  }
-
-  Future<void> importCookies(Uri source, List<Cookie> cookies) async {
-    if (!isSchoolUrl(source)) {
-      throw ArgumentError('只接受学校网站的会话');
-    }
-
-    for (final cookie in cookies) {
-      final domain = cookie.domain?.replaceFirst(RegExp(r'^\.'), '');
-      if (domain != null &&
-          domain.isNotEmpty &&
-          (!isSchoolUrl(Uri.https(domain)) ||
-              (source.host != domain && !source.host.endsWith('.$domain')))) {
-        throw const FormatException('学校会话的 Cookie 域名不匹配');
-      }
-    }
-
-    await _cookies.saveFromResponse(source, cookies);
-  }
-
   Future<void> clear() async {
+    await storage.clear();
     await clearBrowserSession();
-    await _cookies.deleteAll();
   }
 
   Future<void> initializeApp(SchoolNetwork network) async {
@@ -116,7 +85,7 @@ class SchoolSession {
               : '${referer.origin}/',
         );
       }
-      request.cookies.addAll(await _cookies.loadForRequest(uri));
+      request.cookies.addAll(await storage.cookiesFor(uri));
 
       if (body != null) {
         request.headers.contentType = ContentType(
@@ -130,7 +99,7 @@ class SchoolSession {
       final response = await request.close().timeout(
         const Duration(seconds: 25),
       );
-      await _cookies.saveFromResponse(uri, response.cookies);
+      await storage.saveCookies(uri, response.cookies);
       final text = await response
           .transform(utf8.decoder)
           .join()
@@ -171,31 +140,4 @@ class SchoolSession {
   }
 
   void close() => _client.close(force: true);
-}
-
-class _SecureCookieStorage implements Storage {
-  const _SecureCookieStorage();
-  static const _storage = FlutterSecureStorage();
-
-  String _key(String key) => 'cubit.school.cookie.$key';
-
-  @override
-  Future<void> init(bool persistSession, bool ignoreExpires) async {}
-
-  @override
-  Future<String?> read(String key) => _storage.read(key: _key(key));
-
-  @override
-  Future<void> write(String key, String value) =>
-      _storage.write(key: _key(key), value: value);
-
-  @override
-  Future<void> delete(String key) => _storage.delete(key: _key(key));
-
-  @override
-  Future<void> deleteAll(List<String> keys) async {
-    for (final key in keys) {
-      await delete(key);
-    }
-  }
 }

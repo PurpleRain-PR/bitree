@@ -96,7 +96,10 @@ class _SchoolScreenState extends State<_SchoolScreen> {
       _error = null;
     });
     try {
-      await _browser.restoreSession(widget.controller.schoolSession, _network);
+      await _browser.restoreSession(
+        widget.controller.schoolSession.storage,
+        _network,
+      );
       if (mounted) setState(() => _sessionRestored = true);
     } catch (error) {
       if (mounted) setState(() => _error = errorMessage(error));
@@ -169,7 +172,10 @@ class _SchoolScreenState extends State<_SchoolScreen> {
       } else {
         await _page.checkSchedule();
       }
-      await _browser.captureSession(widget.controller.schoolSession, _network);
+      await _browser.captureSession(
+        widget.controller.schoolSession.storage,
+        _network,
+      );
       if (!_active) return;
       final success = signingIn
           ? await widget.controller.completeSignIn(_network)
