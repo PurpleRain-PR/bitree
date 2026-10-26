@@ -167,8 +167,6 @@ class SchoolSession {
         final next = network.route(result.location!);
         if ([301, 302, 303].contains(result.status)) {
           payload = null;
-        } else if (payload != null && next.origin != url.origin) {
-          throw const SchoolRequestError('学校请求尝试将登录信息发送到其他网站。');
         }
         url = next;
         continue;
