@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- fix(ui): unify anchored menus and enable Material animations ([ae0fdad](https://github.com/so1ve/bitree/commit/ae0fdade41e4b1bfa84b45e36ad9b2f9bbc3bd07))
 - refactor: unify agenda labels across the app ([3c04209](https://github.com/so1ve/bitree/commit/3c042096c5faf63250f5d109349ac2a52fe17dd5))
 - fix: group past calendar entries in pull-down history ([44dafba](https://github.com/so1ve/bitree/commit/44dafba46a92ac5d90820e5aa70863ba0ae2e868))
 - refactor: remove redundant calendar visibility toggles ([4e5dcb4](https://github.com/so1ve/bitree/commit/4e5dcb4ab08cdb1a1d0c832044a88af66e631087))
