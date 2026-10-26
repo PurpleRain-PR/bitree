@@ -261,13 +261,13 @@ class SchoolLogin {
     final page = _LoginPage(response);
     final code = page.field('login-error-code');
     final message = switch (code) {
-      '1030027' || '1030031' => '学号或密码错误，请重新输入。',
+      '1030027' || '1030031' => '账号或密码错误',
       '1030028' => '账号已被锁定，请先在学校统一身份认证平台解锁。',
       '1320007' || '1320010' => '验证码错误或已失效，请重试。',
       '1330001' => '学校要求进一步验证，请稍后重试。',
       '1410040' || '1410041' => '学校账号状态异常，请联系学校处理。',
       '3910001' => '账号已休眠，请先在学校统一身份认证平台激活。',
-      _ => page.field('login-error-msg'),
+      _ => _loginErrorMessage(page.field('login-error-msg')),
     };
     if (code == '1030027' || code == '1030031') {
       throw SchoolCredentialsRequired(message);
@@ -383,9 +383,12 @@ class SchoolLogin {
     },
   );
 
-  String _message(Map<String, dynamic> result) =>
-      (result['message'] ?? result['msg'] ?? result['errorMessage'] ?? '')
-          .toString();
+  String _message(Map<String, dynamic> result) => _loginErrorMessage(
+    (result['message'] ?? result['msg'] ?? result['errorMessage'] ?? '').toString(),
+  );
+
+  String _loginErrorMessage(String message) =>
+      message.replaceAll('认证信息无效', '账号或密码错误');
 }
 
 class _LoginPage {
