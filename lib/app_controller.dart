@@ -5,9 +5,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'agenda/controller.dart';
 import 'agenda/deadline_source.dart';
+import 'classrooms/model.dart';
 import 'data/desktop_widget.dart';
 import 'data/schedule_store.dart';
 import 'data/school_errors.dart';
+import 'data/school_classrooms.dart';
 import 'data/lexue_deadlines.dart';
 import 'data/eclass_deadlines.dart';
 import 'data/school_exams.dart';
@@ -194,6 +196,34 @@ class AppController extends ChangeNotifier {
       await SchoolLogin(session, verify).signIn();
       return operation();
     }
+  }
+
+  Future<ClassroomDirectory?> classroomDirectory({
+    required VerifySchoolLogin verify,
+  }) => _readSchool(fetchClassroomDirectory, verify);
+
+  Future<List<ClassroomOccupancy>?> classroomOccupancy({
+    required String buildingCode,
+    required DateTime date,
+    required VerifySchoolLogin verify,
+  }) => _readSchool(
+    (session) => fetchClassroomOccupancy(
+      session,
+      buildingCode: buildingCode,
+      date: date,
+    ),
+    verify,
+  );
+
+  Future<T?> _readSchool<T>(
+    Future<T> Function(SchoolSession) read,
+    VerifySchoolLogin verify,
+  ) async {
+    T? result;
+    final success = await _runSchool(network, (session) async {
+      result = await _authenticated(session, verify, () => read(session));
+    });
+    return success ? result : null;
   }
 
   Future<bool> signIn(

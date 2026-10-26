@@ -19,6 +19,9 @@ enum SchoolNetwork {
   Uri get examApp =>
       route(_campusApp.resolve('/jwapp/sys/wdksapMobile/*default/index.do'));
 
+  Uri get timetableTranslations =>
+      route(_campusApp.resolve('/jwapp/i18n.do?appName=wdkbby&EMAP_LANG=zh'));
+
   Uri get accountConfig => route(
     _campusApp.resolve(
       '/jwapp/sys/funauthapp/api/getAppConfig/xsfacx-4766859113956613.do',
