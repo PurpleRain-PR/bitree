@@ -53,6 +53,7 @@ class ScheduleScreen extends StatelessWidget {
                                         .textTheme
                                         .bodyMedium
                                         ?.copyWith(
+                                          fontWeight: FontWeight.w600,
                                           color: scheme.onSurfaceVariant,
                                         ),
                                   ),
