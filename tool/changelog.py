@@ -20,7 +20,7 @@ def release_notes(section):
     return entry[0].strip() + "\n"
 
 
-def update_changelog(tag=None):
+def _unreleased_changes():
     tags = git("tag", "--merged", "HEAD", "--list", "v[0-9]*")
     previous = (
         git("describe", "--tags", "--abbrev=0", "--match", "v[0-9]*") if tags else None
@@ -34,6 +34,16 @@ def update_changelog(tag=None):
         lines.append(
             f"- {subject} ([{sha[:7]}](https://github.com/so1ve/bitree/commit/{sha}))"
         )
+    return previous, lines
+
+
+def unreleased_notes():
+    _, lines = _unreleased_changes()
+    return "\n".join(["## Unreleased", "", *lines]).rstrip() + "\n"
+
+
+def update_changelog(tag=None):
+    previous, lines = _unreleased_changes()
 
     changelog = Path("CHANGELOG.md")
     history = re.sub(

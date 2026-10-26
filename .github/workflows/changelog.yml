@@ -3,6 +3,7 @@ name: Changelog
 on:
   push:
     branches: [main]
+    paths-ignore: [CHANGELOG.md]
 
 permissions:
   contents: write
@@ -13,6 +14,7 @@ concurrency:
 
 jobs:
   update:
+    if: github.repository == 'so1ve/bitree'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
