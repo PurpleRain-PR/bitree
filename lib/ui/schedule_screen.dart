@@ -39,7 +39,25 @@ class ScheduleScreen extends StatelessWidget {
                           Expanded(
                             child: Align(
                               alignment: Alignment.centerLeft,
-                              child: WeekSelector(controller: controller),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Flexible(
+                                    child: WeekSelector(controller: controller),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    weekdays[campusNow().weekday - 1],
+                                    maxLines: 1,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: scheme.onSurfaceVariant,
+                                        ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                           if (!compact && schedule != null) ...[
