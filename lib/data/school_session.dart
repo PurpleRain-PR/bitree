@@ -176,7 +176,7 @@ class SchoolSession {
         final message = switch (result.status) {
           403 => '请求被拒绝（403）：${url.host}${url.path}',
           429 => '请求过于频繁，请稍后重试。',
-          _ => '学校服务出错（${result.status}），请稍后重试。',
+          _ => '请求失败（${result.status}）：${url.host}${url.path}',
         };
         throw SchoolRequestError(message);
       }

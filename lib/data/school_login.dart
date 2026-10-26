@@ -22,15 +22,6 @@ class SchoolLogin {
   Uri _referer = _sso.resolve('/cas/login');
 
   Future<void> signIn(SchoolCredentials credentials) async {
-    // The public entry supplies the CAS service; the VPN proxy rewrites it.
-    final preflight = await session.request(
-      SchoolNetwork.teachingLogin,
-      followRedirects: false,
-      anonymous: true,
-    );
-    final service = preflight.location!.queryParameters['service']!;
-    final callback = await _authenticate(credentials, Uri.parse(service));
-
     if (session.network == SchoolNetwork.webvpn) {
       await _prepareWebVpn();
       final vpnCallback = await _authenticate(
@@ -40,6 +31,14 @@ class SchoolLogin {
       await _openCallback(vpnCallback);
     }
 
+    // The public entry supplies the CAS service; the VPN proxy rewrites it.
+    final preflight = await session.request(
+      SchoolNetwork.teachingLogin,
+      followRedirects: false,
+      anonymous: true,
+    );
+    final service = preflight.location!.queryParameters['service']!;
+    final callback = await _authenticate(credentials, Uri.parse(service));
     await _openCallback(callback);
     try {
       await session.checkLogin();
@@ -254,7 +253,10 @@ class SchoolLogin {
     }
     if (response.status == 429) throw const SchoolRequestError('登录过于频繁，请稍后重试。');
     if (response.status >= 500) {
-      throw const SchoolRequestError('学校认证服务暂时不可用，请稍后重试。');
+      throw SchoolRequestError(
+        '认证请求失败（${response.status}）：'
+        '${response.url.host}${response.url.path}',
+      );
     }
     throw SchoolRequestError(message.isEmpty ? '学校未完成登录，请重试。' : message);
   }
