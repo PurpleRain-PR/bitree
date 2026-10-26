@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- feat(home): implement compact date agenda layout ([f4665e0](https://github.com/so1ve/bitree/commit/f4665e0c4f55dd8b9e50fd4fb604e9d4bdf8efa4))
 - fix(agenda): top-align overdue entries and restore red controls ([a3e2c67](https://github.com/so1ve/bitree/commit/a3e2c67c5b44d56e83b52288dfafcd3fe84824b9))
 - fix(agenda): sync automatic completion from Lexue ([c5ddae2](https://github.com/so1ve/bitree/commit/c5ddae2b14f9c224974396035825423cf4fc2ab4))
 - fix(agenda): compact header and hide idle overdue prompt ([2becf8d](https://github.com/so1ve/bitree/commit/2becf8d3943c2e82723cf0020152dc4ad8e4e2b9))
