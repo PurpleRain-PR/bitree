@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- refactor: share course and agenda editor layout ([a981596](https://github.com/so1ve/bitree/commit/a9815962c9873ec376fc7054df6d09ca83f2c6ef))
 - refactor: share atomic JSON persistence ([d889196](https://github.com/so1ve/bitree/commit/d889196ad8c0cc986682c902baa8370a1c04750a))
 - feat: select course week ranges by dragging ([b55c90e](https://github.com/so1ve/bitree/commit/b55c90ea5017170f6bc4a50dee664f02021b4389))
 - fix: isolate academic weeks when switching semesters ([742db35](https://github.com/so1ve/bitree/commit/742db35953dbc855e4a983fbbf436639d9b2c202))
