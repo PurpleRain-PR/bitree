@@ -7,13 +7,13 @@ class PullToRevealList extends StatefulWidget {
   const PullToRevealList({
     super.key,
     required this.hiddenChildren,
-    required this.revealLabel,
+    required this.hiddenLabel,
     required this.children,
   });
 
   final List<Widget> children;
   final List<Widget> hiddenChildren;
-  final String revealLabel;
+  final String hiddenLabel;
 
   @override
   State<PullToRevealList> createState() => _PullToRevealListState();
@@ -22,6 +22,7 @@ class PullToRevealList extends StatefulWidget {
 class _PullToRevealListState extends State<PullToRevealList> {
   static const _threshold = 64.0;
   final _scroll = ScrollController();
+  final _currentItems = UniqueKey();
   bool _revealed = false;
   bool _dragging = false;
   double _pull = 0;
@@ -46,7 +47,7 @@ class _PullToRevealListState extends State<PullToRevealList> {
 
     final pull = math.max(
       0.0,
-      notification.metrics.pixels - notification.metrics.maxScrollExtent,
+      notification.metrics.minScrollExtent - notification.metrics.pixels,
     );
     if (userDrag && pull >= _threshold && _pull < _threshold) {
       HapticFeedback.selectionClick();
@@ -58,13 +59,13 @@ class _PullToRevealListState extends State<PullToRevealList> {
   void _release() {
     final reveal = _dragging && _pull >= _threshold;
     _dragging = false;
-    if (reveal) _reveal();
+    if (reveal) _setRevealed(true);
   }
 
-  void _reveal() {
-    final offset = _scroll.offset;
+  void _setRevealed(bool value) {
+    final offset = value ? (_pull > 0 ? _scroll.offset : -128.0) : 0.0;
     setState(() {
-      _revealed = true;
+      _revealed = value;
       _pull = 0;
     });
     // The stretched edge becomes real content without resetting the viewport.
@@ -95,40 +96,47 @@ class _PullToRevealListState extends State<PullToRevealList> {
               children: [
                 CustomScrollView(
                   controller: _scroll,
+                  center: _currentItems,
                   physics: _canReveal
-                      ? const _BottomPullPhysics(
+                      ? const _TopPullPhysics(
                           parent: AlwaysScrollableScrollPhysics(),
                         )
                       : const ClampingScrollPhysics(),
                   slivers: [
-                    SliverList.list(children: widget.children),
-                    if (_canReveal)
-                      SliverToBoxAdapter(
-                        child: Center(
-                          child: TextButton(
-                            onPressed: _reveal,
-                            child: Text(
-                              '上滑${widget.revealLabel}',
-                              textAlign: TextAlign.center,
+                    // Slivers before the center grow upward, leaving the current items anchored.
+                    if (_revealed)
+                      SliverList.list(
+                        children: widget.hiddenChildren.reversed.toList(),
+                      ),
+                    SliverList.list(
+                      key: _currentItems,
+                      children: [
+                        if (widget.hiddenChildren.isNotEmpty)
+                          Center(
+                            child: TextButton(
+                              onPressed: () => _setRevealed(!_revealed),
+                              child: Text(
+                                '${_revealed ? '收起' : '下拉查看'}${widget.hiddenLabel}',
+                                textAlign: TextAlign.center,
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                    if (_revealed)
-                      SliverList.list(children: widget.hiddenChildren),
+                        ...widget.children,
+                      ],
+                    ),
                     const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
                   ],
                 ),
                 if (_canReveal && _pull > 0)
                   Positioned(
-                    bottom: 0,
+                    top: 0,
                     left: 0,
                     right: 0,
                     height: math.min(_pull, 96),
                     child: IgnorePointer(
                       child: Center(
                         child: Text(
-                          _pull >= _threshold ? '松开显示' : '继续上滑',
+                          _pull >= _threshold ? '松开显示' : '继续下拉',
                           style: TextStyle(color: scheme.onSurfaceVariant),
                         ),
                       ),
@@ -143,23 +151,23 @@ class _PullToRevealListState extends State<PullToRevealList> {
   }
 }
 
-/// Bounces only at the bottom while the extra items are hidden.
-class _BottomPullPhysics extends BouncingScrollPhysics {
-  const _BottomPullPhysics({super.parent});
+/// Bounces only at the top while the extra items are hidden.
+class _TopPullPhysics extends BouncingScrollPhysics {
+  const _TopPullPhysics({super.parent});
 
   @override
-  _BottomPullPhysics applyTo(ScrollPhysics? ancestor) =>
-      _BottomPullPhysics(parent: buildParent(ancestor));
+  _TopPullPhysics applyTo(ScrollPhysics? ancestor) =>
+      _TopPullPhysics(parent: buildParent(ancestor));
 
   @override
   double applyBoundaryConditions(ScrollMetrics position, double value) {
-    if (value < position.pixels &&
-        position.pixels <= position.minScrollExtent) {
+    if (value > position.pixels &&
+        position.pixels >= position.maxScrollExtent) {
       return value - position.pixels;
     }
-    if (value < position.minScrollExtent &&
-        position.pixels > position.minScrollExtent) {
-      return value - position.minScrollExtent;
+    if (value > position.maxScrollExtent &&
+        position.pixels < position.maxScrollExtent) {
+      return value - position.maxScrollExtent;
     }
     return 0;
   }

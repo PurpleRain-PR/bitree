@@ -122,7 +122,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           Expanded(
             child: PullToRevealList(
               key: ValueKey(_kind),
-              revealLabel: '查看已截止的 DDL',
+              hiddenLabel: '已截止的 DDL',
               hiddenChildren: [
                 if (overdue.isNotEmpty) ...[
                   heading('已截止的 DDL'),
