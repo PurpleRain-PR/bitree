@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- feat(tools): add empty classroom lookup ([4bf7eb1](https://github.com/so1ve/bitree/commit/4bf7eb17bd9e23edd031fb7fa93df2441dd97c7b))
 - feat(ui): redesign home agenda and schedule lists ([b98f86a](https://github.com/so1ve/bitree/commit/b98f86ae7bd01686a145b4394a0c949a24f18882))
 - fix(licenses): remove duplicate project license registration ([3832cbd](https://github.com/so1ve/bitree/commit/3832cbd712e2ef122785b529d59aa2b32a816559))
 - fix(ui): adapt menus and share persistent week range controls ([ab19f5f](https://github.com/so1ve/bitree/commit/ab19f5f624211926e9e621f5d44553d48888577c))
