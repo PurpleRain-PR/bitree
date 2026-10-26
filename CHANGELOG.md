@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- refactor(ci): centralize changelog updates on upstream main ([3bab24e](https://github.com/so1ve/bitree/commit/3bab24e27364ab5c1ad2c291738ccccf47fbe5f0))
 - fix(android): make PR builds installable with debug signing ([cebcab8](https://github.com/so1ve/bitree/commit/cebcab8b6009c6d37862932ab911cd787718c3b4))
 - fix(ci): upload build artifacts individually without zip wrappers ([d229980](https://github.com/so1ve/bitree/commit/d2299808fff9e76e92b741c131f3134bf260e9b5))
 - refactor: separate timetable layout and selection ([5604a06](https://github.com/so1ve/bitree/commit/5604a060757c07efe5fad251a78f6a6d1c8c1f97))
