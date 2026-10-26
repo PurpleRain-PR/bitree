@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- fix: group past calendar entries in pull-down history ([44dafba](https://github.com/so1ve/bitree/commit/44dafba46a92ac5d90820e5aa70863ba0ae2e868))
 - refactor: remove redundant calendar visibility toggles ([4e5dcb4](https://github.com/so1ve/bitree/commit/4e5dcb4ab08cdb1a1d0c832044a88af66e631087))
 - fix(android): keep app icon padding proportional across display sizes ([5ee9639](https://github.com/so1ve/bitree/commit/5ee963990bbb1a008d12ad110908dd68fc3428da))
 - feat: time indicator (#4) ([770ce71](https://github.com/so1ve/bitree/commit/770ce713ddf82a291ca3a091576935ea9d3886c3))
