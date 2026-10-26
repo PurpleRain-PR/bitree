@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- refactor: remove duplicate course creation from settings ([8aefa61](https://github.com/so1ve/bitree/commit/8aefa615e84da8c5ac90683614e58483fc895b22))
 - fix: align revealed deadlines with the bottom of the list ([d4988da](https://github.com/so1ve/bitree/commit/d4988da40406a79e815d6bc5cd06c77f092f83ad))
 - feat: refine agenda swipe and completion feedback ([fc6afd3](https://github.com/so1ve/bitree/commit/fc6afd3e6a38067979361947a2e58b2a07f8e324))
 - feat: animate agenda insertion and removal ([549f736](https://github.com/so1ve/bitree/commit/549f736e00e1b2c8afcc78bbc1173323dae25590))
