@@ -47,8 +47,6 @@ class HomeScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (!controller.ready) const LinearProgressIndicator(minHeight: 3),
-          if (controller.agenda.ready)
-            TodayAgenda(controller: controller, entries: entries, now: now),
           Expanded(
             child: schedule == null
                 ? Center(
@@ -89,6 +87,8 @@ class HomeScreen extends StatelessWidget {
                     active: active,
                   ),
           ),
+          if (controller.agenda.ready)
+            TodayAgenda(controller: controller, entries: entries, now: now),
           if (schedule != null &&
               schedule.courses.any((course) => !course.isScheduled))
             Align(
