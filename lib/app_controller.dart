@@ -62,7 +62,8 @@ class AppController extends ChangeNotifier {
     var first = current.firstWeek;
     var last = current.lastWeek < 30 ? 30 : current.lastWeek;
     for (final entry in agenda.entries) {
-      if (entry.term != null && entry.term != current.term) continue;
+      // General calendar entries do not extend an academic term's weeks.
+      if (entry.term != current.term) continue;
       final startWeek = current.weekAt(entry.startsAt);
       final endWeek = entry.isDeadline
           ? startWeek
@@ -122,10 +123,8 @@ class AppController extends ChangeNotifier {
 
   void _goToCurrentWeek() {
     final available = weeks;
-    week = (schedule?.weekAt(campusNow()) ?? 1).clamp(
-      available.firstOrNull ?? 1,
-      available.lastOrNull ?? 20,
-    );
+    final current = schedule?.weekAt(campusNow()) ?? 1;
+    week = available.contains(current) ? current : 1;
   }
 
   void selectWeek(int value) {
@@ -363,9 +362,7 @@ class AppController extends ChangeNotifier {
       if (busy) return false;
       if (saved == null) return await importTerm(term);
 
-      final success = await _save(saved);
-      if (success) showCurrentWeek();
-      return success;
+      return await _save(saved);
     } catch (failure) {
       error = errorMessage(failure);
       notifyListeners();
@@ -390,9 +387,14 @@ class AppController extends ChangeNotifier {
 
     try {
       await _store.write(next);
+      final changingTerm = _schedule?.term != next.term;
       _schedule = next;
-      final available = weeks;
-      week = week.clamp(available.first, available.last);
+      if (changingTerm) {
+        _goToCurrentWeek();
+      } else {
+        final available = weeks;
+        week = week.clamp(available.first, available.last);
+      }
       terms = {...terms, next.term}.toList();
       await _updateWidget();
       return true;
