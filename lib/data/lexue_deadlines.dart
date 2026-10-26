@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:html/parser.dart' as html;
 
 import '../agenda/deadline_source.dart';
@@ -31,7 +33,86 @@ Future<List<AgendaEntry>> fetchLexueDeadlines(
     throw const SchoolRequestError('乐学返回的日程地址无效。');
   }
   final calendar = await session.request(url, stopAtLogin: true);
-  return _parseLexueCalendar(calendar.text);
+  final entries = _parseLexueCalendar(calendar.text);
+  final completed = await _completedLexueEvents(session, sesskey, entries);
+  return [
+    for (final entry in entries)
+      entry.copyWith(done: completed.contains(entry.id)),
+  ];
+}
+
+Future<Set<String>> _completedLexueEvents(
+  SchoolSession session,
+  String sesskey,
+  List<AgendaEntry> entries,
+) async {
+  if (entries.isEmpty) return {};
+
+  // Moodle's ICS UID is the calendar event ID followed by the site's hostname.
+  final events = await _lexueAjax(session, sesskey, [
+    for (final entry in entries)
+      (
+        method: 'core_calendar_get_calendar_event_by_id',
+        args: {
+          'eventid': int.parse(
+            entry.id.substring('lexue-'.length).split('@').first,
+          ),
+        },
+      ),
+  ]);
+  final modulesByEvent = {
+    for (var index = 0; index < events.length; index++)
+      if (events[index]['event']['instance'] case final int moduleId)
+        entries[index].id: moduleId,
+  };
+  final moduleIds = modulesByEvent.values.toSet().toList();
+  if (moduleIds.isEmpty) return {};
+
+  // Read course-list fragments, which expose completion without viewing an activity.
+  final modules = await _lexueAjax(session, sesskey, [
+    for (final id in moduleIds)
+      (method: 'core_course_get_module', args: {'id': id}),
+  ]);
+  final completedModules = <int>{};
+  for (var index = 0; index < modules.length; index++) {
+    final activity = html.parseFragment(modules[index] as String);
+    if (activity.querySelector('[data-toggletype="manual:undo"]') != null) {
+      completedModules.add(moduleIds[index]);
+    }
+  }
+  return {
+    for (final entry in modulesByEvent.entries)
+      if (completedModules.contains(entry.value)) entry.key,
+  };
+}
+
+Future<List<dynamic>> _lexueAjax(
+  SchoolSession session,
+  String sesskey,
+  List<({String method, Map<String, Object> args})> calls,
+) async {
+  final response = await session.request(
+    DeadlineSource.lexue.origin
+        .resolve('/lib/ajax/service.php')
+        .replace(queryParameters: {'sesskey': sesskey}),
+    jsonBody: [
+      for (final (index, call) in calls.indexed)
+        {'index': index, 'methodname': call.method, 'args': call.args},
+    ],
+    headers: {
+      'Accept': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+    },
+    stopAtLogin: true,
+  );
+  final results = (jsonDecode(response.text) as List).cast<Map>();
+  return [
+    for (final result in results)
+      if (result['error'] == true)
+        throw SchoolRequestError(result['exception']['message'] as String)
+      else
+        result['data'],
+  ];
 }
 
 List<AgendaEntry> _parseLexueCalendar(String calendar) {
