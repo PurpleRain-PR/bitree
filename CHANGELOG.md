@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- refactor(http): remove cross-origin payload guard ([d6f363e](https://github.com/so1ve/bitree/commit/d6f363ec62fc0695cef87f17ca53a51d8155d10e))
 - refactor(auth): centralize request validation and session restoration ([6141025](https://github.com/so1ve/bitree/commit/61410250b6dae90f92f783d936734bf5b8d3ef62))
 - fix(auth): clarify invalid account or password message ([1546bf2](https://github.com/so1ve/bitree/commit/1546bf215898a8d457ed2c946ac4987e33445314))
 - style(course): redesign week selection shortcuts as compact segments ([05b090a](https://github.com/so1ve/bitree/commit/05b090ae211682d458b631e4d824ea7349ecd64d))
