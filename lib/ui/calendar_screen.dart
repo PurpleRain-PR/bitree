@@ -8,6 +8,7 @@ import 'add_menu.dart';
 import 'app_page.dart';
 import 'calendar_list.dart';
 import 'data_errors.dart';
+import 'pull_to_reveal_list.dart';
 import 'school_import_button.dart';
 
 class CalendarScreen extends StatefulWidget {
@@ -119,33 +120,41 @@ class _CalendarScreenState extends State<CalendarScreen> {
           if (!controller.agenda.ready && controller.agenda.busy)
             const LinearProgressIndicator(minHeight: 3),
           Expanded(
-            child: overdue.isEmpty && days.isEmpty
-                ? const Center(child: Text('没有待办安排'))
-                : ListView(
-                    padding: const EdgeInsets.only(bottom: 24),
-                    children: [
-                      if (overdue.isNotEmpty) ...[
-                        heading('已截止的 DDL'),
-                        for (final entry in overdue)
-                          CalendarItemTile(
-                            controller: controller,
-                            item: CalendarItem.agenda(entry),
-                            showDate: true,
-                          ),
-                      ],
-                      for (final day in days.entries) ...[
-                        heading(
-                          agendaDateLabel(day.key),
-                          highlight: day.key == today,
-                        ),
-                        for (final entry in day.value)
-                          CalendarItemTile(
-                            controller: controller,
-                            item: CalendarItem.agenda(entry),
-                          ),
-                      ],
-                    ],
+            child: PullToRevealList(
+              key: ValueKey(_kind),
+              revealLabel: '查看已截止的 DDL',
+              hiddenChildren: [
+                if (overdue.isNotEmpty) ...[
+                  heading('已截止的 DDL'),
+                  for (final entry in overdue)
+                    CalendarItemTile(
+                      key: ValueKey(entry.id),
+                      controller: controller,
+                      item: CalendarItem.agenda(entry),
+                      showDate: true,
+                    ),
+                ],
+              ],
+              children: [
+                if (days.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 64),
+                    child: Center(child: Text('没有待办安排')),
                   ),
+                for (final day in days.entries) ...[
+                  heading(
+                    agendaDateLabel(day.key),
+                    highlight: day.key == today,
+                  ),
+                  for (final entry in day.value)
+                    CalendarItemTile(
+                      key: ValueKey(entry.id),
+                      controller: controller,
+                      item: CalendarItem.agenda(entry),
+                    ),
+                ],
+              ],
+            ),
           ),
         ],
       ),
