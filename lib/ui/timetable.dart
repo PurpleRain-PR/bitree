@@ -227,30 +227,27 @@ class _TimetableState extends State<Timetable> with WidgetsBindingObserver {
         ),
     ];
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final gutterWidth = 30.0 * scale;
-        final dateHeight = 56.0 * scale;
-        final rowHeight = math.max(
-          48.0 * scale,
-          (constraints.maxHeight - dateHeight) / sectionTimes.length,
-        );
-        _rowHeight = rowHeight;
+    final gutterWidth = 30.0 * scale;
+    return Column(
+      children: [
+        TimetableHeader(
+          controller: controller,
+          monday: monday,
+          now: _currentTime.value,
+          days: days,
+          gutterWidth: gutterWidth,
+          todayBackground: todayBackground,
+        ),
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final rowHeight = math.max(
+                48.0 * scale,
+                constraints.maxHeight / sectionTimes.length,
+              );
+              _rowHeight = rowHeight;
 
-        return Column(
-          children: [
-            TimetableHeader(
-              controller: controller,
-              monday: monday,
-              today: today,
-              days: days,
-              pinned: pinned,
-              gutterWidth: gutterWidth,
-              dateHeight: dateHeight,
-              todayBackground: todayBackground,
-            ),
-            Expanded(
-              child: NotificationListener<ScrollMetricsNotification>(
+              return NotificationListener<ScrollMetricsNotification>(
                 onNotification: (_) {
                   unawaited(_revealCurrentTime());
                   return false;
@@ -273,11 +270,11 @@ class _TimetableState extends State<Timetable> with WidgetsBindingObserver {
                     ),
                   ),
                 ),
-              ),
-            ),
-          ],
-        );
-      },
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

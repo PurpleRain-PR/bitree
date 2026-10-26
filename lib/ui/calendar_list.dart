@@ -28,6 +28,7 @@ Future<void> showCalendarItems(
   String title,
   List<CalendarItem> items, {
   bool showDates = false,
+  String emptyMessage = '这一天没有安排',
 }) async {
   final selected = await showModalBottomSheet<CalendarItem>(
     context: context,
@@ -85,9 +86,9 @@ Future<void> showCalendarItems(
                 onTap: () => Navigator.pop(context, item),
               ),
             if (items.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(24),
-                child: Text('这一天没有安排'),
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(emptyMessage),
               ),
           ],
         ),
