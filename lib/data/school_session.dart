@@ -52,9 +52,10 @@ class SchoolSession {
   Future<Map<String, dynamic>> json(
     String path, {
     Map<String, String>? form,
+    String app = 'wdkbby',
   }) async {
     final response = await request(
-      network.endpoint(path),
+      network.endpoint(path, app: app),
       form: form,
       headers: {
         'Accept': 'application/json, text/javascript, */*; q=0.01',

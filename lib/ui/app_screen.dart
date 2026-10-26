@@ -3,7 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
-import 'schedule_screen.dart';
+import 'calendar_screen.dart';
+import 'home_screen.dart';
 import 'settings_screen.dart';
 import 'school_verification_dialog.dart';
 import 'update_check.dart';
@@ -70,8 +71,11 @@ class _AppScreenState extends State<AppScreen> {
         IndexedStack(
           index: _tab,
           children: [
-            ScheduleScreen(controller: widget.controller),
-            const _PendingPage(title: '日程'),
+            HomeScreen(
+              controller: widget.controller,
+              onOpenCalendar: () => setState(() => _tab = 1),
+            ),
+            CalendarScreen(controller: widget.controller),
             const _PendingPage(title: '工具'),
             SettingsScreen(
               controller: widget.controller,
@@ -111,14 +115,14 @@ class _AppScreenState extends State<AppScreen> {
               onDestinationSelected: (value) => setState(() => _tab = value),
               destinations: const [
                 NavigationDestination(
-                  icon: Icon(Icons.calendar_view_week_outlined),
-                  selectedIcon: Icon(Icons.calendar_view_week_rounded),
-                  label: '课表',
+                  icon: Icon(Icons.home_outlined),
+                  selectedIcon: Icon(Icons.home_rounded),
+                  label: '首页',
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.event_note_outlined),
-                  selectedIcon: Icon(Icons.event_note_rounded),
-                  label: '日程',
+                  icon: Icon(Icons.calendar_month_outlined),
+                  selectedIcon: Icon(Icons.calendar_month_rounded),
+                  label: '日历',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.grid_view_outlined),

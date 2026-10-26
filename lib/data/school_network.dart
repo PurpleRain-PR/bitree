@@ -16,6 +16,9 @@ enum SchoolNetwork {
   Uri get accountPage =>
       route(_campusApp.resolve('/jwapp/sys/xsfacx/*default/index.do'));
 
+  Uri get examApp =>
+      route(_campusApp.resolve('/jwapp/sys/wdksapMobile/*default/index.do'));
+
   Uri get accountConfig => route(
     _campusApp.resolve(
       '/jwapp/sys/funauthapp/api/getAppConfig/xsfacx-4766859113956613.do',
@@ -31,8 +34,8 @@ enum SchoolNetwork {
   static Uri get vpnLogin =>
       Uri.https('webvpn.bit.edu.cn', '/login', {'cas_login': 'true'});
 
-  Uri endpoint(String path) =>
-      route(_campusApp.resolve('/jwapp/sys/wdkbby/$path'));
+  Uri endpoint(String path, {String app = 'wdkbby'}) =>
+      route(_campusApp.resolve('/jwapp/sys/$app/$path'));
 
   Uri route(Uri url) {
     final encoded = _vpnHosts[url.host];

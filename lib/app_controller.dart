@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'agenda/controller.dart';
 import 'data/desktop_widget.dart';
 import 'data/schedule_store.dart';
 import 'data/school_errors.dart';
+import 'data/school_exams.dart';
 import 'data/school_login.dart';
 import 'data/school_network.dart';
 import 'data/school_service.dart';
@@ -23,12 +25,16 @@ class AppController extends ChangeNotifier {
     required this._school,
     required this._schoolStorage,
     required this._preferences,
-  });
+    required this.agenda,
+  }) {
+    agenda.addListener(_agendaChanged);
+  }
 
   final ScheduleStore _store;
   final SchoolService _school;
   final SchoolStorage _schoolStorage;
   final SharedPreferencesAsync _preferences;
+  final AgendaController agenda;
 
   SemesterSchedule? _schedule;
   bool ready = false;
@@ -46,6 +52,25 @@ class AppController extends ChangeNotifier {
 
   SemesterSchedule? get schedule => _schedule;
 
+  List<int> get weeks {
+    final current = schedule;
+    if (current == null) return const [];
+    var first = current.firstWeek;
+    var last = current.lastWeek < 30 ? 30 : current.lastWeek;
+    for (final entry in agenda.entries) {
+      if (entry.term != null && entry.term != current.term) continue;
+      final startWeek = current.weekAt(entry.startsAt);
+      final endWeek = entry.isDeadline
+          ? startWeek
+          : current.weekAt(
+              entry.endsAt!.subtract(const Duration(microseconds: 1)),
+            );
+      if (startWeek < first) first = startWeek;
+      if (endWeek > last) last = endWeek;
+    }
+    return academicWeeks(first, last);
+  }
+
   bool get loginExpired => accountStatus == AccountStatus.expired;
 
   bool get schoolBusy => _activeSchoolSession != null;
@@ -62,26 +87,44 @@ class AppController extends ChangeNotifier {
       network = await _preferences.getString('network') == 'webvpn'
           ? SchoolNetwork.webvpn
           : SchoolNetwork.campus;
-      _goToCurrentWeek();
       username = (await _schoolStorage.readCredentials())?.username;
       if (username == null) accountStatus = AccountStatus.signedOut;
     } catch (failure) {
       error = errorMessage(failure);
     }
 
+    await agenda.load();
+    _goToCurrentWeek();
     ready = true;
     notifyListeners();
   }
 
+  @override
+  void dispose() {
+    agenda.removeListener(_agendaChanged);
+    agenda.dispose();
+    super.dispose();
+  }
+
+  void _agendaChanged() {
+    final available = weeks;
+    if (available.isNotEmpty) {
+      week = week.clamp(available.first, available.last);
+    }
+    notifyListeners();
+  }
+
   void _goToCurrentWeek() {
+    final available = weeks;
     week = (schedule?.weekAt(campusNow()) ?? 1).clamp(
-      schedule?.firstWeek ?? 1,
-      schedule?.lastWeek ?? 20,
+      available.firstOrNull ?? 1,
+      available.lastOrNull ?? 20,
     );
   }
 
   void selectWeek(int value) {
-    week = value.clamp(schedule?.firstWeek ?? 1, schedule?.lastWeek ?? 20);
+    final available = weeks;
+    week = value.clamp(available.firstOrNull ?? 1, available.lastOrNull ?? 20);
     notifyListeners();
   }
 
@@ -243,6 +286,21 @@ class AppController extends ChangeNotifier {
     }
   });
 
+  Future<bool> importExams({
+    SchoolNetwork? using,
+    required VerifySchoolLogin verify,
+  }) => _runSchool(using ?? network, (session) async {
+    final result = await _authenticated(
+      session,
+      verify,
+      () => fetchSchoolExams(session, term: schedule?.term),
+    );
+    session.checkActive();
+    if (!await agenda.replaceExams(result.term, result.exams)) {
+      throw SchoolRequestError(agenda.error ?? '安排正在保存，请稍后重试。');
+    }
+  });
+
   Future<bool> saveCourse(
     Course course, {
     Course? replacing,
@@ -302,7 +360,8 @@ class AppController extends ChangeNotifier {
     try {
       await _store.write(next);
       _schedule = next;
-      week = week.clamp(next.firstWeek, next.lastWeek);
+      final available = weeks;
+      week = week.clamp(available.first, available.last);
       terms = {...terms, next.term}.toList();
       await _updateWidget();
       return true;

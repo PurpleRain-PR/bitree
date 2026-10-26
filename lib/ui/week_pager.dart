@@ -2,12 +2,20 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
+import '../agenda/calendar.dart';
 import 'timetable.dart';
 
 class WeekPager extends StatefulWidget {
-  const WeekPager({super.key, required this.controller});
+  const WeekPager({
+    super.key,
+    required this.controller,
+    required this.filter,
+    required this.showCompleted,
+  });
 
   final AppController controller;
+  final CalendarFilter filter;
+  final bool showCompleted;
 
   @override
   State<WeekPager> createState() => _WeekPagerState();
@@ -23,7 +31,7 @@ class _WeekPagerState extends State<WeekPager> {
     super.initState();
     _week = widget.controller.week;
     _pages = PageController(
-      initialPage: widget.controller.schedule!.weeks.indexOf(_week),
+      initialPage: widget.controller.weeks.indexOf(_week),
       keepPage: false,
     );
   }
@@ -34,7 +42,7 @@ class _WeekPagerState extends State<WeekPager> {
     final week = widget.controller.week;
     if (_week == week) return;
     _week = week;
-    final page = widget.controller.schedule!.weeks.indexOf(week);
+    final page = widget.controller.weeks.indexOf(week);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_pages.hasClients) return;
       if (MediaQuery.disableAnimationsOf(context)) {
@@ -58,7 +66,7 @@ class _WeekPagerState extends State<WeekPager> {
   @override
   Widget build(BuildContext context) {
     final behavior = ScrollConfiguration.of(context);
-    final weeks = widget.controller.schedule!.weeks;
+    final weeks = widget.controller.weeks;
     return ScrollConfiguration(
       behavior: behavior.copyWith(
         dragDevices: {...behavior.dragDevices, PointerDeviceKind.mouse},
@@ -75,6 +83,8 @@ class _WeekPagerState extends State<WeekPager> {
         itemBuilder: (context, page) => Timetable(
           controller: widget.controller,
           week: weeks[page],
+          filter: widget.filter,
+          showCompleted: widget.showCompleted,
           initialScrollOffset: _scrollOffset,
           onScroll: (offset) => _scrollOffset = offset,
         ),

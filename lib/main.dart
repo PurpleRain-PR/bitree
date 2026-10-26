@@ -3,6 +3,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app_controller.dart';
+import 'agenda/controller.dart';
+import 'data/agenda_store.dart';
 import 'data/schedule_store.dart';
 import 'data/school_service.dart';
 import 'data/school_storage.dart';
@@ -16,6 +18,7 @@ void main() {
     school: SchoolService(),
     schoolStorage: SchoolStorage(),
     preferences: SharedPreferencesAsync(),
+    agenda: AgendaController(AgendaStore()),
   );
   runApp(BitreeApp(controller: controller));
   controller.initialize();

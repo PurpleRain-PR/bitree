@@ -20,7 +20,7 @@ class WeekSelector extends StatelessWidget {
       MediaQuery.textScalerOf(context).scale(14) * 2 + 16,
     );
     final columns = ((screen.width - 32) / (cellSize + 4)).floor().clamp(1, 5);
-    final weeks = schedule?.weeks ?? const <int>[];
+    final weeks = controller.weeks;
     final currentWeek = schedule?.weekAt(campusNow());
     return MenuAnchor(
       style: MenuStyle(

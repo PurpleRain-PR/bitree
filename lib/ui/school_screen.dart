@@ -7,7 +7,17 @@ import '../data/school_verification.dart';
 import 'school_network_picker.dart';
 import 'school_verification_dialog.dart';
 
-enum SchoolAction { signIn, importSchedule }
+enum SchoolAction { signIn, importSchedule, importExams }
+
+Future<bool> _fetchSchoolData(
+  AppController controller,
+  SchoolAction action,
+  SchoolNetwork network,
+  String? term,
+  VerifySchoolLogin verify,
+) => action == SchoolAction.importExams
+    ? controller.importExams(using: network, verify: verify)
+    : controller.synchronize(using: network, term: term, verify: verify);
 
 Future<bool?> openSchoolPage(
   BuildContext context,
@@ -19,11 +29,13 @@ Future<bool?> openSchoolPage(
   if (controller.busy || controller.schoolBusy) return null;
   final using = network ?? controller.network;
 
-  if (action == SchoolAction.importSchedule && controller.username != null) {
-    final success = await controller.synchronize(
-      using: using,
-      term: term,
-      verify: (request) => verifySchoolLogin(context, request),
+  if (action != SchoolAction.signIn && controller.username != null) {
+    final success = await _fetchSchoolData(
+      controller,
+      action,
+      using,
+      term,
+      (request) => verifySchoolLogin(context, request),
     );
     if (success || !controller.loginExpired || !context.mounted) return success;
   }
@@ -68,7 +80,7 @@ class _SchoolScreenState extends State<_SchoolScreen> {
   bool _hidePassword = true;
   String? _error;
 
-  bool get _importing => widget.action == SchoolAction.importSchedule;
+  bool get _importing => widget.action != SchoolAction.signIn;
   bool get _running => _operation != null;
 
   Future<void> _run() async {
@@ -93,13 +105,15 @@ class _SchoolScreenState extends State<_SchoolScreen> {
         return;
       }
       _password.clear();
-      if (_importing) setState(() => _operation = SchoolAction.importSchedule);
+      if (_importing) setState(() => _operation = widget.action);
       final success =
           !_importing ||
-          await controller.synchronize(
-            using: _network,
-            term: widget.term,
-            verify: verify,
+          await _fetchSchoolData(
+            controller,
+            widget.action,
+            _network,
+            widget.term,
+            verify,
           );
       if (!mounted) return;
       _operation = null;
@@ -120,7 +134,11 @@ class _SchoolScreenState extends State<_SchoolScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(_importing ? '导入课表' : '登录学校账号'),
+      title: Text(switch (widget.action) {
+        SchoolAction.signIn => '登录学校账号',
+        SchoolAction.importSchedule => '导入课表',
+        SchoolAction.importExams => '获取考试安排',
+      }),
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(3),
         child: SizedBox(
@@ -221,7 +239,12 @@ class _SchoolScreenState extends State<_SchoolScreen> {
                 Text(switch (_operation) {
                   SchoolAction.signIn => '登录中…',
                   SchoolAction.importSchedule => '导入中…',
-                  null => _importing ? '登录并导入' : '登录',
+                  SchoolAction.importExams => '获取中…',
+                  null => switch (widget.action) {
+                    SchoolAction.signIn => '登录',
+                    SchoolAction.importSchedule => '登录并导入',
+                    SchoolAction.importExams => '登录并获取',
+                  },
                 }),
               ],
             ),

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
 import '../schedule/model.dart';
+import '../schedule/selection.dart';
 import 'course_period_fields.dart';
 import 'course_week_picker.dart';
 import 'sheet_layout.dart';
@@ -12,19 +13,25 @@ Future<void> editCourse(
   BuildContext context,
   AppController controller, {
   Course? course,
+  TimetableSelection? selection,
 }) => showModalBottomSheet<void>(
   context: context,
   isScrollControlled: true,
   useSafeArea: true,
   constraints: const BoxConstraints(maxWidth: 560),
-  builder: (_) => _CourseEditor(controller: controller, course: course),
+  builder: (_) => _CourseEditor(
+    controller: controller,
+    course: course,
+    selection: selection,
+  ),
 );
 
 class _CourseEditor extends StatefulWidget {
-  const _CourseEditor({required this.controller, this.course});
+  const _CourseEditor({required this.controller, this.course, this.selection});
 
   final AppController controller;
   final Course? course;
+  final TimetableSelection? selection;
 
   @override
   State<_CourseEditor> createState() => _CourseEditorState();
@@ -36,15 +43,23 @@ class _CourseEditorState extends State<_CourseEditor> {
   late final _room = TextEditingController(text: widget.course?.room);
   late final _teacher = TextEditingController(text: widget.course?.teacher);
   late final _term = TextEditingController(text: _initialTerm());
-  late int _day = widget.course?.weekday ?? campusNow().weekday;
-  late int _start = widget.course?.startSection ?? 1;
-  late int _end = widget.course?.endSection ?? 2;
+  late int _day =
+      widget.course?.weekday ??
+      widget.selection?.date.weekday ??
+      campusNow().weekday;
+  late int _start =
+      widget.course?.startSection ?? widget.selection?.startSection ?? 1;
+  late int _end =
+      widget.course?.endSection ?? widget.selection?.endSection ?? 2;
   late DateTime _monday =
       widget.controller.schedule?.firstMonday ?? mondayOf(campusNow());
   late Set<int> _weeks =
       widget.course?.weeks.toSet() ??
+      (widget.selection == null
+          ? null
+          : {widget.controller.schedule!.weekAt(widget.selection!.date)}) ??
       (widget.controller.schedule?.weeks ?? academicWeeks(1, 20)).toSet();
-  late int _firstWeek = widget.controller.schedule?.firstWeek ?? 1;
+  late int _firstWeek = widget.controller.weeks.firstOrNull ?? 1;
   bool _saving = false;
   String? _error;
 
@@ -116,7 +131,7 @@ class _CourseEditorState extends State<_CourseEditor> {
   Widget build(BuildContext context) {
     final weeks = academicWeeks(
       _firstWeek,
-      widget.controller.schedule?.lastWeek ?? 20,
+      widget.controller.weeks.lastOrNull ?? 20,
     );
     final menuHeight = math.min(320.0, MediaQuery.sizeOf(context).height * 0.4);
     final theme = Theme.of(context);

@@ -1,36 +1,47 @@
+import '../agenda/calendar.dart';
 import 'model.dart';
 
-typedef CourseBlock = ({
-  List<Course> courses,
-  int startSection,
-  int endSection,
-});
+typedef CalendarBlock = ({List<CalendarItem> items, double start, double end});
 
-/// Courses linked by overlapping sections share one timetable entry.
-List<CourseBlock> groupOverlappingCourses(List<Course> courses) {
-  final sorted = [...courses]
+/// Overlapping entries share one column without widening the week.
+List<CalendarBlock> groupCalendarItems(
+  List<CalendarItem> items,
+  DateTime date,
+) {
+  final length = sectionTimes.length.toDouble();
+  double startOf(CalendarItem item) => timetableOffset(
+    item.startsAt,
+    date,
+  ).clamp(0, item.course == null ? length - 0.6 : length).toDouble();
+  double endOf(CalendarItem item) => timetableOffset(
+    item.endsAt!,
+    date,
+  ).clamp(startOf(item) + (item.course == null ? 0.6 : 0), length).toDouble();
+  final sorted = [...items]
     ..sort((first, second) {
-      final section = first.startSection!.compareTo(second.startSection!);
-      return section != 0 ? section : first.name.compareTo(second.name);
+      final time = first.startsAt.compareTo(second.startsAt);
+      return time != 0 ? time : first.title.compareTo(second.title);
     });
-  final result = <CourseBlock>[];
-  var group = <Course>[];
-  var groupEnd = 0;
+  final result = <CalendarBlock>[];
+  var group = <CalendarItem>[];
+  var groupEnd = 0.0;
 
   void finish() {
     result.add((
-      courses: List.unmodifiable(group),
-      startSection: group.first.startSection!,
-      endSection: groupEnd,
+      items: List.unmodifiable(group),
+      start: startOf(group.first),
+      end: groupEnd,
     ));
     group = [];
     groupEnd = 0;
   }
 
-  for (final course in sorted) {
-    if (group.isNotEmpty && course.startSection! > groupEnd) finish();
-    group.add(course);
-    if (course.endSection! > groupEnd) groupEnd = course.endSection!;
+  for (final item in sorted) {
+    final start = startOf(item);
+    final end = endOf(item);
+    if (group.isNotEmpty && start >= groupEnd) finish();
+    group.add(item);
+    if (end > groupEnd) groupEnd = end;
   }
   if (group.isNotEmpty) finish();
 
