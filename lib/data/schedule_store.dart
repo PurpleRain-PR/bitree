@@ -1,16 +1,8 @@
-import 'dart:convert';
-import 'dart:io';
-
-import 'package:path_provider/path_provider.dart';
-
 import '../schedule/model.dart';
+import 'json_file.dart';
 
 class ScheduleStore {
-  Future<File> _file() async {
-    final directory = await getApplicationSupportDirectory();
-    await directory.create(recursive: true);
-    return File('${directory.path}/schedule.json');
-  }
+  final _file = const JsonFile('schedule.json');
 
   Future<SemesterSchedule?> read() async {
     final library = await _readLibrary();
@@ -40,12 +32,8 @@ class ScheduleStore {
   }
 
   Future<Map<String, dynamic>> _readLibrary() async {
-    final file = await _file();
-    if (!await file.exists()) {
-      return {'selectedTerm': null, 'semesters': <String, dynamic>{}};
-    }
-
-    return jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+    return await _file.read((json) => json as Map<String, dynamic>) ??
+        {'selectedTerm': null, 'semesters': <String, dynamic>{}};
   }
 
   Future<void> write(SemesterSchedule schedule) async {
@@ -54,14 +42,10 @@ class ScheduleStore {
     semesters[schedule.term] = schedule.toJson();
     library['selectedTerm'] = schedule.term;
 
-    final file = await _file();
-    final pending = File('${file.path}.pending');
-    await pending.writeAsString(jsonEncode(library), flush: true);
-    await pending.rename(file.path);
+    await _file.write(library);
   }
 
-  Future<void> clear() async {
-    final file = await _file();
-    if (await file.exists()) await file.delete();
+  Future<void> clear() {
+    return _file.delete();
   }
 }
