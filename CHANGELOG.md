@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- fix(ui): unify dropdown styling and Material menu animations ([aadbd83](https://github.com/so1ve/bitree/commit/aadbd8352f5363fbe3ab223bcb73655893269168))
 - feat(agenda): preserve deleted deadlines during updates and allow restoration ([3373ca3](https://github.com/so1ve/bitree/commit/3373ca38c9eaa796884a53da2bdaa72bc9a6fb38))
 - fix(auth): preserve upstream login error messages ([eadac62](https://github.com/so1ve/bitree/commit/eadac62d6b02642dd045aaaa20877b3c0209ed12))
 - refactor(http): remove cross-origin payload guard ([d6f363e](https://github.com/so1ve/bitree/commit/d6f363ec62fc0695cef87f17ca53a51d8155d10e))
