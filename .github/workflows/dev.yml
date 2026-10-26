@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: dev-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || github.repository }}
+  group: dev-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -58,7 +58,11 @@ jobs:
 
   publish:
     needs: [prepare, build]
-    if: ${{ !cancelled() && github.event_name == 'push' && needs.prepare.result == 'success' }}
+    if: >-
+      ${{ !cancelled() &&
+          github.event_name == 'push' &&
+          github.ref == 'refs/heads/main' &&
+          needs.prepare.result == 'success' }}
     runs-on: ubuntu-24.04
     permissions:
       contents: write
