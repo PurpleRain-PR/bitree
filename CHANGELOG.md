@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fix(android): make PR builds installable with debug signing ([cebcab8](https://github.com/so1ve/bitree/commit/cebcab8b6009c6d37862932ab911cd787718c3b4))
+- fix(ci): upload build artifacts individually without zip wrappers ([d229980](https://github.com/so1ve/bitree/commit/d2299808fff9e76e92b741c131f3134bf260e9b5))
 - refactor: separate timetable layout and selection ([5604a06](https://github.com/so1ve/bitree/commit/5604a060757c07efe5fad251a78f6a6d1c8c1f97))
 - refactor: share course and agenda editor layout ([a981596](https://github.com/so1ve/bitree/commit/a9815962c9873ec376fc7054df6d09ca83f2c6ef))
 - refactor: share atomic JSON persistence ([d889196](https://github.com/so1ve/bitree/commit/d889196ad8c0cc986682c902baa8370a1c04750a))
