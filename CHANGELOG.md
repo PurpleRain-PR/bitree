@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- refactor: unify page layout and restore the timetable home ([c6187cf](https://github.com/so1ve/bitree/commit/c6187cfbf4a3b620e537413cfbbdbb1c7904f3b5))
+- feat: add deadline imports and school task links ([3b2839c](https://github.com/so1ve/bitree/commit/3b2839cab5d6a193fb3ac428284e10b3d4c5ca7f))
 - feat: add Lexue and eclass deadline sources ([02b1d9b](https://github.com/so1ve/bitree/commit/02b1d9be8a2509596eeea4e76ff217444a9ab9b0))
 - fix(ci): build unsigned Android artifacts without signing secrets ([d25159b](https://github.com/so1ve/bitree/commit/d25159bd5cfe422c02e348b3a43873cc21427c3c))
 - feat(about): add author credit and project license ([ea7e9f7](https://github.com/so1ve/bitree/commit/ea7e9f70727dbcb1a757333b77a7ab564f888081))
