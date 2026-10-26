@@ -1,10 +1,9 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
 import '../schedule/model.dart';
 import '../schedule/selection.dart';
+import 'app_dropdown_field.dart';
 import 'course_period_fields.dart';
 import 'course_week_picker.dart';
 import 'editor_sheet.dart';
@@ -133,8 +132,6 @@ class _CourseEditorState extends State<_CourseEditor> {
       _firstWeek,
       widget.controller.weeks.lastOrNull ?? 20,
     );
-    final menuHeight = math.min(320.0, MediaQuery.sizeOf(context).height * 0.4);
-
     return EditorSheet(
       title: widget.course == null ? '添加课程' : '编辑课程',
       saveLabel: Text(_saving ? '保存中…' : '保存课程'),
@@ -216,21 +213,14 @@ class _CourseEditorState extends State<_CourseEditor> {
             },
           ),
           const SizedBox(height: 12),
-          DropdownMenu<int>(
-            initialSelection: _day,
-            label: const Text('星期'),
-            expandedInsets: EdgeInsets.zero,
-            menuHeight: menuHeight,
-            selectOnly: true,
-            enableSearch: false,
-            enabled: !_saving,
-            dropdownMenuEntries: [
+          AppDropdownField<int>(
+            value: _day,
+            label: '星期',
+            entries: [
               for (var i = 1; i <= 7; i++)
                 DropdownMenuEntry(value: i, label: weekdays[i - 1]),
             ],
-            onSelected: (value) {
-              if (value != null) setState(() => _day = value);
-            },
+            onChanged: _saving ? null : (value) => setState(() => _day = value),
           ),
           const SizedBox(height: 12),
           CoursePeriodFields(

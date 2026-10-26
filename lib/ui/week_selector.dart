@@ -25,13 +25,7 @@ class WeekSelector extends StatelessWidget {
     final currentWeek = schedule?.weekAt(campusNow());
     return AppMenuAnchor(
       style: MenuStyle(
-        maximumSize: WidgetStatePropertyAll(
-          Size(double.infinity, math.min(320, screen.height * 0.4)),
-        ),
         padding: const WidgetStatePropertyAll(EdgeInsets.all(8)),
-        shape: WidgetStatePropertyAll(
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
       ),
       menuChildren: [
         for (var row = 0; row < weeks.length; row += columns)

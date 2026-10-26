@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../schedule/model.dart';
+import 'app_dropdown_field.dart';
 
 class CoursePeriodFields extends StatelessWidget {
   const CoursePeriodFields({
@@ -76,27 +77,14 @@ class _SectionMenu extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => DropdownMenu<int>(
-    initialSelection: value,
-    label: Text(label),
-    expandedInsets: EdgeInsets.zero,
-    menuHeight: math.min(320.0, MediaQuery.sizeOf(context).height * 0.4),
-    inputDecorationTheme: Theme.of(context).inputDecorationTheme.copyWith(
-      suffixIconConstraints: const BoxConstraints.tightFor(
-        width: 36,
-        height: 44,
-      ),
-    ),
-    trailingIcon: const Icon(Icons.expand_more_rounded, size: 18),
-    selectedTrailingIcon: const Icon(Icons.expand_less_rounded, size: 18),
+  Widget build(BuildContext context) => AppDropdownField<int>(
+    value: value,
+    label: label,
     textStyle: compact
         ? Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 13)
         : Theme.of(context).textTheme.bodyLarge,
-    selectOnly: true,
-    enableSearch: false,
     maxLines: compact ? 2 : null,
-    enabled: enabled,
-    dropdownMenuEntries: [
+    entries: [
       for (
         var section = firstSection;
         section <= sectionTimes.length;
@@ -105,11 +93,8 @@ class _SectionMenu extends StatelessWidget {
         DropdownMenuEntry(
           value: section,
           label: _sectionLabel(section, multiline: compact),
-          labelWidget: Text(_sectionLabel(section)),
         ),
     ],
-    onSelected: (value) {
-      if (value != null) onChanged(value);
-    },
+    onChanged: enabled ? onChanged : null,
   );
 }

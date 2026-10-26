@@ -1,0 +1,148 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import 'app_menu_anchor.dart';
+
+class AppDropdownField<T> extends StatefulWidget {
+  const AppDropdownField({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.entries,
+    required this.onChanged,
+    this.textStyle,
+    this.maxLines = 1,
+  });
+
+  final String label;
+  final T value;
+  final List<DropdownMenuEntry<T>> entries;
+  final ValueChanged<T>? onChanged;
+  final TextStyle? textStyle;
+  final int? maxLines;
+
+  @override
+  State<AppDropdownField<T>> createState() => _AppDropdownFieldState<T>();
+}
+
+class _AppDropdownFieldState<T> extends State<AppDropdownField<T>> {
+  final _focusNode = FocusNode();
+  final _selectedItem = GlobalKey();
+  bool _focused = false;
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _scrollToSelection() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final context = _selectedItem.currentContext;
+      if (context != null) Scrollable.ensureVisible(context, alignment: 0.5);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final enabled = widget.onChanged != null;
+    final selected = widget.entries.firstWhere(
+      (entry) => entry.value == widget.value,
+    );
+    final textStyle = widget.textStyle ?? theme.textTheme.bodyLarge;
+
+    return LayoutBuilder(
+      builder: (context, constraints) => AppMenuAnchor(
+        childFocusNode: _focusNode,
+        onOpen: _scrollToSelection,
+        menuWidth: constraints.maxWidth,
+        menuChildren: [
+          for (final entry in widget.entries)
+            Semantics(
+              selected: entry.value == widget.value,
+              child: MenuItemButton(
+                key: entry.value == widget.value ? _selectedItem : null,
+                autofocus: entry.value == widget.value,
+                onPressed: enabled && entry.enabled
+                    ? () => widget.onChanged?.call(entry.value)
+                    : null,
+                leadingIcon: entry.leadingIcon,
+                trailingIcon: entry.value == widget.value
+                    ? const Icon(Icons.check_rounded, size: 18)
+                    : const SizedBox(width: 18),
+                child: DefaultTextStyle.merge(
+                  style: textStyle,
+                  child: entry.labelWidget ?? Text(entry.label),
+                ),
+              ),
+            ),
+        ],
+        builder: (context, menu, _) {
+          void toggle() => menu.isOpen ? menu.close() : menu.open();
+
+          return CallbackShortcuts(
+            bindings: {
+              if (enabled) ...{
+                const SingleActivator(LogicalKeyboardKey.arrowDown): menu.open,
+                const SingleActivator(LogicalKeyboardKey.arrowUp): menu.open,
+              },
+            },
+            child: Semantics(
+              label: widget.label,
+              value: selected.label.replaceAll('\n', ' '),
+              button: true,
+              enabled: enabled,
+              expanded: menu.isOpen,
+              onTap: enabled ? toggle : null,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 48),
+                child: InkWell(
+                  focusNode: _focusNode,
+                  canRequestFocus: enabled,
+                  onFocusChange: (focused) =>
+                      setState(() => _focused = focused),
+                  onTap: enabled ? toggle : null,
+                  excludeFromSemantics: true,
+                  borderRadius: BorderRadius.circular(10),
+                  child: ExcludeSemantics(
+                    child: InputDecorator(
+                      isFocused: _focused || menu.isOpen,
+                      baseStyle: textStyle,
+                      decoration: InputDecoration(
+                        labelText: widget.label,
+                        enabled: enabled,
+                        suffixIconConstraints: const BoxConstraints.tightFor(
+                          width: 36,
+                          height: 44,
+                        ),
+                        suffixIcon: Icon(
+                          menu.isOpen
+                              ? Icons.expand_less_rounded
+                              : Icons.expand_more_rounded,
+                          size: 18,
+                        ),
+                      ),
+                      child: Text(
+                        selected.label,
+                        maxLines: widget.maxLines,
+                        overflow: TextOverflow.ellipsis,
+                        style: enabled
+                            ? textStyle
+                            : textStyle?.copyWith(
+                                color: theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.38,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
