@@ -21,8 +21,6 @@ class CalendarScreen extends StatefulWidget {
 
 class _CalendarScreenState extends State<CalendarScreen> {
   AgendaKind? _kind;
-  bool _showCompleted = true;
-  bool _showPast = false;
 
   @override
   Widget build(BuildContext context) {
@@ -39,15 +37,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     for (final entry in entries) {
       if (_kind != null && entry.kind != _kind) continue;
-      if (entry.done && !_showCompleted) continue;
       if (entry.isDeadline && entry.dueAt.isBefore(now)) {
         overdue.add(entry);
         continue;
       }
-      final past = entry.isDeadline
-          ? entry.dueAt.isBefore(now)
-          : !entry.endsAt!.isAfter(now);
-      if (past && !_showPast && !entry.done) continue;
+      if (!entry.isDeadline && !entry.done && !entry.endsAt!.isAfter(now)) {
+        continue;
+      }
       final day = calendarDate(entry.startsAt);
       days.putIfAbsent(day, () => []).add(entry);
     }
@@ -71,25 +67,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
       actions: [
         AddButton(controller: controller, includeCourse: false),
         SchoolImportButton(controller: controller, includeSchedule: false),
-        MenuAnchor(
-          menuChildren: [
-            CheckboxMenuButton(
-              value: _showCompleted,
-              onChanged: (value) => setState(() => _showCompleted = value!),
-              child: const Text('显示已完成'),
-            ),
-            CheckboxMenuButton(
-              value: _showPast,
-              onChanged: (value) => setState(() => _showPast = value!),
-              child: const Text('显示已结束'),
-            ),
-          ],
-          builder: (context, menu, _) => IconButton(
-            tooltip: '更多',
-            onPressed: () => menu.isOpen ? menu.close() : menu.open(),
-            icon: const Icon(Icons.more_horiz_rounded),
-          ),
-        ),
       ],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
