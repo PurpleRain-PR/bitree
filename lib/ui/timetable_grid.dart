@@ -1,0 +1,361 @@
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../app_controller.dart';
+import '../schedule/layout.dart';
+import '../schedule/model.dart';
+import '../schedule/selection.dart';
+import 'add_menu.dart';
+import 'calendar_block.dart';
+
+class TimetableGrid extends StatefulWidget {
+  const TimetableGrid({
+    super.key,
+    required this.controller,
+    required this.monday,
+    required this.layouts,
+    required this.gutterWidth,
+    required this.rowHeight,
+    required this.todayColumn,
+    required this.todayBackground,
+  });
+
+  final AppController controller;
+  final DateTime monday;
+  final List<List<CalendarBlock>> layouts;
+  final double gutterWidth;
+  final double rowHeight;
+  final int? todayColumn;
+  final Color todayBackground;
+
+  @override
+  State<TimetableGrid> createState() => _TimetableGridState();
+}
+
+class _TimetableGridState extends State<TimetableGrid> {
+  final _grid = GlobalKey();
+  ({int day, int anchor, int end})? _selection;
+  Offset? _dragPosition;
+  EdgeDraggingAutoScroller? _autoScroller;
+
+  @override
+  void dispose() {
+    _stopDrag();
+    super.dispose();
+  }
+
+  ({int day, int section}) _cellAt(Offset position) {
+    final box = _grid.currentContext!.findRenderObject()! as RenderBox;
+    final local = box.globalToLocal(position);
+
+    return (
+      day: (local.dx / (box.size.width / 7)).floor().clamp(0, 6),
+      section:
+          (local.dy / widget.rowHeight).floor().clamp(
+            0,
+            sectionTimes.length - 1,
+          ) +
+          1,
+    );
+  }
+
+  bool _occupied(int day, int section) => widget.layouts[day].any(
+    (block) => block.start < section && block.end > section - 1,
+  );
+
+  void _beginSelection(Offset position) {
+    if (widget.controller.busy) return;
+    final cell = _cellAt(position);
+    if (_occupied(cell.day, cell.section)) return;
+
+    setState(() {
+      _selection = (day: cell.day, anchor: cell.section, end: cell.section);
+    });
+  }
+
+  void _extendSelection(Offset position) {
+    final selection = _selection;
+    if (selection == null) return;
+
+    final target = _cellAt(position).section;
+    var end = selection.anchor;
+    final direction = target >= end ? 1 : -1;
+    while (end != target) {
+      if (_occupied(selection.day, end + direction)) break;
+      end += direction;
+    }
+
+    if (end != selection.end) {
+      setState(() {
+        _selection = (day: selection.day, anchor: selection.anchor, end: end);
+      });
+    }
+  }
+
+  void _startDrag(Offset position) {
+    _beginSelection(position);
+    if (_selection == null) return;
+
+    _autoScroller = EdgeDraggingAutoScroller(
+      Scrollable.of(context),
+      velocityScalar: 20,
+      onScrollViewScrolled: () {
+        final position = _dragPosition;
+        if (position != null) _dragSelection(position);
+      },
+    );
+    HapticFeedback.selectionClick();
+    _dragSelection(position);
+  }
+
+  void _dragSelection(Offset position) {
+    if (_selection == null) return;
+    _dragPosition = position;
+    _extendSelection(position);
+
+    final scroller = _autoScroller!;
+    // Start scrolling within 36 pixels of either viewport edge.
+    final targetHeight = math.min(
+      72.0,
+      scroller.scrollable.position.viewportDimension,
+    );
+    scroller.startAutoScrollIfNecessary(
+      Rect.fromCenter(center: position, width: 1, height: targetHeight),
+    );
+  }
+
+  void _stopDrag() {
+    _dragPosition = null;
+    _autoScroller?.stopAutoScroll();
+    _autoScroller = null;
+  }
+
+  void _cancelSelection() {
+    _stopDrag();
+    setState(() => _selection = null);
+  }
+
+  Future<void> _finishSelection(Offset position) async {
+    _stopDrag();
+    final selection = _selection;
+    if (selection == null) return;
+
+    await showAddMenu(
+      context,
+      widget.controller,
+      position,
+      selection: TimetableSelection(
+        date: widget.monday.add(Duration(days: selection.day)),
+        startSection: math.min(selection.anchor, selection.end),
+        endSection: math.max(selection.anchor, selection.end),
+      ),
+    );
+    if (mounted) setState(() => _selection = null);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final rowHeight = widget.rowHeight;
+    final gridHeight = rowHeight * sectionTimes.length;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columnWidth = (constraints.maxWidth - widget.gutterWidth) / 7;
+
+        return SizedBox(
+          height: gridHeight,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: widget.gutterWidth,
+                child: Column(
+                  children: [
+                    for (
+                      var section = 1;
+                      section <= sectionTimes.length;
+                      section++
+                    )
+                      SizedBox(
+                        height: rowHeight,
+                        child: _PeriodLabel(section: section),
+                      ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTapUp: (details) {
+                    _beginSelection(details.globalPosition);
+                    _finishSelection(details.globalPosition);
+                  },
+                  onLongPressStart: (details) =>
+                      _startDrag(details.globalPosition),
+                  onLongPressMoveUpdate: (details) =>
+                      _dragSelection(details.globalPosition),
+                  onLongPressEnd: (details) =>
+                      _finishSelection(details.globalPosition),
+                  onLongPressCancel: _cancelSelection,
+                  child: Stack(
+                    key: _grid,
+                    children: [
+                      Positioned.fill(
+                        child: CustomPaint(
+                          painter: _TimetableBackground(
+                            rowHeight: rowHeight,
+                            surfaceColor: scheme.onSurface,
+                            todayColumn: widget.todayColumn,
+                            todayBackground: widget.todayBackground,
+                          ),
+                        ),
+                      ),
+                      for (var day = 0; day < 7; day++)
+                        for (final block in widget.layouts[day])
+                          Positioned(
+                            key: ValueKey((day, block.start)),
+                            left: day * columnWidth + 2,
+                            width: columnWidth - 4,
+                            top: block.start * rowHeight + 2,
+                            height: (block.end - block.start) * rowHeight - 4,
+                            child: CalendarBlockTile(
+                              items: block.items,
+                              controller: widget.controller,
+                              isToday: day == widget.todayColumn,
+                            ),
+                          ),
+                      if (_selection case final selection?)
+                        Positioned(
+                          left: selection.day * columnWidth + 2,
+                          width: columnWidth - 4,
+                          top:
+                              (math.min(selection.anchor, selection.end) - 1) *
+                                  rowHeight +
+                              2,
+                          height:
+                              ((selection.end - selection.anchor).abs() + 1) *
+                                  rowHeight -
+                              4,
+                          child: IgnorePointer(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: scheme.primary.withValues(alpha: 0.18),
+                                border: Border.all(
+                                  color: scheme.primary,
+                                  width: 1.5,
+                                ),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _TimetableBackground extends CustomPainter {
+  const _TimetableBackground({
+    required this.rowHeight,
+    required this.surfaceColor,
+    required this.todayColumn,
+    required this.todayBackground,
+  });
+
+  final double rowHeight;
+  final Color surfaceColor;
+  final int? todayColumn;
+  final Color todayBackground;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final columnWidth = size.width / 7;
+    final paint = Paint();
+    const radius = Radius.circular(6);
+
+    for (var section = 0; section < sectionTimes.length; section++) {
+      paint.color = surfaceColor.withValues(
+        alpha: section.isEven ? 0.025 : 0.045,
+      );
+      for (var day = 0; day < 7; day++) {
+        final cell = Rect.fromLTWH(
+          day * columnWidth + 2,
+          section * rowHeight + 2,
+          columnWidth - 4,
+          rowHeight - 4,
+        );
+        canvas.drawRRect(RRect.fromRectAndRadius(cell, radius), paint);
+      }
+    }
+
+    if (todayColumn != null) {
+      final column = Rect.fromLTWH(
+        todayColumn! * columnWidth + 2,
+        0,
+        columnWidth - 4,
+        size.height,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndCorners(
+          column,
+          bottomLeft: radius,
+          bottomRight: radius,
+        ),
+        paint..color = todayBackground,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_TimetableBackground oldDelegate) =>
+      rowHeight != oldDelegate.rowHeight ||
+      surfaceColor != oldDelegate.surfaceColor ||
+      todayColumn != oldDelegate.todayColumn ||
+      todayBackground != oldDelegate.todayBackground;
+}
+
+class _PeriodLabel extends StatelessWidget {
+  const _PeriodLabel({required this.section});
+
+  final int section;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final time = sectionTimes[section - 1];
+    return Semantics(
+      label: '第 $section 节，${time.$1}–${time.$2}',
+      child: ExcludeSemantics(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              '$section',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '${time.$1}\n${time.$2}',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 9,
+                height: 1.2,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
