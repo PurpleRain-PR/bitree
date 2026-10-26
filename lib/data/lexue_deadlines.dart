@@ -76,7 +76,18 @@ Future<Set<String>> _completedLexueEvents(
   final completedModules = <int>{};
   for (var index = 0; index < modules.length; index++) {
     final activity = html.parseFragment(modules[index] as String);
-    if (activity.querySelector('[data-toggletype="manual:undo"]') != null) {
+    final manuallyCompleted =
+        activity.querySelector('[data-toggletype="manual:undo"]') != null;
+    final conditions = activity.querySelectorAll(
+      '[data-region="completionrequirements"] [role="listitem"]',
+    );
+    final automaticallyCompleted =
+        conditions.isNotEmpty &&
+        conditions.every(
+          (condition) => condition.classes.contains('badge-success'),
+        );
+
+    if (manuallyCompleted || automaticallyCompleted) {
       completedModules.add(moduleIds[index]);
     }
   }
