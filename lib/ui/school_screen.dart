@@ -14,7 +14,7 @@ enum SchoolAction {
   importSchedule('导入课表'),
   importExams('获取考试安排'),
   importLexueDeadlines('获取乐学 DDL', source: DeadlineSource.lexue),
-  importEclassDeadlines('获取课程中心 DDL', source: DeadlineSource.eclass);
+  importEclassDeadlines('获取新延河课堂 DDL', source: DeadlineSource.eclass);
 
   const SchoolAction(this.label, {this.source});
   final String label;
