@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- feat(diagnostics): add seven-day logs and transient error notices ([73d93bb](https://github.com/so1ve/bitree/commit/73d93bb34120d43b923b52691179784f3901ec19))
+- fix(classrooms): allow buildings without a campus code ([bf889a1](https://github.com/so1ve/bitree/commit/bf889a11b9e31ef8910a7ef45952cff51de3cf5a))
 - fix(agenda): fit the entire revealed list before bottom alignment ([cc07637](https://github.com/so1ve/bitree/commit/cc076370fb062d0b2294463b168cfdbcd54a2f9f))
 - feat(auth): automatically fall back to WebVPN for school access ([ce04053](https://github.com/so1ve/bitree/commit/ce04053d8704700349da47062d2b83af43f02bc4))
 - fix(agenda): bottom-align overdue entries only when they fit ([e617969](https://github.com/so1ve/bitree/commit/e6179698d343879a3315429898a0b0e2c02b0dff))
