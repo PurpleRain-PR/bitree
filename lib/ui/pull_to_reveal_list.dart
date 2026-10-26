@@ -127,28 +127,29 @@ class _PullToRevealListState extends State<PullToRevealList> {
                               )
                             : const ClampingScrollPhysics(),
                         slivers: [
-                          AnimatedSliverChildren(
-                            key: const ValueKey('hidden'),
-                            children: _revealed
-                                ? widget.hiddenChildren
-                                : const [],
-                          ),
+                          if (_revealed && widget.hiddenChildren.isNotEmpty)
+                            // Short lists align to the bottom; long lists keep their full height.
+                            SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  ...widget.hiddenChildren,
+                                  Center(
+                                    child: TextButton(
+                                      onPressed: () => _setRevealed(false),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: scheme.error,
+                                      ),
+                                      child: const Text('收回'),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           AnimatedSliverChildren(
                             key: const ValueKey('current'),
-                            children: [
-                              if (_revealed && widget.hiddenChildren.isNotEmpty)
-                                Center(
-                                  key: const ValueKey('reveal'),
-                                  child: TextButton(
-                                    onPressed: () => _setRevealed(false),
-                                    style: TextButton.styleFrom(
-                                      foregroundColor: scheme.error,
-                                    ),
-                                    child: const Text('收回'),
-                                  ),
-                                ),
-                              ...widget.children,
-                            ],
+                            children: widget.children,
                           ),
                           const SliverPadding(
                             padding: EdgeInsets.only(bottom: 24),
