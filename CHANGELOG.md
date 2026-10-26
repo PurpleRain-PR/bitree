@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- fix: finish WebVPN setup before teaching center login ([ddb1b3e](https://github.com/so1ve/bitree/commit/ddb1b3e9ed6922242f28c20304c5f56ae48f29ee))
+- feat(ui): copy course names on long press ([98f3597](https://github.com/so1ve/bitree/commit/98f3597a9b979e7be27d4da48440f9a95b2c580c))
+- fix: register the WebVPN device before authentication ([fe81575](https://github.com/so1ve/bitree/commit/fe815757e9358b2b3f8a2f2dee53c5a091fb4f60))
 - fix: correct WebVPN authentication order ([795893f](https://github.com/so1ve/bitree/commit/795893f79edc5901316ea289259f3e4432220ea0))
 - feat: add native school login and background imports ([8f2e1e6](https://github.com/so1ve/bitree/commit/8f2e1e6749a66db1da8d80ab77784cdf902aa9c1))
 - fix(ci): isolate dev builds by branch ([aa220e9](https://github.com/so1ve/bitree/commit/aa220e9683832a36759c956ad27c01880a450959))
