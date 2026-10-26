@@ -1,0 +1,36 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        type: string
+        required: true
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: create-release
+  cancel-in-progress: false
+
+jobs:
+  create:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+      - name: Set Git author
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+      - name: Create version and start release build
+        env:
+          BITREE_RELEASE_VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 tool/release.py "$BITREE_RELEASE_VERSION"
+          gh workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref "$BITREE_RELEASE_VERSION"
