@@ -63,7 +63,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
 
     return AppPage(
-      title: const Text('日历'),
+      title: const Text('日程'),
       actions: [
         AddButton(controller: controller, includeCourse: false),
         SchoolImportButton(controller: controller, includeSchedule: false),
@@ -118,7 +118,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   const Padding(
                     key: ValueKey('empty-state'),
                     padding: EdgeInsets.symmetric(vertical: 64),
-                    child: Center(child: Text('没有待办安排')),
+                    child: Center(child: Text('暂无日程')),
                   ),
                 for (final day in days.entries) ...[
                   heading(

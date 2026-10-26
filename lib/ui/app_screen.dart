@@ -72,10 +72,7 @@ class _AppScreenState extends State<AppScreen> {
         IndexedStack(
           index: _tab,
           children: [
-            HomeScreen(
-              controller: widget.controller,
-              active: _tab == 0,
-            ),
+            HomeScreen(controller: widget.controller, active: _tab == 0),
             CalendarScreen(controller: widget.controller),
             const _PendingPage(title: '工具'),
             SettingsScreen(
@@ -123,7 +120,7 @@ class _AppScreenState extends State<AppScreen> {
                 NavigationDestination(
                   icon: Icon(Icons.calendar_month_outlined),
                   selectedIcon: Icon(Icons.calendar_month_rounded),
-                  label: '日历',
+                  label: '日程',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.grid_view_outlined),

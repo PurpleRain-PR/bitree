@@ -280,7 +280,7 @@ class SettingsScreen extends StatelessWidget {
                 onTap: controller.busy ? null : () => _clearSchedule(context),
               ),
             ]),
-          section('日历与待办', [
+          section('日程', [
             SwitchListTile(
               contentPadding: tilePadding,
               title: const Text('删除前确认'),
