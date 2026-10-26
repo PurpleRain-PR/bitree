@@ -14,11 +14,7 @@ import 'week_pager.dart';
 import 'week_selector.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({
-    super.key,
-    required this.controller,
-    this.active = true,
-  });
+  const HomeScreen({super.key, required this.controller, this.active = true});
 
   final AppController controller;
   final bool active;
@@ -52,7 +48,7 @@ class HomeScreen extends StatelessWidget {
       actions: [
         AddButton(controller: controller, date: selectedDate),
         SchoolImportButton(controller: controller),
-        ScheduleMenu(schedule: schedule, enabled: !controller.busy),
+        ScheduleMenu(controller: controller),
       ],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -56,25 +56,7 @@ class AppController extends ChangeNotifier {
 
   SemesterSchedule? get schedule => _schedule;
 
-  List<int> get weeks {
-    final current = schedule;
-    if (current == null) return const [];
-    var first = current.firstWeek;
-    var last = current.lastWeek < 30 ? 30 : current.lastWeek;
-    for (final entry in agenda.entries) {
-      // General calendar entries do not extend an academic term's weeks.
-      if (entry.term != current.term) continue;
-      final startWeek = current.weekAt(entry.startsAt);
-      final endWeek = entry.isDeadline
-          ? startWeek
-          : current.weekAt(
-              entry.endsAt!.subtract(const Duration(microseconds: 1)),
-            );
-      if (startWeek < first) first = startWeek;
-      if (endWeek > last) last = endWeek;
-    }
-    return academicWeeks(first, last);
-  }
+  List<int> get weeks => schedule?.weeks ?? const [];
 
   bool get loginExpired => accountStatus == AccountStatus.expired;
 
@@ -281,9 +263,7 @@ class AppController extends ChangeNotifier {
     try {
       final previous = await _store.readTerm(result.schedule.term);
       session.checkActive();
-      final next = result.schedule.mergeLocalCourses(
-        previous?.courses ?? const [],
-      );
+      final next = result.schedule.mergeLocalChanges(previous);
       await _store.write(next);
       _schedule = next;
       terms = {...await _store.terms(), ...result.terms}.toList();
@@ -347,6 +327,12 @@ class AppController extends ChangeNotifier {
         ],
       ),
     );
+  }
+
+  Future<bool> setWeekRange({required int first, required int last}) async {
+    final current = schedule;
+    if (current == null || busy) return false;
+    return _save(current.copyWith(firstWeek: first, lastWeek: last));
   }
 
   Future<bool> selectTerm(

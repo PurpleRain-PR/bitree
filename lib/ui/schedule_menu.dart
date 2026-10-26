@@ -5,20 +5,17 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../app_controller.dart';
 import '../schedule/ics.dart';
 import '../schedule/model.dart';
 import 'app_menu_anchor.dart';
+import 'week_range_dialog.dart';
 import 'widget_guide.dart';
 
 class ScheduleMenu extends StatefulWidget {
-  const ScheduleMenu({
-    super.key,
-    required this.schedule,
-    required this.enabled,
-  });
+  const ScheduleMenu({super.key, required this.controller});
 
-  final SemesterSchedule? schedule;
-  final bool enabled;
+  final AppController controller;
 
   @override
   State<ScheduleMenu> createState() => _ScheduleMenuState();
@@ -70,9 +67,17 @@ class _ScheduleMenuState extends State<ScheduleMenu> {
 
   @override
   Widget build(BuildContext context) {
-    final schedule = widget.schedule;
+    final schedule = widget.controller.schedule;
+    final enabled = !widget.controller.busy;
     return AppMenuAnchor(
       menuChildren: [
+        MenuItemButton(
+          leadingIcon: const Icon(Icons.date_range_outlined),
+          onPressed: schedule == null || !enabled
+              ? null
+              : () => manageTermWeeks(context, widget.controller),
+          child: const Text('周数管理'),
+        ),
         if (Platform.isAndroid)
           MenuItemButton(
             onPressed: () => showWidgetGuide(context),
@@ -80,7 +85,7 @@ class _ScheduleMenuState extends State<ScheduleMenu> {
             child: const Text('桌面日程表'),
           ),
         MenuItemButton(
-          onPressed: schedule == null || !widget.enabled || _exporting
+          onPressed: schedule == null || !enabled || _exporting
               ? null
               : () => _export(schedule),
           leadingIcon: const Icon(Icons.file_download_outlined),

@@ -242,11 +242,34 @@ class SemesterSchedule {
     required this.term,
     required DateTime firstMonday,
     required List<Course> courses,
+    int? firstWeek,
+    int? lastWeek,
     this.syncedAt,
   }) : firstMonday = calendarDate(firstMonday),
-       courses = List.unmodifiable(courses) {
+       courses = List.unmodifiable(courses),
+       firstWeek =
+           firstWeek ??
+           courses.fold(
+             1,
+             (first, course) => course.weeks.isEmpty
+                 ? first
+                 : math.min(first, course.weeks.first),
+           ),
+       lastWeek =
+           lastWeek ??
+           courses.fold(
+             25,
+             (last, course) => course.weeks.isEmpty
+                 ? last
+                 : math.max(last, course.weeks.last),
+           ) {
     if (term.trim().isEmpty || firstMonday.weekday != DateTime.monday) {
       throw const FormatException('学期或开学日期不正确；开学日期应为第一周周一');
+    }
+    if (this.firstWeek == 0 ||
+        this.lastWeek == 0 ||
+        this.firstWeek > this.lastWeek) {
+      throw const FormatException('学期起止周次不正确');
     }
   }
 
@@ -257,17 +280,8 @@ class SemesterSchedule {
   final List<Course> courses;
   final DateTime? syncedAt;
 
-  int get firstWeek => courses.fold(
-    1,
-    (first, course) =>
-        course.weeks.isEmpty ? first : math.min(first, course.weeks.first),
-  );
-
-  int get lastWeek => courses.fold(
-    20,
-    (count, course) =>
-        course.weeks.isEmpty ? count : math.max(count, course.weeks.last),
-  );
+  final int firstWeek;
+  final int lastWeek;
 
   List<int> get weeks => academicWeeks(firstWeek, lastWeek);
 
@@ -305,25 +319,34 @@ class SemesterSchedule {
     return scheduled;
   }
 
-  SemesterSchedule copyWith({List<Course>? courses}) => SemesterSchedule(
+  SemesterSchedule copyWith({
+    List<Course>? courses,
+    int? firstWeek,
+    int? lastWeek,
+  }) => SemesterSchedule(
     term: term,
     firstMonday: firstMonday,
     courses: courses ?? this.courses,
+    firstWeek: firstWeek ?? this.firstWeek,
+    lastWeek: lastWeek ?? this.lastWeek,
     syncedAt: syncedAt,
   );
 
-  SemesterSchedule mergeLocalCourses(Iterable<Course> previousCourses) =>
-      copyWith(
-        courses: {
-          for (final course in courses) course.id: course,
-          for (final course in previousCourses)
-            if (course.local) course.id: course,
-        }.values.toList(),
-      );
+  SemesterSchedule mergeLocalChanges(SemesterSchedule? previous) => copyWith(
+    firstWeek: previous?.firstWeek,
+    lastWeek: previous?.lastWeek,
+    courses: {
+      for (final course in courses) course.id: course,
+      for (final course in previous?.courses ?? const <Course>[])
+        if (course.local) course.id: course,
+    }.values.toList(),
+  );
 
   Map<String, dynamic> toJson() => {
     'term': term,
     'firstMonday': dateText(firstMonday),
+    'firstWeek': firstWeek,
+    'lastWeek': lastWeek,
     'courses': courses.map((course) => course.toJson()).toList(),
     'syncedAt': syncedAt?.toIso8601String(),
   };
@@ -332,6 +355,8 @@ class SemesterSchedule {
       SemesterSchedule(
         term: json['term'] as String,
         firstMonday: DateTime.parse(json['firstMonday'] as String),
+        firstWeek: json['firstWeek'] as int?,
+        lastWeek: json['lastWeek'] as int?,
         courses: (json['courses'] as List)
             .map(
               (row) => Course.fromJson(Map<String, dynamic>.from(row as Map)),

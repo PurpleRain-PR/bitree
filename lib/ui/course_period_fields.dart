@@ -93,6 +93,7 @@ class _SectionMenu extends StatelessWidget {
         DropdownMenuEntry(
           value: section,
           label: _sectionLabel(section, multiline: compact),
+          labelWidget: Text(_sectionLabel(section)),
         ),
     ],
     onChanged: enabled ? onChanged : null,

@@ -7,6 +7,7 @@ import 'app_page.dart';
 import 'external_link.dart';
 import 'school_account.dart';
 import 'school_screen.dart';
+import 'week_range_dialog.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({
@@ -238,37 +239,53 @@ class SettingsScreen extends StatelessWidget {
           ]),
           if (controller.schedule != null)
             section('本地课表', [
-              AppMenuAnchor(
-                menuChildren: [
-                  for (final term in controller.terms)
-                    Semantics(
-                      selected: controller.schedule!.term == term,
-                      child: MenuItemButton(
-                        onPressed: controller.busy
-                            ? null
-                            : () => _selectTerm(context, term),
-                        trailingIcon: controller.schedule!.term == term
-                            ? const Icon(Icons.check_rounded, size: 18)
-                            : const SizedBox(width: 18),
-                        child: Text(term),
+              LayoutBuilder(
+                builder: (context, constraints) => AppMenuAnchor(
+                  menuWidth: constraints.maxWidth,
+                  menuChildren: [
+                    for (final term in controller.terms)
+                      Semantics(
+                        selected: controller.schedule!.term == term,
+                        child: MenuItemButton(
+                          onPressed: controller.busy
+                              ? null
+                              : () => _selectTerm(context, term),
+                          trailingIcon: controller.schedule!.term == term
+                              ? const Icon(Icons.check_rounded, size: 18)
+                              : const SizedBox(width: 18),
+                          overflowAxis: Axis.vertical,
+                          child: Text(term),
+                        ),
                       ),
+                  ],
+                  builder: (context, menu, _) => ListTile(
+                    contentPadding: tilePadding,
+                    leading: const Icon(Icons.calendar_month_outlined),
+                    title: const Text('学期'),
+                    subtitle: Text(controller.schedule!.termLabel),
+                    trailing: Icon(
+                      menu.isOpen
+                          ? Icons.expand_less_rounded
+                          : Icons.expand_more_rounded,
+                      size: 18,
                     ),
-                ],
-                builder: (context, menu, _) => ListTile(
-                  contentPadding: tilePadding,
-                  leading: const Icon(Icons.calendar_month_outlined),
-                  title: const Text('学期'),
-                  subtitle: Text(controller.schedule!.termLabel),
-                  trailing: Icon(
-                    menu.isOpen
-                        ? Icons.expand_less_rounded
-                        : Icons.expand_more_rounded,
-                    size: 18,
+                    onTap: controller.busy
+                        ? null
+                        : () => menu.isOpen ? menu.close() : menu.open(),
                   ),
-                  onTap: controller.busy
-                      ? null
-                      : () => menu.isOpen ? menu.close() : menu.open(),
                 ),
+              ),
+              ListTile(
+                contentPadding: tilePadding,
+                leading: const Icon(Icons.date_range_outlined),
+                title: const Text('周数管理'),
+                subtitle: Text(
+                  '${controller.schedule!.firstWeek} — ${controller.schedule!.lastWeek} 周',
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded, size: 20),
+                onTap: controller.busy
+                    ? null
+                    : () => manageTermWeeks(context, controller),
               ),
               ListTile(
                 contentPadding: tilePadding,

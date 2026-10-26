@@ -27,10 +27,8 @@ class AppMenuAnchor extends StatelessWidget {
   final Widget? child;
 
   @override
-  Widget build(BuildContext context) => MenuAnchor(
-    controller: controller,
-    childFocusNode: childFocusNode,
-    style: MenuStyle(
+  Widget build(BuildContext context) {
+    final menuStyle = MenuStyle(
       minimumSize: menuWidth == null
           ? null
           : WidgetStatePropertyAll(Size(menuWidth!, 0)),
@@ -40,12 +38,46 @@ class AppMenuAnchor extends StatelessWidget {
           math.min(320, MediaQuery.sizeOf(context).height * 0.4),
         ),
       ),
-    ).merge(style),
-    onOpen: onOpen,
-    onClose: onClose,
-    animated: !MediaQuery.disableAnimationsOf(context),
-    menuChildren: menuChildren,
-    builder: builder,
-    child: child,
-  );
+    ).merge(style);
+    final padding =
+        menuStyle.padding?.resolve({}) ??
+        MenuTheme.of(context).style?.padding?.resolve({}) ??
+        const EdgeInsets.symmetric(vertical: 8);
+
+    return MenuAnchor(
+      controller: controller,
+      childFocusNode: childFocusNode,
+      crossAxisUnconstrained: menuWidth == null,
+      style: menuStyle.copyWith(
+        padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+      ),
+      onOpen: onOpen,
+      onClose: onClose,
+      animated: !MediaQuery.disableAnimationsOf(context),
+      // Bound the list itself so MenuAnchor's outer panel has no scroll overflow
+      // and does not add a permanent scrollbar.
+      menuChildren: [
+        ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: menuStyle.maximumSize!.resolve({})!.height,
+          ),
+          child: ScrollConfiguration(
+            behavior: ScrollConfiguration.of(context)
+                .copyWith(scrollbars: false),
+            child: SingleChildScrollView(
+              primary: false,
+              padding: padding,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: menuChildren,
+              ),
+            ),
+          ),
+        ),
+      ],
+      builder: builder,
+      child: child,
+    );
+  }
 }
