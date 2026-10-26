@@ -15,7 +15,7 @@ inputs:
     description: Build number derived from the commit time
     required: true
   signing-password:
-    description: Optional Android keystore password; builds are unsigned when empty
+    description: Optional Android keystore password; builds use debug signing when empty
     required: false
 
 runs:

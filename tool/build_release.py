@@ -17,15 +17,11 @@ def run(program, *arguments):
 
 
 def build_android(flags, prefix):
-    suffix = "" if Path("android/key.properties").exists() else "-unsigned"
+    suffix = "" if Path("android/key.properties").exists() else "-debug-signed"
 
     run("flutter", "build", "apk", "--split-per-abi", *flags)
     for apk in Path("build/app/outputs/flutter-apk").glob("*.apk"):
-        abi = (
-            apk.stem.removeprefix("app-")
-            .removesuffix("-unsigned")
-            .removesuffix("-release")
-        )
+        abi = apk.stem.removeprefix("app-").removesuffix("-release")
         shutil.copy2(apk, f"dist/{prefix}-android-{abi}{suffix}.apk")
 
     run("flutter", "build", "appbundle", *flags)
