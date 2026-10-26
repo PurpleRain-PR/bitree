@@ -29,14 +29,14 @@ class CourseWeekPicker extends StatefulWidget {
     required this.selectedWeeks,
     required this.enabled,
     required this.onChanged,
-    required this.onAddEarlierWeek,
+    required this.onManageRange,
   });
 
   final List<int> weeks;
   final Set<int> selectedWeeks;
   final bool enabled;
   final ValueChanged<Set<int>> onChanged;
-  final VoidCallback onAddEarlierWeek;
+  final VoidCallback onManageRange;
 
   @override
   State<CourseWeekPicker> createState() => _CourseWeekPickerState();
@@ -155,6 +155,7 @@ class _CourseWeekPickerState extends State<CourseWeekPicker> {
     final enabled = widget.enabled;
     final onChanged = widget.onChanged;
     final hasSummerWeeks = weeks.any((week) => week < 0);
+    final hasRegularWeeks = weeks.any((week) => week > 0);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -168,13 +169,13 @@ class _CourseWeekPickerState extends State<CourseWeekPicker> {
               ),
             ),
             TextButton.icon(
-              onPressed: enabled ? widget.onAddEarlierWeek : null,
+              onPressed: enabled ? widget.onManageRange : null,
               style: TextButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 textStyle: theme.textTheme.labelMedium,
               ),
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('增加小学期'),
+              icon: const Icon(Icons.tune_rounded, size: 18),
+              label: const Text('周数管理'),
             ),
           ],
         ),
@@ -199,7 +200,9 @@ class _CourseWeekPickerState extends State<CourseWeekPicker> {
                       onPressed:
                           !enabled ||
                               (selection == _WeekSelection.summer &&
-                                  !hasSummerWeeks)
+                                  !hasSummerWeeks) ||
+                              (selection == _WeekSelection.regular &&
+                                  !hasRegularWeeks)
                           ? null
                           : () => onChanged(selection.weeksIn(weeks)),
                       child: Text(selection.label),
