@@ -64,11 +64,11 @@ class _TimetableState extends State<Timetable> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final gutterWidth = 30.0 * scale;
-        final headerHeight = 56.0 * scale;
+        final headerHeight = 46.0 * scale;
         final columnWidth = (constraints.maxWidth - gutterWidth) / 7;
         final gridWidth = columnWidth * 7;
         final rowHeight = math.max(
-          (constraints.maxWidth < 680 ? 60.0 : 52.0) * scale,
+          48.0 * scale,
           (constraints.maxHeight - headerHeight) / sectionTimes.length,
         );
         final gridHeight = rowHeight * sectionTimes.length;
@@ -254,13 +254,13 @@ class _DateHeading extends StatelessWidget {
                   color: current ? scheme.onSurface : scheme.onSurfaceVariant,
                 ),
               ),
-              const SizedBox(height: 5),
+              const SizedBox(height: 2),
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 7,
-                    vertical: 4,
+                    vertical: 2,
                   ),
                   decoration: BoxDecoration(
                     color: current ? scheme.primary : null,
@@ -305,13 +305,13 @@ class _PeriodLabel extends StatelessWidget {
               '$section',
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Text(
               '${time.$1}\n${time.$2}',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 9,
-                height: 1.35,
+                height: 1.2,
                 color: scheme.onSurfaceVariant,
               ),
             ),

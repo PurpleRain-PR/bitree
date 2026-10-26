@@ -116,25 +116,25 @@ class ConflictingCourses extends StatelessWidget {
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final scaler = MediaQuery.textScalerOf(context);
-                  final titleHeight = scaler.scale(12) * 1.35;
-                  final sectionHeight = scaler.scale(10) * 1.3;
-                  final available = constraints.maxHeight - sectionHeight - 18;
+                  final titleHeight = scaler.scale(12) * 1.25;
+                  final sectionHeight = scaler.scale(10) * 1.25;
+                  final available = constraints.maxHeight - sectionHeight - 12;
                   final showSections =
                       available >= titleHeight + sectionHeight + 3;
                   final sectionSpace = showSections ? sectionHeight + 3 : 0;
                   final shownCount =
-                      available >= (titleHeight * 2 + sectionSpace) * 2 + 8
+                      available >= (titleHeight * 2 + sectionSpace) * 2 + 4
                       ? 2
                       : 1;
                   final titleLines =
-                      ((available - (shownCount - 1) * 8) / shownCount -
+                      ((available - (shownCount - 1) * 4) / shownCount -
                           sectionSpace) ~/
                       titleHeight;
 
                   return Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 3,
-                      vertical: 6,
+                      vertical: 4,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -146,18 +146,18 @@ class ConflictingCourses extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 10,
-                            height: 1.3,
+                            height: 1.25,
                             fontWeight: FontWeight.w600,
                             color: scheme.primary,
                           ),
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
                         Expanded(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               for (var i = 0; i < shownCount; i++) ...[
-                                if (i > 0) const SizedBox(height: 8),
+                                if (i > 0) const SizedBox(height: 4),
                                 Text(
                                   courses[i].name,
                                   textAlign: TextAlign.center,
@@ -165,7 +165,7 @@ class ConflictingCourses extends StatelessWidget {
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 12,
-                                    height: 1.35,
+                                    height: 1.25,
                                     fontWeight: FontWeight.w600,
                                     color: scheme.onPrimaryContainer,
                                   ),
@@ -179,7 +179,7 @@ class ConflictingCourses extends StatelessWidget {
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       fontSize: 10,
-                                      height: 1.3,
+                                      height: 1.25,
                                       color: scheme.onPrimaryContainer,
                                     ),
                                   ),
