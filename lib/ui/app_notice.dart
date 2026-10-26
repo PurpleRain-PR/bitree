@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+
+import 'app_page.dart';
 
 OverlayEntry? _notice;
 Timer? _dismissTimer;
@@ -27,16 +30,23 @@ void showOverlayNotice(
     builder: (context) {
       final theme = Theme.of(context);
       return Positioned(
-        top: 0,
+        bottom:
+            math.max(
+              MediaQuery.viewInsetsOf(context).bottom,
+              appNavigationBarHeight(context) +
+                  MediaQuery.viewPaddingOf(context).bottom,
+            ) +
+            16,
         left: 0,
         right: 0,
         child: IgnorePointer(
           ignoring: action == null,
           child: SafeArea(
+            top: false,
             bottom: false,
-            minimum: const EdgeInsets.all(16),
+            minimum: const EdgeInsets.symmetric(horizontal: 16),
             child: Align(
-              alignment: Alignment.topCenter,
+              alignment: Alignment.bottomCenter,
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 560),
                 child: Material(

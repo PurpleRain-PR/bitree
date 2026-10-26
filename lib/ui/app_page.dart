@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+double appNavigationBarHeight(BuildContext context) =>
+    56 + MediaQuery.textScalerOf(context).scale(12);
+
 /// Shared frame for the four main destinations.
 class AppPage extends StatelessWidget {
   const AppPage({
