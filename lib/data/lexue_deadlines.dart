@@ -30,9 +30,7 @@ Future<List<AgendaEntry>> fetchLexueDeadlines(
       : RegExp(r'https://\S+').firstMatch(block.text)?[0];
   if (address == null) throw const SchoolRequestError('乐学没有返回日程导出地址。');
   final url = Uri.parse(address);
-  if (url.host != source.host ||
-      url.scheme != 'https' ||
-      url.userInfo.isNotEmpty) {
+  if (url.host != source.host || url.userInfo.isNotEmpty) {
     throw const SchoolRequestError('乐学返回的日程地址无效。');
   }
   final calendar = await session.request(url, stopAtLogin: true);

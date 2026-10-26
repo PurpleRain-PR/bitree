@@ -209,9 +209,7 @@ class AppController extends ChangeNotifier {
     try {
       return await operation();
     } on SessionExpired {
-      final credentials = await _schoolStorage.readCredentials();
-      if (credentials == null) throw const SchoolCredentialsRequired();
-      await SchoolLogin(session, verify).signIn(credentials);
+      await SchoolLogin(session, verify).signIn();
       return operation();
     }
   }
@@ -238,7 +236,7 @@ class AppController extends ChangeNotifier {
     if (username == null) return true;
     return _runSchool(
       network,
-      (session) => _authenticated(session, verify, session.checkLogin),
+      (session) => SchoolLogin(session, verify).restore(),
     );
   }
 
@@ -250,7 +248,7 @@ class AppController extends ChangeNotifier {
     if (username != null) {
       return _runSchool(
         value,
-        (session) => _authenticated(session, verify, session.checkLogin),
+        (session) => SchoolLogin(session, verify).restore(),
       );
     }
     try {
