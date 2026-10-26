@@ -13,6 +13,7 @@ import '../schedule/selection.dart';
 import 'add_menu.dart';
 import 'calendar_block.dart';
 import 'calendar_list.dart';
+import 'current_time_indicator.dart';
 
 class Timetable extends StatefulWidget {
   const Timetable({
@@ -406,6 +407,13 @@ class _TimetableState extends State<Timetable> {
                                           isToday: day == todayColumn,
                                         ),
                                       ),
+                                  Positioned.fill(
+                                    child: CurrentTimeIndicator(
+                                      monday: monday,
+                                      columnWidth: columnWidth,
+                                      rowHeight: rowHeight,
+                                    ),
+                                  ),
                                   if (_selection case final selection?)
                                     Positioned(
                                       left: selection.day * columnWidth + 2,
