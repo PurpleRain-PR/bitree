@@ -91,9 +91,10 @@ class WeekSelector extends StatelessWidget {
           foregroundColor: scheme.onSurface,
           disabledForegroundColor: scheme.onSurface,
           minimumSize: const Size(48, 48),
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+          padding: EdgeInsets.zero,
+          alignment: Alignment.centerLeft,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          textStyle: Theme.of(context).appBarTheme.titleTextStyle,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

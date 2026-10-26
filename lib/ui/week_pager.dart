@@ -2,20 +2,12 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
-import '../agenda/calendar.dart';
 import 'timetable.dart';
 
 class WeekPager extends StatefulWidget {
-  const WeekPager({
-    super.key,
-    required this.controller,
-    required this.filter,
-    required this.showCompleted,
-  });
+  const WeekPager({super.key, required this.controller});
 
   final AppController controller;
-  final CalendarFilter filter;
-  final bool showCompleted;
 
   @override
   State<WeekPager> createState() => _WeekPagerState();
@@ -83,8 +75,6 @@ class _WeekPagerState extends State<WeekPager> {
         itemBuilder: (context, page) => Timetable(
           controller: widget.controller,
           week: weeks[page],
-          filter: widget.filter,
-          showCompleted: widget.showCompleted,
           initialScrollOffset: _scrollOffset,
           onScroll: (offset) => _scrollOffset = offset,
         ),

@@ -2,25 +2,6 @@ import '../schedule/model.dart';
 import '../schedule/selection.dart';
 import 'model.dart';
 
-enum CalendarFilter {
-  all('全部'),
-  courses('课程'),
-  events('活动'),
-  exams('考试'),
-  deadlines('DDL');
-
-  const CalendarFilter(this.label);
-  final String label;
-
-  bool includes(CalendarItem item) => switch (this) {
-    all => true,
-    courses => item.course != null,
-    events => item.entry?.kind == AgendaKind.event,
-    exams => item.entry?.kind == AgendaKind.exam,
-    deadlines => item.entry?.kind == AgendaKind.deadline,
-  };
-}
-
 class CalendarItem {
   CalendarItem.course(Course value, DateTime date)
     : course = value,
@@ -61,10 +42,8 @@ class CalendarItem {
 List<CalendarItem> calendarItemsOn(
   DateTime date,
   SemesterSchedule? schedule,
-  Iterable<AgendaEntry> entries, {
-  CalendarFilter filter = CalendarFilter.all,
-  bool showCompleted = false,
-}) {
+  Iterable<AgendaEntry> entries,
+) {
   final items = [
     if (schedule != null)
       for (final course in schedule.coursesAt(
@@ -73,10 +52,8 @@ List<CalendarItem> calendarItemsOn(
       ))
         CalendarItem.course(course, date),
     for (final entry in entries)
-      if ((showCompleted || !entry.done) && entry.occursOn(date))
-        CalendarItem.agenda(entry),
+      if (!entry.done && entry.occursOn(date)) CalendarItem.agenda(entry),
   ];
-  items.removeWhere((item) => !filter.includes(item));
   items.sort((a, b) {
     if (a.pinned != b.pinned) return a.pinned ? -1 : 1;
     return a.startsAt.compareTo(b.startsAt);

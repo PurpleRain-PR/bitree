@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
+import 'app_page.dart';
 import 'calendar_screen.dart';
 import 'home_screen.dart';
 import 'settings_screen.dart';
@@ -71,10 +72,7 @@ class _AppScreenState extends State<AppScreen> {
         IndexedStack(
           index: _tab,
           children: [
-            HomeScreen(
-              controller: widget.controller,
-              onOpenCalendar: () => setState(() => _tab = 1),
-            ),
+            HomeScreen(controller: widget.controller),
             CalendarScreen(controller: widget.controller),
             const _PendingPage(title: '工具'),
             SettingsScreen(
@@ -149,9 +147,9 @@ class _PendingPage extends StatelessWidget {
   final String title;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(title)),
-    body: Center(
+  Widget build(BuildContext context) => AppPage(
+    title: Text(title),
+    child: Center(
       child: Text(
         '$title功能暂未开放',
         style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),

@@ -40,7 +40,7 @@ class CalendarItemTile extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final overdue = entry?.overdue(campusNow()) ?? false;
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      contentPadding: const EdgeInsets.symmetric(vertical: 2),
       leading: Icon(
         entry == null ? Icons.school_outlined : agendaIcon(entry.kind),
         color: overdue ? scheme.error : scheme.onSurfaceVariant,
@@ -55,6 +55,8 @@ class CalendarItemTile extends StatelessWidget {
       subtitle: Text(
         [
           item.kindLabel,
+          if (entry?.source != null) entry!.source!.label,
+          if (entry?.course.isNotEmpty == true) entry!.course,
           if (showDate) agendaDateLabel(item.startsAt),
           item.timeLabel,
           if (item.location.isNotEmpty) item.location,
@@ -121,6 +123,9 @@ Future<void> showCalendarItems(
                 subtitle: Text(
                   [
                     item.kindLabel,
+                    if (item.entry?.source != null) item.entry!.source!.label,
+                    if (item.entry?.course.isNotEmpty == true)
+                      item.entry!.course,
                     if (showDates) agendaDateLabel(item.startsAt),
                     item.timeLabel,
                     if (item.location.isNotEmpty) item.location,
@@ -141,95 +146,5 @@ Future<void> showCalendarItems(
   );
   if (selected != null && context.mounted) {
     await openCalendarItem(context, controller, selected);
-  }
-}
-
-class WeekAgendaList extends StatelessWidget {
-  const WeekAgendaList({
-    super.key,
-    required this.controller,
-    required this.monday,
-    required this.filter,
-    required this.showCompleted,
-  });
-
-  final AppController controller;
-  final DateTime monday;
-  final CalendarFilter filter;
-  final bool showCompleted;
-
-  @override
-  Widget build(BuildContext context) {
-    final dates =
-        [for (var day = 0; day < 7; day++) monday.add(Duration(days: day))]
-            .where(
-              (date) => calendarItemsOn(
-                date,
-                controller.schedule,
-                controller.agenda.entries,
-                filter: filter,
-                showCompleted: showCompleted,
-              ).isNotEmpty,
-            )
-            .toList();
-    if (dates.isEmpty) return const Center(child: Text('本周没有安排'));
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 16),
-      children: [
-        for (final date in dates)
-          CalendarDay(
-            controller: controller,
-            date: date,
-            filter: filter,
-            showCompleted: showCompleted,
-          ),
-      ],
-    );
-  }
-}
-
-class CalendarDay extends StatelessWidget {
-  const CalendarDay({
-    super.key,
-    required this.controller,
-    required this.date,
-    required this.filter,
-    required this.showCompleted,
-  });
-
-  final AppController controller;
-  final DateTime date;
-  final CalendarFilter filter;
-  final bool showCompleted;
-
-  @override
-  Widget build(BuildContext context) {
-    final items = calendarItemsOn(
-      date,
-      controller.schedule,
-      controller.agenda.entries,
-      filter: filter,
-      showCompleted: showCompleted,
-    );
-    final today = calendarDate(date) == calendarDate(campusNow());
-    final scheme = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-          child: Text(
-            agendaDateLabel(date),
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: today ? scheme.primary : scheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-        for (final item in items)
-          CalendarItemTile(controller: controller, item: item),
-      ],
-    );
   }
 }

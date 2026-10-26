@@ -21,16 +21,12 @@ class Timetable extends StatefulWidget {
     required this.week,
     required this.initialScrollOffset,
     required this.onScroll,
-    required this.filter,
-    required this.showCompleted,
   });
 
   final AppController controller;
   final int week;
   final double initialScrollOffset;
   final ValueChanged<double> onScroll;
-  final CalendarFilter filter;
-  final bool showCompleted;
 
   @override
   State<Timetable> createState() => _TimetableState();
@@ -181,8 +177,6 @@ class _TimetableState extends State<Timetable> {
           monday.add(Duration(days: day - 1)),
           schedule,
           controller.agenda.entries,
-          filter: widget.filter,
-          showCompleted: widget.showCompleted,
         ),
     ];
     final pinned = [

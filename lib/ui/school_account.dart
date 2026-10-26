@@ -86,10 +86,7 @@ class _SchoolAccountState extends State<SchoolAccount> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         ListTile(
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 4,
-          ),
+          contentPadding: const EdgeInsets.symmetric(vertical: 4),
           leading: Icon(
             Icons.account_circle_outlined,
             size: 36,
@@ -113,7 +110,7 @@ class _SchoolAccountState extends State<SchoolAccount> {
               : null,
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+          padding: const EdgeInsets.only(top: 8),
           child: SchoolNetworkSelector(
             selected: controller.network,
             onChanged: canLogin

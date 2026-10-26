@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
 import '../app_version.dart';
+import 'app_page.dart';
 import 'course_editor.dart';
 import 'external_link.dart';
 import 'school_account.dart';
@@ -204,136 +205,115 @@ class SettingsScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: _SectionLabel(title),
-          ),
+          _SectionLabel(title),
           const SizedBox(height: 8),
           ...children,
         ],
       ),
     );
 
-    const tilePadding = EdgeInsets.symmetric(horizontal: 12, vertical: 2);
+    const tilePadding = EdgeInsets.symmetric(vertical: 2);
 
-    return Align(
-      alignment: Alignment.topCenter,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 680),
-        child: Scaffold(
-          appBar: AppBar(titleSpacing: 28, title: const Text('设置')),
-          body: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            children: [
-              SchoolAccount(controller: controller),
-              if (controller.error != null)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                  child: Text(
-                    controller.error!,
-                    style: TextStyle(color: scheme.error),
-                  ),
+    return AppPage(
+      title: const Text('设置'),
+      child: ListView(
+        padding: const EdgeInsets.only(top: 8, bottom: 24),
+        children: [
+          SchoolAccount(controller: controller),
+          if (controller.error != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                controller.error!,
+                style: TextStyle(color: scheme.error),
+              ),
+            ),
+          section('外观', [
+            SegmentedButton<ThemeMode>(
+              expandedInsets: EdgeInsets.zero,
+              showSelectedIcon: false,
+              style: SegmentedButton.styleFrom(
+                minimumSize: const Size(48, 44),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 10,
                 ),
-              section('外观', [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: SegmentedButton<ThemeMode>(
-                    expandedInsets: EdgeInsets.zero,
-                    showSelectedIcon: false,
-                    style: SegmentedButton.styleFrom(
-                      minimumSize: const Size(48, 44),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 10,
-                      ),
-                      textStyle: const TextStyle(fontSize: 14),
-                      backgroundColor: scheme.surfaceContainerLow,
-                      foregroundColor: scheme.onSurfaceVariant,
-                      selectedBackgroundColor: scheme.primaryContainer,
-                      selectedForegroundColor: scheme.onPrimaryContainer,
-                      side: BorderSide(color: scheme.outlineVariant),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    segments: const [
-                      ButtonSegment(
-                        value: ThemeMode.system,
-                        label: Text(
-                          '跟随系统',
-                          maxLines: 2,
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                      ButtonSegment(value: ThemeMode.light, label: Text('浅色')),
-                      ButtonSegment(value: ThemeMode.dark, label: Text('深色')),
-                    ],
-                    selected: {controller.themeMode},
-                    onSelectionChanged: (selection) =>
-                        controller.setTheme(selection.single),
-                  ),
+                textStyle: const TextStyle(fontSize: 14),
+                backgroundColor: scheme.surfaceContainerLow,
+                foregroundColor: scheme.onSurfaceVariant,
+                selectedBackgroundColor: scheme.primaryContainer,
+                selectedForegroundColor: scheme.onPrimaryContainer,
+                side: BorderSide(color: scheme.outlineVariant),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
                 ),
-              ]),
-              section('本地课表', [
-                ListTile(
-                  contentPadding: tilePadding,
-                  leading: const Icon(Icons.add_rounded),
-                  title: const Text('添加课程'),
-                  trailing: const Icon(Icons.chevron_right_rounded, size: 20),
-                  onTap: controller.busy
-                      ? null
-                      : () => editCourse(context, controller),
+              ),
+              segments: const [
+                ButtonSegment(
+                  value: ThemeMode.system,
+                  label: Text('跟随系统', maxLines: 2, textAlign: TextAlign.center),
                 ),
-                if (controller.schedule != null) ...[
-                  ListTile(
-                    contentPadding: tilePadding,
-                    leading: const Icon(Icons.calendar_month_outlined),
-                    title: const Text('学期'),
-                    subtitle: Text(controller.schedule!.termLabel),
-                    trailing: const Icon(Icons.chevron_right_rounded, size: 20),
-                    onTap: controller.busy ? null : () => _selectTerm(context),
-                  ),
-                  ListTile(
-                    contentPadding: tilePadding,
-                    leading: Icon(
-                      Icons.delete_outline_rounded,
-                      color: scheme.error,
-                    ),
-                    title: Text(
-                      '删除本地课表',
-                      style: TextStyle(color: scheme.error),
-                    ),
-                    onTap: controller.busy
-                        ? null
-                        : () => _clearSchedule(context),
-                  ),
-                ],
-              ]),
-              section('应用', [
-                ListTile(
-                  contentPadding: tilePadding,
-                  leading: const Icon(Icons.system_update_outlined),
-                  title: Text(checkingForUpdates ? '正在检查更新…' : '检查更新'),
-                  trailing: checkingForUpdates
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.chevron_right_rounded, size: 20),
-                  onTap: checkingForUpdates ? null : onCheckForUpdates,
+                ButtonSegment(value: ThemeMode.light, label: Text('浅色')),
+                ButtonSegment(value: ThemeMode.dark, label: Text('深色')),
+              ],
+              selected: {controller.themeMode},
+              onSelectionChanged: (selection) =>
+                  controller.setTheme(selection.single),
+            ),
+          ]),
+          section('本地课表', [
+            ListTile(
+              contentPadding: tilePadding,
+              leading: const Icon(Icons.add_rounded),
+              title: const Text('添加课程'),
+              trailing: const Icon(Icons.chevron_right_rounded, size: 20),
+              onTap: controller.busy
+                  ? null
+                  : () => editCourse(context, controller),
+            ),
+            if (controller.schedule != null) ...[
+              ListTile(
+                contentPadding: tilePadding,
+                leading: const Icon(Icons.calendar_month_outlined),
+                title: const Text('学期'),
+                subtitle: Text(controller.schedule!.termLabel),
+                trailing: const Icon(Icons.chevron_right_rounded, size: 20),
+                onTap: controller.busy ? null : () => _selectTerm(context),
+              ),
+              ListTile(
+                contentPadding: tilePadding,
+                leading: Icon(
+                  Icons.delete_outline_rounded,
+                  color: scheme.error,
                 ),
-                ListTile(
-                  contentPadding: tilePadding,
-                  leading: const Icon(Icons.info_outline_rounded),
-                  title: const Text('关于 BITree'),
-                  trailing: const Icon(Icons.chevron_right_rounded, size: 20),
-                  onTap: () => _showAbout(context),
-                ),
-              ]),
+                title: Text('删除本地课表', style: TextStyle(color: scheme.error)),
+                onTap: controller.busy ? null : () => _clearSchedule(context),
+              ),
             ],
-          ),
-        ),
+          ]),
+          section('应用', [
+            ListTile(
+              contentPadding: tilePadding,
+              leading: const Icon(Icons.system_update_outlined),
+              title: Text(checkingForUpdates ? '正在检查更新…' : '检查更新'),
+              trailing: checkingForUpdates
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.chevron_right_rounded, size: 20),
+              onTap: checkingForUpdates ? null : onCheckForUpdates,
+            ),
+            ListTile(
+              contentPadding: tilePadding,
+              leading: const Icon(Icons.info_outline_rounded),
+              title: const Text('关于 BITree'),
+              trailing: const Icon(Icons.chevron_right_rounded, size: 20),
+              onTap: () => _showAbout(context),
+            ),
+          ]),
+        ],
       ),
     );
   }
