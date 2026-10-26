@@ -73,7 +73,7 @@ class _AppScreenState extends State<AppScreen> {
           index: _tab,
           children: [
             HomeScreen(controller: widget.controller, active: _tab == 0),
-            CalendarScreen(controller: widget.controller),
+            CalendarScreen(controller: widget.controller, active: _tab == 1),
             const _PendingPage(title: '工具'),
             SettingsScreen(
               controller: widget.controller,

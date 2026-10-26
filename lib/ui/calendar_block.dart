@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../agenda/calendar.dart';
 import '../agenda/model.dart';
 import '../app_controller.dart';
+import '../schedule/model.dart';
 import 'calendar_list.dart';
 import 'conflicting_courses.dart';
 import 'course_tile.dart';
@@ -21,12 +22,17 @@ class CalendarBlockTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final now = campusNow();
     if (items.every((item) => item.course != null)) {
       return items.length == 1
           ? CourseTile(
               course: items.single.course!,
               controller: controller,
               isToday: isToday,
+              isCurrent:
+                  isToday &&
+                  !items.single.startsAt.isAfter(now) &&
+                  items.single.endsAt!.isAfter(now),
             )
           : ConflictingCourses(
               courses: items.map((item) => item.course!).toList(),
@@ -36,10 +42,10 @@ class CalendarBlockTile extends StatelessWidget {
     }
     final scheme = Theme.of(context).colorScheme;
     final exam = items.any((item) => item.entry?.kind == AgendaKind.exam);
-    final background = exam ? scheme.errorContainer : scheme.secondaryContainer;
-    final foreground = exam
-        ? scheme.onErrorContainer
-        : scheme.onSecondaryContainer;
+    final background = exam
+        ? scheme.errorContainer
+        : scheme.surfaceContainerLow;
+    final foreground = exam ? scheme.onErrorContainer : scheme.onSurface;
     final summary = items
         .map((item) => '${item.kindLabel} ${item.title}\n${item.timeLabel}')
         .join('\n');
@@ -53,8 +59,8 @@ class CalendarBlockTile extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(6),
             side: BorderSide(
-              color: exam ? scheme.error : scheme.outline,
-              width: isToday ? 1.5 : 0.7,
+              color: exam ? scheme.error : scheme.outlineVariant,
+              width: exam ? 1 : 0.7,
             ),
           ),
           clipBehavior: Clip.antiAlias,
@@ -62,62 +68,62 @@ class CalendarBlockTile extends StatelessWidget {
             onTap: () => items.length == 1
                 ? openCalendarItem(context, controller, items.single)
                 : showCalendarItems(context, controller, '选择安排', items),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final scale = MediaQuery.textScalerOf(context).scale(1);
-                final detailed = constraints.maxHeight >= 90 * scale;
-                return Padding(
-                  padding: const EdgeInsets.all(4),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (constraints.maxHeight >= 48 * scale) ...[
-                        Text(
-                          items.length == 1
-                              ? items.single.kindLabel
-                              : '${items.length} 项',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 10,
-                            height: 1.2,
-                            color: foreground,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                border: Border(
+                  left: BorderSide(
+                    color: exam ? scheme.error : scheme.primary,
+                    width: 3,
+                  ),
+                ),
+              ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final scale = MediaQuery.textScalerOf(context).scale(1);
+                  final detailed = constraints.maxHeight >= 90 * scale;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 6,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (constraints.maxHeight >= 48 * scale &&
+                            (exam || items.length > 1)) ...[
+                          Text(
+                            items.length == 1 ? '考试' : '${items.length} 项',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 10,
+                              height: 1.2,
+                              color: foreground,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 3),
-                      ],
-                      Flexible(
-                        child: Text(
-                          items.map((item) => item.title).join(' / '),
-                          textAlign: TextAlign.center,
-                          maxLines: detailed ? 4 : 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12,
-                            height: 1.25,
-                            fontWeight: FontWeight.w600,
-                            color: foreground,
-                          ),
-                        ),
-                      ),
-                      if (detailed && items.length == 1) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          items.single.timeLabel,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 10,
-                            height: 1.2,
-                            color: foreground,
-                          ),
-                        ),
-                        if (items.single.location.isNotEmpty) ...[
                           const SizedBox(height: 3),
+                        ],
+                        Flexible(
+                          child: Text(
+                            items.map((item) => item.title).join(' / '),
+                            textAlign: TextAlign.start,
+                            maxLines: detailed ? 4 : 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12,
+                              height: 1.25,
+                              fontWeight: FontWeight.w600,
+                              color: foreground,
+                            ),
+                          ),
+                        ),
+                        if (detailed &&
+                            items.length == 1 &&
+                            items.single.location.isNotEmpty) ...[
+                          const SizedBox(height: 4),
                           Text(
                             items.single.location,
-                            textAlign: TextAlign.center,
+                            textAlign: TextAlign.start,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -128,10 +134,10 @@ class CalendarBlockTile extends StatelessWidget {
                           ),
                         ],
                       ],
-                    ],
-                  ),
-                );
-              },
+                    ),
+                  );
+                },
+              ),
             ),
           ),
         ),

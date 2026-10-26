@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 
+import '../agenda/model.dart';
 import '../app_controller.dart';
 import '../schedule/model.dart';
 import 'add_menu.dart';
 import 'app_page.dart';
+import 'campus_time_builder.dart';
 import 'course_detail.dart';
 import 'course_editor.dart';
 import 'data_errors.dart';
 import 'schedule_menu.dart';
 import 'school_import_button.dart';
 import 'school_screen.dart';
+import 'today_agenda.dart';
 import 'week_pager.dart';
 import 'week_selector.dart';
 
@@ -20,9 +23,21 @@ class HomeScreen extends StatelessWidget {
   final bool active;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      CampusTimeBuilder(active: active, builder: _build);
+
+  Widget _build(BuildContext context, DateTime today) {
     final schedule = controller.schedule;
-    final today = campusNow();
+    final currentWeek =
+        schedule == null || schedule.weekAt(today) == controller.week;
+    final entries = currentWeek
+        ? controller.agenda.entries
+              .where(
+                (entry) => !entry.isFinished(today) && entry.occursOn(today),
+              )
+              .toList()
+        : <AgendaEntry>[];
+    entries.sort((a, b) => a.startsAt.compareTo(b.startsAt));
     final monday = schedule?.mondayAt(controller.week);
     final selectedDate =
         monday == null || schedule!.weekAt(today) == controller.week
@@ -30,21 +45,32 @@ class HomeScreen extends StatelessWidget {
         : monday.add(const Duration(hours: 9));
 
     return AppPage(
-      title: schedule == null
-          ? const Text('首页')
-          : Row(
-              children: [
-                Flexible(child: WeekSelector(controller: controller)),
-                const SizedBox(width: 8),
-                Text(
-                  weekdays[today.weekday - 1],
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
+      title: Wrap(
+        spacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          if (schedule == null)
+            const Text('首页')
+          else
+            WeekSelector(controller: controller),
+          if (currentWeek)
+            DefaultTextStyle(
+              style: Theme.of(context).textTheme.bodySmall!
+                  .copyWith(fontSize: 13),
+              child: Wrap(
+                spacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(weekdays[today.weekday - 1]),
+                  if (entries.isNotEmpty)
+                    Text(
+                      '${entries.length}项${entries.every((entry) => entry.isDeadline) ? '待办' : '日程'}',
+                    ),
+                ],
+              ),
             ),
+        ],
+      ),
       actions: [
         AddButton(controller: controller, date: selectedDate),
         SchoolImportButton(controller: controller),
@@ -55,6 +81,8 @@ class HomeScreen extends StatelessWidget {
         children: [
           DataErrors(controller: controller),
           if (!controller.ready) const LinearProgressIndicator(minHeight: 3),
+          if (entries.isNotEmpty)
+            TodayAgenda(controller: controller, entries: entries, now: today),
           Expanded(
             child: schedule == null
                 ? Center(

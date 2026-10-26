@@ -189,7 +189,7 @@ class _TimetableState extends State<Timetable> with WidgetsBindingObserver {
     final currentWeek = schedule.weekAt(today) == widget.week;
     final todayColumn = currentWeek ? today.weekday - 1 : null;
     final todayBackground = Theme.of(context).colorScheme.primary
-        .withValues(alpha: 0.12);
+        .withValues(alpha: 0.08);
     final scale = MediaQuery.textScalerOf(context).scale(1);
 
     final days = [
@@ -221,14 +221,10 @@ class _TimetableState extends State<Timetable> with WidgetsBindingObserver {
     return LayoutBuilder(
       builder: (context, constraints) {
         final gutterWidth = 30.0 * scale;
-        final dateHeight = 46.0 * scale;
-        final pinnedHeight = pinned.any((items) => items.isNotEmpty)
-            ? 32.0 * scale
-            : 0.0;
+        final dateHeight = 56.0 * scale;
         final rowHeight = math.max(
           48.0 * scale,
-          (constraints.maxHeight - dateHeight - pinnedHeight) /
-              sectionTimes.length,
+          (constraints.maxHeight - dateHeight) / sectionTimes.length,
         );
         _rowHeight = rowHeight;
 
@@ -242,7 +238,6 @@ class _TimetableState extends State<Timetable> with WidgetsBindingObserver {
               pinned: pinned,
               gutterWidth: gutterWidth,
               dateHeight: dateHeight,
-              pinnedHeight: pinnedHeight,
               todayBackground: todayBackground,
             ),
             Expanded(

@@ -13,7 +13,7 @@ class CurrentTimeIndicator extends StatelessWidget {
     required this.rowHeight,
   });
 
-  static const _lineHeight = 3.0;
+  static const _lineHeight = 2.0;
   static const _horizontalInset = 3.0;
 
   final DateTime now;
@@ -46,8 +46,20 @@ class CurrentTimeIndicator extends StatelessWidget {
               height: _lineHeight,
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.error,
+                  color: Theme.of(context).colorScheme.primary,
                   borderRadius: BorderRadius.circular(_lineHeight / 2),
+                ),
+              ),
+            ),
+            Positioned(
+              left: day * columnWidth + _horizontalInset - 2,
+              top: (top - 1.5).clamp(0.0, gridHeight - 5),
+              width: 5,
+              height: 5,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
+                  shape: BoxShape.circle,
                 ),
               ),
             ),
