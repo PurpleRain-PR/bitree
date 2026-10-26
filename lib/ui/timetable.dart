@@ -112,102 +112,77 @@ class _TimetableState extends State<Timetable> {
             Expanded(
               child: SingleChildScrollView(
                 controller: _vertical,
-                child: SizedBox(
-                  height: gridHeight,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: gutterWidth,
-                        child: Column(
-                          children: [
-                            for (
-                              var section = 1;
-                              section <= sectionTimes.length;
-                              section++
-                            )
-                              SizedBox(
-                                height: rowHeight,
-                                child: _PeriodLabel(section: section),
-                              ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: SizedBox(
-                          width: gridWidth,
-                          height: gridHeight,
-                          child: Stack(
+                child: RepaintBoundary(
+                  child: SizedBox(
+                    height: gridHeight,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: gutterWidth,
+                          child: Column(
                             children: [
                               for (
-                                var section = 0;
-                                section < sectionTimes.length;
+                                var section = 1;
+                                section <= sectionTimes.length;
                                 section++
                               )
-                                for (var day = 0; day < 7; day++)
-                                  Positioned(
-                                    left: day * columnWidth + 2,
-                                    top: section * rowHeight + 2,
-                                    width: columnWidth - 4,
-                                    height: rowHeight - 4,
-                                    child: DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        color: scheme.onSurface.withValues(
-                                          alpha: section.isEven ? 0.025 : 0.045,
-                                        ),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                    ),
-                                  ),
-                              for (var day = 0; day < 7; day++)
-                                if (day == todayColumn)
-                                  Positioned(
-                                    left: day * columnWidth + 2,
-                                    width: columnWidth - 4,
-                                    top: 0,
-                                    bottom: 0,
-                                    child: DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        color: todayBackground,
-                                        borderRadius:
-                                            const BorderRadius.vertical(
-                                              bottom: Radius.circular(6),
-                                            ),
-                                      ),
-                                    ),
-                                  ),
-                              for (var day = 0; day < 7; day++)
-                                for (final block in layouts[day])
-                                  Positioned(
-                                    key: ValueKey((day, block.startSection)),
-                                    left: day * columnWidth + 2,
-                                    width: columnWidth - 4,
-                                    top:
-                                        (block.startSection - 1) * rowHeight +
-                                        2,
-                                    height:
-                                        (block.endSection -
-                                                block.startSection +
-                                                1) *
-                                            rowHeight -
-                                        4,
-                                    child: block.courses.length == 1
-                                        ? CourseTile(
-                                            course: block.courses.single,
-                                            controller: controller,
-                                            isToday: day == todayColumn,
-                                          )
-                                        : ConflictingCourses(
-                                            courses: block.courses,
-                                            controller: controller,
-                                            isToday: day == todayColumn,
-                                          ),
-                                  ),
+                                SizedBox(
+                                  height: rowHeight,
+                                  child: _PeriodLabel(section: section),
+                                ),
                             ],
                           ),
                         ),
-                      ),
-                    ],
+                        Expanded(
+                          child: SizedBox(
+                            width: gridWidth,
+                            height: gridHeight,
+                            child: Stack(
+                              children: [
+                                Positioned.fill(
+                                  child: CustomPaint(
+                                    painter: _TimetableBackground(
+                                      rowHeight: rowHeight,
+                                      surfaceColor: scheme.onSurface,
+                                      todayColumn: todayColumn,
+                                      todayBackground: todayBackground,
+                                    ),
+                                  ),
+                                ),
+                                for (var day = 0; day < 7; day++)
+                                  for (final block in layouts[day])
+                                    Positioned(
+                                      key: ValueKey((day, block.startSection)),
+                                      left: day * columnWidth + 2,
+                                      width: columnWidth - 4,
+                                      top:
+                                          (block.startSection - 1) * rowHeight +
+                                          2,
+                                      height:
+                                          (block.endSection -
+                                                  block.startSection +
+                                                  1) *
+                                              rowHeight -
+                                          4,
+                                      child: block.courses.length == 1
+                                          ? CourseTile(
+                                              course: block.courses.single,
+                                              controller: controller,
+                                              isToday: day == todayColumn,
+                                            )
+                                          : ConflictingCourses(
+                                              courses: block.courses,
+                                              controller: controller,
+                                              isToday: day == todayColumn,
+                                            ),
+                                    ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -217,6 +192,66 @@ class _TimetableState extends State<Timetable> {
       },
     );
   }
+}
+
+class _TimetableBackground extends CustomPainter {
+  const _TimetableBackground({
+    required this.rowHeight,
+    required this.surfaceColor,
+    required this.todayColumn,
+    required this.todayBackground,
+  });
+
+  final double rowHeight;
+  final Color surfaceColor;
+  final int? todayColumn;
+  final Color todayBackground;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final columnWidth = size.width / 7;
+    final paint = Paint();
+    const radius = Radius.circular(6);
+
+    for (var section = 0; section < sectionTimes.length; section++) {
+      paint.color = surfaceColor.withValues(
+        alpha: section.isEven ? 0.025 : 0.045,
+      );
+      for (var day = 0; day < 7; day++) {
+        final cell = Rect.fromLTWH(
+          day * columnWidth + 2,
+          section * rowHeight + 2,
+          columnWidth - 4,
+          rowHeight - 4,
+        );
+        canvas.drawRRect(RRect.fromRectAndRadius(cell, radius), paint);
+      }
+    }
+
+    if (todayColumn != null) {
+      final column = Rect.fromLTWH(
+        todayColumn! * columnWidth + 2,
+        0,
+        columnWidth - 4,
+        size.height,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndCorners(
+          column,
+          bottomLeft: radius,
+          bottomRight: radius,
+        ),
+        paint..color = todayBackground,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_TimetableBackground oldDelegate) =>
+      rowHeight != oldDelegate.rowHeight ||
+      surfaceColor != oldDelegate.surfaceColor ||
+      todayColumn != oldDelegate.todayColumn ||
+      todayBackground != oldDelegate.todayBackground;
 }
 
 class _DateHeading extends StatelessWidget {
