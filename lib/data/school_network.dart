@@ -8,8 +8,6 @@ enum SchoolNetwork {
     'jxzxehall.bit.edu.cn': '77726476706e69737468656265737421faef5b842238695c72468ba58c1b26316e8e7f6f',
   };
 
-  String get label => this == campus ? '校园网' : 'WebVPN';
-
   Uri get app =>
       route(_campusApp.resolve('/jwapp/sys/wdkbby/*default/index.do'));
 

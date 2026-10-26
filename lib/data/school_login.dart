@@ -28,14 +28,6 @@ class SchoolLogin {
     return account;
   }
 
-  Future<void> restore() async {
-    try {
-      await session.checkLogin();
-    } on SessionExpired {
-      await signIn();
-    }
-  }
-
   Future<SchoolResponse> openLearningPlatform(
     DeadlineSource source, {
     SchoolCredentials? credentials,
@@ -71,7 +63,10 @@ class SchoolLogin {
     try {
       await session.checkLogin();
     } on SessionExpired {
-      throw SchoolRequestError('未能建立${session.network.label}登录会话，请重试。');
+      throw SchoolConnectionError(
+        session.network.accountPage,
+        const SchoolRequestError('未能建立学校登录会话，请重试。'),
+      );
     }
   }
 

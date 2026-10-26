@@ -7,11 +7,12 @@ import 'data/school_errors.dart';
 import 'data/school_storage.dart';
 
 String errorMessage(Object error) => switch (error) {
+  SchoolConnectionError() => errorMessage(error.cause),
   SessionExpired() => error.toString(),
   SchoolCredentialsRequired() => error.message,
   SchoolRequestError() => error.message,
   SchoolStorageError() => error.message,
-  SocketException() => '无法连接学校网站，请检查网络或更换登录方式。',
+  SocketException() => '无法连接学校网站，请检查网络后重试。',
   TimeoutException() => '连接学校网站超时，请稍后重试。',
   HandshakeException() => '无法验证学校网站证书，请检查系统时间和网络。',
   FormatException() => '数据格式不正确：${error.message}',

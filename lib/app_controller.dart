@@ -8,13 +8,12 @@ import 'agenda/deadline_source.dart';
 import 'classrooms/model.dart';
 import 'data/desktop_widget.dart';
 import 'data/schedule_store.dart';
+import 'data/school_access.dart';
 import 'data/school_errors.dart';
 import 'data/school_classrooms.dart';
 import 'data/lexue_deadlines.dart';
 import 'data/eclass_deadlines.dart';
 import 'data/school_exams.dart';
-import 'data/school_login.dart';
-import 'data/school_network.dart';
 import 'data/school_service.dart';
 import 'data/school_session.dart';
 import 'data/school_storage.dart';
@@ -38,6 +37,7 @@ class AppController extends ChangeNotifier {
   final ScheduleStore _store;
   final SchoolService _school;
   final SchoolStorage _schoolStorage;
+  late final _schoolAccess = SchoolAccess(_schoolStorage);
   final SharedPreferencesAsync _preferences;
   final AgendaController agenda;
 
@@ -47,13 +47,11 @@ class AppController extends ChangeNotifier {
   String? error;
   AccountStatus accountStatus = AccountStatus.unverified;
   String? username;
-  SchoolSession? _activeSchoolSession;
   Future<void>? _schoolFinished;
 
   int week = 1;
   ThemeMode themeMode = ThemeMode.system;
   bool confirmDelete = true;
-  SchoolNetwork network = SchoolNetwork.campus;
   List<String> terms = [];
 
   SemesterSchedule? get schedule => _schedule;
@@ -62,7 +60,7 @@ class AppController extends ChangeNotifier {
 
   bool get loginExpired => accountStatus == AccountStatus.expired;
 
-  bool get schoolBusy => _activeSchoolSession != null;
+  bool get schoolBusy => _schoolFinished != null;
 
   Future<void> initialize() async {
     try {
@@ -74,9 +72,6 @@ class AppController extends ChangeNotifier {
       themeMode =
           ThemeMode.values.where((value) => value.name == theme).firstOrNull ??
           ThemeMode.system;
-      network = await _preferences.getString('network') == 'webvpn'
-          ? SchoolNetwork.webvpn
-          : SchoolNetwork.campus;
       username = (await _schoolStorage.readCredentials())?.username;
       if (username == null) accountStatus = AccountStatus.signedOut;
     } catch (failure) {
@@ -137,13 +132,6 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _saveLoginState(SchoolNetwork using) async {
-    await _preferences.setString('network', using.name);
-
-    accountStatus = AccountStatus.signedIn;
-    network = using;
-  }
-
   void _handleSchoolError(Object failure) {
     if (failure is SessionExpired || failure is SchoolCredentialsRequired) {
       requireLogin();
@@ -151,52 +139,31 @@ class AppController extends ChangeNotifier {
     error = errorMessage(failure);
   }
 
-  Future<bool> _runSchool(
-    SchoolNetwork using,
-    Future<void> Function(SchoolSession) operation,
-  ) async {
+  Future<bool> _runSchool(Future<void> Function() operation) async {
     if (busy || schoolBusy) return false;
 
-    final session = SchoolSession(network: using, storage: _schoolStorage);
     final finished = Completer<void>();
-    _activeSchoolSession = session;
     _schoolFinished = finished.future;
     error = null;
     notifyListeners();
 
     try {
-      await operation(session);
-      session.checkActive();
-      await _saveLoginState(using);
+      await operation();
+      accountStatus = AccountStatus.signedIn;
       return true;
     } on SchoolCancelled {
       return false;
     } catch (failure) {
-      if (!session.cancelled) _handleSchoolError(failure);
+      _handleSchoolError(failure);
       return false;
     } finally {
-      session.close();
-      _activeSchoolSession = null;
       _schoolFinished = null;
       finished.complete();
       notifyListeners();
     }
   }
 
-  void cancelSchoolRequest() => _activeSchoolSession?.close();
-
-  Future<T> _authenticated<T>(
-    SchoolSession session,
-    VerifySchoolLogin verify,
-    Future<T> Function() operation,
-  ) async {
-    try {
-      return await operation();
-    } on SessionExpired {
-      await SchoolLogin(session, verify).signIn();
-      return operation();
-    }
-  }
+  void cancelSchoolRequest() => _schoolAccess.cancel();
 
   Future<ClassroomDirectory?> classroomDirectory({
     required VerifySchoolLogin verify,
@@ -220,124 +187,80 @@ class AppController extends ChangeNotifier {
     VerifySchoolLogin verify,
   ) async {
     T? result;
-    final success = await _runSchool(network, (session) async {
-      result = await _authenticated(session, verify, () => read(session));
+    final success = await _runSchool(() async {
+      result = await _schoolAccess.read(verify, read);
     });
     return success ? result : null;
   }
 
   Future<bool> signIn(
     SchoolCredentials credentials,
-    SchoolNetwork using,
     VerifySchoolLogin verify, {
     DeadlineSource? source,
-  }) => _runSchool(using, (session) async {
-    await _schoolStorage.clearSession(using);
-    final login = SchoolLogin(session, verify);
-    if (source == null) {
-      await login.signIn(credentials);
-    } else {
-      await login.openLearningPlatform(source, credentials: credentials);
-    }
-    session.checkActive();
-    await _schoolStorage.saveCredentials(credentials);
+  }) => _runSchool(() async {
+    await _schoolAccess.signIn(credentials, verify, source: source);
     username = credentials.username;
   });
 
   Future<bool> restoreAccount(VerifySchoolLogin verify) async {
     if (username == null) return true;
     return _runSchool(
-      network,
-      (session) => SchoolLogin(session, verify).restore(),
+      () => _schoolAccess.read(verify, (session) => session.checkLogin()),
     );
   }
 
-  Future<bool> changeNetwork(
-    SchoolNetwork value,
-    VerifySchoolLogin verify,
-  ) async {
-    if (busy || schoolBusy || value == network) return false;
-    if (username != null) {
-      return _runSchool(
-        value,
-        (session) => SchoolLogin(session, verify).restore(),
+  Future<bool> synchronize({String? term, required VerifySchoolLogin verify}) =>
+      _runSchool(
+        () => _schoolAccess.read(verify, (session) async {
+          final result = await _school.synchronize(session, term: term);
+
+          if (busy) throw const SchoolRequestError('课程正在保存，请稍后重新导入。');
+          busy = true;
+          notifyListeners();
+          try {
+            final previous = await _store.readTerm(result.schedule.term);
+            session.checkActive();
+            final next = result.schedule.mergeLocalChanges(previous);
+            await _store.write(next);
+            _schedule = next;
+            terms = {...await _store.terms(), ...result.terms}.toList();
+            _goToCurrentWeek();
+            await _updateWidget();
+          } finally {
+            busy = false;
+            notifyListeners();
+          }
+        }),
       );
-    }
-    try {
-      await _preferences.setString('network', value.name);
-      network = value;
-      error = null;
-      return true;
-    } catch (failure) {
-      error = errorMessage(failure);
-      return false;
-    } finally {
-      notifyListeners();
-    }
-  }
 
-  Future<bool> synchronize({
-    SchoolNetwork? using,
-    String? term,
-    required VerifySchoolLogin verify,
-  }) => _runSchool(using ?? network, (session) async {
-    final result = await _authenticated(
-      session,
-      verify,
-      () => _school.synchronize(session, term: term),
-    );
-
-    if (busy) throw const SchoolRequestError('课程正在保存，请稍后重新导入。');
-    busy = true;
-    notifyListeners();
-    try {
-      final previous = await _store.readTerm(result.schedule.term);
+  Future<bool> importExams({required VerifySchoolLogin verify}) => _runSchool(
+    () => _schoolAccess.read(verify, (session) async {
+      final result = await fetchSchoolExams(session, term: schedule?.term);
       session.checkActive();
-      final next = result.schedule.mergeLocalChanges(previous);
-      await _store.write(next);
-      _schedule = next;
-      terms = {...await _store.terms(), ...result.terms}.toList();
-      _goToCurrentWeek();
-      await _updateWidget();
-    } finally {
-      busy = false;
-      notifyListeners();
-    }
-  });
-
-  Future<bool> importExams({
-    SchoolNetwork? using,
-    required VerifySchoolLogin verify,
-  }) => _runSchool(using ?? network, (session) async {
-    final result = await _authenticated(
-      session,
-      verify,
-      () => fetchSchoolExams(session, term: schedule?.term),
-    );
-    session.checkActive();
-    if (!await agenda.replaceExams(result.term, result.exams)) {
-      throw SchoolRequestError(agenda.error ?? '安排正在保存，请稍后重试。');
-    }
-  });
+      if (!await agenda.replaceExams(result.term, result.exams)) {
+        throw SchoolRequestError(agenda.error ?? '安排正在保存，请稍后重试。');
+      }
+    }),
+  );
 
   Future<bool> importDeadlines(
     DeadlineSource source, {
-    SchoolNetwork? using,
     required VerifySchoolLogin verify,
-  }) => _runSchool(using ?? network, (session) async {
-    final page = await SchoolLogin(
+  }) => _runSchool(
+    () => _schoolAccess.readLearningPlatform(source, verify, (
       session,
-      verify,
-    ).openLearningPlatform(source);
-    final deadlines = await switch (source) {
-      DeadlineSource.lexue => fetchLexueDeadlines(session, page),
-      DeadlineSource.eclass => fetchEclassDeadlines(session),
-    };
-    session.checkActive();
-    if (!await agenda.mergeDeadlines(deadlines)) {
-      throw SchoolRequestError(agenda.error ?? '安排正在保存，请稍后重试。');
-    }
-  });
+      page,
+    ) async {
+      final deadlines = await switch (source) {
+        DeadlineSource.lexue => fetchLexueDeadlines(session, page),
+        DeadlineSource.eclass => fetchEclassDeadlines(session),
+      };
+      session.checkActive();
+      if (!await agenda.mergeDeadlines(deadlines)) {
+        throw SchoolRequestError(agenda.error ?? '安排正在保存，请稍后重试。');
+      }
+    }),
+  );
 
   Future<bool> saveCourse(
     Course course, {
