@@ -1,5 +1,5 @@
 name: bitree
-description: "BITree (理枝) - a local-first toolkit for Beijing Institute of Technology."
+description: "面向北京理工大学的本地跨平台工具集"
 publish_to: 'none'
 version: 0.1.0+1
 
