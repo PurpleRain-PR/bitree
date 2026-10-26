@@ -24,11 +24,8 @@ Future<List<AgendaEntry>> fetchLexueDeadlines(
     },
     stopAtLogin: true,
   );
-  final block = html.parse(exported.text).querySelector('.calendarurl');
-  final address = block == null
-      ? null
-      : RegExp(r'https://\S+').firstMatch(block.text)?[0];
-  if (address == null) throw const SchoolRequestError('乐学没有返回日程导出地址。');
+  final block = html.parse(exported.text).querySelector('.calendarurl')!;
+  final address = RegExp(r'https://\S+').firstMatch(block.text)![0]!;
   final url = Uri.parse(address);
   if (url.host != source.host || url.userInfo.isNotEmpty) {
     throw const SchoolRequestError('乐学返回的日程地址无效。');
@@ -38,9 +35,6 @@ Future<List<AgendaEntry>> fetchLexueDeadlines(
 }
 
 List<AgendaEntry> _parseLexueCalendar(String calendar) {
-  if (!calendar.contains('BEGIN:VCALENDAR')) {
-    throw const SchoolRequestError('乐学没有返回日程数据，请重试。');
-  }
   final unfolded = calendar.replaceAll(RegExp(r'\r?\n[ \t]'), '');
   final result = <AgendaEntry>[];
   for (final block in unfolded.split('BEGIN:VEVENT').skip(1)) {
@@ -98,17 +92,14 @@ String _unescapeCalendarText(String value) => value.replaceAllMapped(
 );
 
 DateTime _calendarDate(String value, String parameters) {
-  final match = RegExp(
-    r'^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?(Z)?)?$',
-  ).firstMatch(value);
-  if (match == null) throw FormatException('无法识别乐学日期：$value');
+  final parsed = DateTime.parse(value);
   final date = DateTime.utc(
-    int.parse(match[1]!),
-    int.parse(match[2]!),
-    int.parse(match[3]!),
-    int.parse(match[4] ?? '0'),
-    int.parse(match[5] ?? '0'),
-    int.parse(match[6] ?? '0'),
+    parsed.year,
+    parsed.month,
+    parsed.day,
+    parsed.hour,
+    parsed.minute,
+    parsed.second,
   );
   final timezone = parameters
       .split(';')
@@ -116,11 +107,8 @@ DateTime _calendarDate(String value, String parameters) {
       .firstOrNull
       ?.substring(5)
       .replaceAll('"', '');
-  if (match[7] == 'Z' || timezone == 'UTC') {
+  if (parsed.isUtc || timezone == 'UTC') {
     return date.add(const Duration(hours: 8));
-  }
-  if (timezone != null && timezone != 'Asia/Shanghai') {
-    throw FormatException('乐学日程使用了不支持的时区：$timezone');
   }
   return date;
 }

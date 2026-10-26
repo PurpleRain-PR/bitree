@@ -44,11 +44,7 @@ class SchoolLogin {
     if (source == DeadlineSource.eclass) {
       final response = await session.request(service);
       if (!isSchoolLogin(response.url)) return response;
-      final callback = response.url.queryParameters['service'];
-      if (callback == null) {
-        throw const SchoolRequestError('学校登录入口没有提供回调地址。');
-      }
-      service = Uri.parse(callback);
+      service = Uri.parse(response.url.queryParameters['service']!);
     }
     final account = await _credentials(credentials);
     final callback = await _authenticate(account, service);
