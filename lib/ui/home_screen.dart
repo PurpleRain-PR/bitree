@@ -14,9 +14,14 @@ import 'week_pager.dart';
 import 'week_selector.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key, required this.controller});
+  const HomeScreen({
+    super.key,
+    required this.controller,
+    this.active = true,
+  });
 
   final AppController controller;
+  final bool active;
 
   @override
   Widget build(BuildContext context) {
@@ -91,6 +96,7 @@ class HomeScreen extends StatelessWidget {
                       controller.weeks.last,
                     )),
                     controller: controller,
+                    active: active,
                   ),
           ),
           if (schedule != null &&

@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -9,6 +10,7 @@ import '../schedule/model.dart';
 import '../schedule/selection.dart';
 import 'add_menu.dart';
 import 'calendar_block.dart';
+import 'current_time_indicator.dart';
 
 class TimetableGrid extends StatefulWidget {
   const TimetableGrid({
@@ -20,6 +22,7 @@ class TimetableGrid extends StatefulWidget {
     required this.rowHeight,
     required this.todayColumn,
     required this.todayBackground,
+    required this.currentTime,
   });
 
   final AppController controller;
@@ -29,6 +32,7 @@ class TimetableGrid extends StatefulWidget {
   final double rowHeight;
   final int? todayColumn;
   final Color todayBackground;
+  final ValueListenable<DateTime> currentTime;
 
   @override
   State<TimetableGrid> createState() => _TimetableGridState();
@@ -227,6 +231,19 @@ class _TimetableGridState extends State<TimetableGrid> {
                               isToday: day == widget.todayColumn,
                             ),
                           ),
+                      Positioned.fill(
+                        child: RepaintBoundary(
+                          child: ValueListenableBuilder<DateTime>(
+                            valueListenable: widget.currentTime,
+                            builder: (context, now, _) => CurrentTimeIndicator(
+                              now: now,
+                              monday: widget.monday,
+                              columnWidth: columnWidth,
+                              rowHeight: rowHeight,
+                            ),
+                          ),
+                        ),
+                      ),
                       if (_selection case final selection?)
                         Positioned(
                           left: selection.day * columnWidth + 2,

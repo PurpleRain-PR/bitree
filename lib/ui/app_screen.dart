@@ -72,7 +72,10 @@ class _AppScreenState extends State<AppScreen> {
         IndexedStack(
           index: _tab,
           children: [
-            HomeScreen(controller: widget.controller),
+            HomeScreen(
+              controller: widget.controller,
+              active: _tab == 0,
+            ),
             CalendarScreen(controller: widget.controller),
             const _PendingPage(title: '工具'),
             SettingsScreen(

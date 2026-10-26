@@ -5,9 +5,10 @@ import '../app_controller.dart';
 import 'timetable.dart';
 
 class WeekPager extends StatefulWidget {
-  const WeekPager({super.key, required this.controller});
+  const WeekPager({super.key, required this.controller, this.active = true});
 
   final AppController controller;
+  final bool active;
 
   @override
   State<WeekPager> createState() => _WeekPagerState();
@@ -77,6 +78,7 @@ class _WeekPagerState extends State<WeekPager> {
           week: weeks[page],
           initialScrollOffset: _scrollOffset,
           onScroll: (offset) => _scrollOffset = offset,
+          active: widget.active && weeks[page] == widget.controller.week,
         ),
       ),
     );
