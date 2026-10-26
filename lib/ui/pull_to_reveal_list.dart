@@ -92,74 +92,93 @@ class _PullToRevealListState extends State<PullToRevealList> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final behavior = ScrollConfiguration.of(context);
+    final scrollbarGutter = switch (behavior.getPlatform(context)) {
+      TargetPlatform.linux ||
+      TargetPlatform.macOS ||
+      TargetPlatform.windows => 16.0,
+      _ => 0.0,
+    };
     return Listener(
       onPointerUp: (_) => _release(),
       onPointerCancel: (_) => _dragging = false,
       child: NotificationListener<ScrollNotification>(
         onNotification: _onScroll,
         child: ScrollConfiguration(
-          behavior: ScrollConfiguration.of(context).copyWith(overscroll: false),
-          child: ClipRect(
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                CustomScrollView(
-                  controller: _scroll,
-                  center: _currentItems,
-                  physics: _canReveal
-                      ? const _TopPullPhysics(
-                          parent: AlwaysScrollableScrollPhysics(),
-                        )
-                      : const ClampingScrollPhysics(),
-                  slivers: [
-                    // Slivers before the center grow upward, leaving the current items anchored.
-                    if (_revealed) ...[
-                      if (widget.hiddenChildren.isNotEmpty)
-                        const SliverFillRemaining(
-                          hasScrollBody: false,
-                          child: SizedBox.shrink(),
-                        ),
-                      AnimatedSliverChildren(
-                        key: const ValueKey('hidden'),
-                        children: widget.hiddenChildren.reversed.toList(),
-                      ),
-                    ],
-                    AnimatedSliverChildren(
-                      key: _currentItems,
-                      children: [
-                        if (widget.hiddenChildren.isNotEmpty)
-                          Center(
-                            key: const ValueKey('reveal'),
-                            child: TextButton(
-                              onPressed: () => _setRevealed(!_revealed),
-                              child: Text(
-                                '${_revealed ? '收起' : '下拉查看'}${widget.hiddenLabel}',
-                                textAlign: TextAlign.center,
-                              ),
+          behavior: behavior.copyWith(overscroll: false, scrollbars: false),
+          child: behavior.buildScrollbar(
+            context,
+            Padding(
+              padding: EdgeInsetsDirectional.only(end: scrollbarGutter),
+              child: ClipRect(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    CustomScrollView(
+                      controller: _scroll,
+                      center: _currentItems,
+                      physics: _canReveal
+                          ? const _TopPullPhysics(
+                              parent: AlwaysScrollableScrollPhysics(),
+                            )
+                          : const ClampingScrollPhysics(),
+                      slivers: [
+                        // Slivers before the center grow upward, leaving the current items anchored.
+                        if (_revealed) ...[
+                          if (widget.hiddenChildren.isNotEmpty)
+                            const SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: SizedBox.shrink(),
                             ),
+                          AnimatedSliverChildren(
+                            key: const ValueKey('hidden'),
+                            children: widget.hiddenChildren.reversed.toList(),
                           ),
-                        ...widget.children,
+                        ],
+                        AnimatedSliverChildren(
+                          key: _currentItems,
+                          children: [
+                            if (widget.hiddenChildren.isNotEmpty)
+                              Center(
+                                key: const ValueKey('reveal'),
+                                child: TextButton(
+                                  onPressed: () => _setRevealed(!_revealed),
+                                  child: Text(
+                                    '${_revealed ? '收起' : '下拉查看'}${widget.hiddenLabel}',
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                            ...widget.children,
+                          ],
+                        ),
+                        const SliverPadding(
+                          padding: EdgeInsets.only(bottom: 24),
+                        ),
                       ],
                     ),
-                    const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
-                  ],
-                ),
-                if (_canReveal && _pull > 0)
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: math.min(_pull, 96),
-                    child: IgnorePointer(
-                      child: Center(
-                        child: Text(
-                          _pull >= _threshold ? '松开显示' : '继续下拉',
-                          style: TextStyle(color: scheme.onSurfaceVariant),
+                    if (_canReveal && _pull > 0)
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: math.min(_pull, 96),
+                        child: IgnorePointer(
+                          child: Center(
+                            child: Text(
+                              _pull >= _threshold ? '松开显示' : '继续下拉',
+                              style: TextStyle(color: scheme.onSurfaceVariant),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-              ],
+                  ],
+                ),
+              ),
+            ),
+            ScrollableDetails(
+              direction: AxisDirection.down,
+              controller: _scroll,
             ),
           ),
         ),
