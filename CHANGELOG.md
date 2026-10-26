@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- style(course): redesign week selection shortcuts as compact segments ([05b090a](https://github.com/so1ve/bitree/commit/05b090ae211682d458b631e4d824ea7349ecd64d))
 - fix(timetable): show pinned item counts instead of truncated titles ([79721a8](https://github.com/so1ve/bitree/commit/79721a8ede2a112542b1ef1877d502e55acdf669))
 - fix(ui): unify anchored menus and enable Material animations ([ae0fdad](https://github.com/so1ve/bitree/commit/ae0fdade41e4b1bfa84b45e36ad9b2f9bbc3bd07))
 - refactor: unify agenda labels across the app ([3c04209](https://github.com/so1ve/bitree/commit/3c042096c5faf63250f5d109349ac2a52fe17dd5))
