@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- feat: add Lexue and eclass deadline sources ([02b1d9b](https://github.com/so1ve/bitree/commit/02b1d9be8a2509596eeea4e76ff217444a9ab9b0))
+- fix(ci): build unsigned Android artifacts without signing secrets ([d25159b](https://github.com/so1ve/bitree/commit/d25159bd5cfe422c02e348b3a43873cc21427c3c))
+- feat(about): add author credit and project license ([ea7e9f7](https://github.com/so1ve/bitree/commit/ea7e9f70727dbcb1a757333b77a7ab564f888081))
 - chore: use `--release --split-per-abi` for `just apk` builds ([be8856e](https://github.com/so1ve/bitree/commit/be8856ea7ee6a199332dee60e021dd4d266166eb))
 - feat: organize courses, events and deadlines in a unified calendar ([b463f07](https://github.com/so1ve/bitree/commit/b463f07f84efb565ff1a1bb4f1fe57dcc6652256))
 - perf(schedule): reduce rebuild and repaint overhead ([bb669bc](https://github.com/so1ve/bitree/commit/bb669bc474dad976168dc203edcfaeda47ea4b74))
