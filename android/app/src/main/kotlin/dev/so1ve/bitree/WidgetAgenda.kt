@@ -160,7 +160,7 @@ private fun readAgendaEntries(context: Context): List<WidgetEntry> {
     fun timestamp(value: String) = formatter.parse(value.substring(0, 19))!!.time
 
     return (0 until rows.length()).map { rows.getJSONObject(it) }
-        .filter { !it.getBoolean("done") }
+        .filter { !it.getBoolean("done") && !it.optBoolean("deleted") }
         .map { row ->
             val kind = WidgetEntryKind.valueOf(row.getString("kind").uppercase(Locale.ROOT))
             val start = timestamp(row.getString("startsAt"))

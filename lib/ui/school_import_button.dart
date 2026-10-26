@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
 import 'app_menu_anchor.dart';
+import 'deleted_deadlines.dart';
 import 'school_screen.dart';
 
 class SchoolImportButton extends StatelessWidget {
@@ -53,6 +54,17 @@ class SchoolImportButton extends StatelessWidget {
                 : () => openSchoolPage(context, controller, action: action),
             child: Text(action.label),
           ),
+        const Divider(),
+        MenuItemButton(
+          leadingIcon: const Icon(Icons.restore_from_trash_outlined),
+          onPressed:
+              !controller.agenda.ready ||
+                  controller.agenda.busy ||
+                  controller.agenda.deletedDeadlines.isEmpty
+              ? null
+              : () => showDeletedDeadlines(context, controller.agenda),
+          child: const Text('已删除的 DDL'),
+        ),
       ],
       builder: (context, menu, _) => IconButton(
         tooltip: '导入',

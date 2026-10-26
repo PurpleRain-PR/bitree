@@ -12,7 +12,11 @@ class AgendaController extends ChangeNotifier {
   bool busy = false;
   String? error;
 
-  List<AgendaEntry> get entries => _entries;
+  Iterable<AgendaEntry> get entries =>
+      _entries.where((entry) => !entry.deleted);
+
+  Iterable<AgendaEntry> get deletedDeadlines =>
+      _entries.where((entry) => entry.deleted);
 
   Future<void> load() async {
     if (busy) return;
@@ -34,8 +38,22 @@ class AgendaController extends ChangeNotifier {
   Future<bool> save(AgendaEntry entry) =>
       _write([..._entries.where((item) => item.id != entry.id), entry]);
 
-  Future<bool> delete(AgendaEntry entry) =>
-      _write(_entries.where((item) => item.id != entry.id).toList());
+  Future<bool> restore(AgendaEntry entry) {
+    final current =
+        _entries.where((item) => item.id == entry.id).firstOrNull ?? entry;
+    return save(current.copyWith(deleted: false));
+  }
+
+  Future<bool> delete(AgendaEntry entry) => _write([
+    for (final item in _entries)
+      if (item.id != entry.id)
+        item
+      else if (item.isDeadline)
+        item.copyWith(deleted: true),
+  ]);
+
+  Future<bool> restoreDeletedDeadlines() =>
+      _write([for (final entry in _entries) entry.copyWith(deleted: false)]);
 
   Future<bool> replaceExams(String term, List<AgendaEntry> exams) {
     final edited = {
@@ -57,7 +75,10 @@ class AgendaController extends ChangeNotifier {
     for (final entry in incoming) {
       final saved = entries[entry.id];
       final next = saved?.local == true ? saved! : entry;
-      entries[entry.id] = next.withDone(entry.done || saved?.done == true);
+      entries[entry.id] = next.copyWith(
+        done: entry.done || saved?.done == true,
+        deleted: saved?.deleted ?? false,
+      );
     }
     return _write(entries.values.toList());
   }

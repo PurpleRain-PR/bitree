@@ -13,8 +13,8 @@ enum SchoolAction {
   signIn('登录学校账号'),
   importSchedule('导入课表'),
   importExams('获取考试安排'),
-  importLexueDeadlines('获取乐学 DDL', source: DeadlineSource.lexue),
-  importEclassDeadlines('获取新延河课堂 DDL', source: DeadlineSource.eclass);
+  importLexueDeadlines('更新乐学 DDL', source: DeadlineSource.lexue),
+  importEclassDeadlines('更新新延河课堂 DDL', source: DeadlineSource.eclass);
 
   const SchoolAction(this.label, {this.source});
   final String label;
