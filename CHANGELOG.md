@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- refactor: remove redundant calendar visibility toggles ([4e5dcb4](https://github.com/so1ve/bitree/commit/4e5dcb4ab08cdb1a1d0c832044a88af66e631087))
+- fix(android): keep app icon padding proportional across display sizes ([5ee9639](https://github.com/so1ve/bitree/commit/5ee963990bbb1a008d12ad110908dd68fc3428da))
 - feat: time indicator (#4) ([770ce71](https://github.com/so1ve/bitree/commit/770ce713ddf82a291ca3a091576935ea9d3886c3))
 - refactor(ci): centralize changelog updates on upstream main ([3bab24e](https://github.com/so1ve/bitree/commit/3bab24e27364ab5c1ad2c291738ccccf47fbe5f0))
 - fix(android): make PR builds installable with debug signing ([cebcab8](https://github.com/so1ve/bitree/commit/cebcab8b6009c6d37862932ab911cd787718c3b4))
