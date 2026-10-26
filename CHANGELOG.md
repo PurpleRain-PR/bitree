@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- feat: make agenda tasks easy to review and complete ([fee0ac0](https://github.com/so1ve/bitree/commit/fee0ac0da3d7618f4b11ab5e7c75c8d79dc5140f))
 - fix: name eclass as the new Yanhe classroom ([bfe2d3c](https://github.com/so1ve/bitree/commit/bfe2d3cde358c364752e5d4d748c4ad73e86e27d))
 - refactor: share feedback for imports and course name copying ([9dfbe17](https://github.com/so1ve/bitree/commit/9dfbe17a7fc38dc6ae7ec28db7384828c65fdee2))
 - refactor: unify page layout and restore the timetable home ([c6187cf](https://github.com/so1ve/bitree/commit/c6187cfbf4a3b620e537413cfbbdbb1c7904f3b5))
