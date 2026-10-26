@@ -5,6 +5,7 @@ import '../agenda/model.dart';
 import '../schedule/model.dart';
 import '../schedule/selection.dart';
 import 'sheet_layout.dart';
+import 'external_link.dart';
 
 Future<void> editAgenda(
   BuildContext context,
@@ -153,6 +154,9 @@ class _AgendaEditorState extends State<_AgendaEditor> {
         notes: _notes.text.trim(),
         done: widget.entry?.done ?? false,
         term: widget.entry?.term ?? widget.term,
+        source: widget.entry?.source,
+        course: widget.entry?.course ?? '',
+        url: widget.entry?.url,
       ),
     );
     if (!mounted) return;
@@ -276,6 +280,35 @@ class _AgendaEditorState extends State<_AgendaEditor> {
                             : (values) => setState(() => _kind = values.single),
                       ),
                       const SizedBox(height: 16),
+                    ],
+                    if (widget.entry?.source != null) ...[
+                      Text(
+                        [
+                          widget.entry!.source!.label,
+                          if (widget.entry!.course.isNotEmpty)
+                            widget.entry!.course,
+                        ].join('  '),
+                        style: theme.textTheme.bodySmall,
+                      ),
+                      if (widget.entry?.url case final url?)
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            onPressed: _saving
+                                ? null
+                                : () => openExternalLink(
+                                    context,
+                                    url,
+                                    failureTitle: '无法打开作业',
+                                  ),
+                            icon: const Icon(
+                              Icons.open_in_new_rounded,
+                              size: 16,
+                            ),
+                            label: const Text('打开作业'),
+                          ),
+                        ),
+                      const SizedBox(height: 12),
                     ],
                     TextFormField(
                       controller: _title,

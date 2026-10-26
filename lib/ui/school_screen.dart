@@ -1,13 +1,24 @@
 import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
+import '../agenda/deadline_source.dart';
 import '../data/school_network.dart';
 import '../data/school_storage.dart';
 import '../data/school_verification.dart';
 import 'school_network_picker.dart';
 import 'school_verification_dialog.dart';
 
-enum SchoolAction { signIn, importSchedule, importExams }
+enum SchoolAction {
+  signIn('登录学校账号'),
+  importSchedule('导入课表'),
+  importExams('获取考试安排'),
+  importLexueDeadlines('获取乐学 DDL', source: DeadlineSource.lexue),
+  importEclassDeadlines('获取课程中心 DDL', source: DeadlineSource.eclass);
+
+  const SchoolAction(this.label, {this.source});
+  final String label;
+  final DeadlineSource? source;
+}
 
 Future<bool> _fetchSchoolData(
   AppController controller,
@@ -15,9 +26,20 @@ Future<bool> _fetchSchoolData(
   SchoolNetwork network,
   String? term,
   VerifySchoolLogin verify,
-) => action == SchoolAction.importExams
-    ? controller.importExams(using: network, verify: verify)
-    : controller.synchronize(using: network, term: term, verify: verify);
+) => switch (action) {
+  SchoolAction.signIn => throw StateError('登录不获取业务数据'),
+  SchoolAction.importSchedule => controller.synchronize(
+    using: network,
+    term: term,
+    verify: verify,
+  ),
+  SchoolAction.importExams => controller.importExams(
+    using: network,
+    verify: verify,
+  ),
+  SchoolAction.importLexueDeadlines || SchoolAction.importEclassDeadlines =>
+    controller.importDeadlines(action.source!, using: network, verify: verify),
+};
 
 Future<bool?> openSchoolPage(
   BuildContext context,
@@ -98,6 +120,7 @@ class _SchoolScreenState extends State<_SchoolScreen> {
         SchoolCredentials(username: _username.text, password: _password.text),
         _network,
         verify,
+        source: widget.action.source,
       );
       if (!mounted) return;
       if (!signedIn) {
@@ -134,11 +157,7 @@ class _SchoolScreenState extends State<_SchoolScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(switch (widget.action) {
-        SchoolAction.signIn => '登录学校账号',
-        SchoolAction.importSchedule => '导入课表',
-        SchoolAction.importExams => '获取考试安排',
-      }),
+      title: Text(widget.action.label),
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(3),
         child: SizedBox(
@@ -239,11 +258,15 @@ class _SchoolScreenState extends State<_SchoolScreen> {
                 Text(switch (_operation) {
                   SchoolAction.signIn => '登录中…',
                   SchoolAction.importSchedule => '导入中…',
-                  SchoolAction.importExams => '获取中…',
+                  SchoolAction.importExams ||
+                  SchoolAction.importLexueDeadlines ||
+                  SchoolAction.importEclassDeadlines => '获取中…',
                   null => switch (widget.action) {
                     SchoolAction.signIn => '登录',
                     SchoolAction.importSchedule => '登录并导入',
-                    SchoolAction.importExams => '登录并获取',
+                    SchoolAction.importExams ||
+                    SchoolAction.importLexueDeadlines ||
+                    SchoolAction.importEclassDeadlines => '登录并获取',
                   },
                 }),
               ],
