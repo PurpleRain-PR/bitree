@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- fix(agenda): sync deadline completion from learning platforms ([596a17c](https://github.com/so1ve/bitree/commit/596a17c8897cf14223174ca753faccb9cd49588f))
 - refactor(data): simplify school response parsing ([84f9fe2](https://github.com/so1ve/bitree/commit/84f9fe21c66796d0a7ed2a95af469fd7659bc5e5))
 - fix(agenda): restore pull-to-reveal overdue entries ([3478577](https://github.com/so1ve/bitree/commit/347857746e6d41a3c01f925186741069d15025b6))
 - feat(tools): add empty classroom lookup ([4bf7eb1](https://github.com/so1ve/bitree/commit/4bf7eb17bd9e23edd031fb7fa93df2441dd97c7b))
