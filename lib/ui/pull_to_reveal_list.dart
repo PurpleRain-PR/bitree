@@ -65,20 +65,27 @@ class _PullToRevealListState extends State<PullToRevealList> {
   }
 
   void _setRevealed(bool value) {
-    final offset = value ? (_pull > 0 ? _scroll.offset : -128.0) : 0.0;
     setState(() {
       _revealed = value;
       _pull = 0;
     });
-    // The stretched edge becomes real content without resetting the viewport.
+    // The last hidden row ends at the center sliver's zero offset.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _scroll.jumpTo(
-        offset.clamp(
-          _scroll.position.minScrollExtent,
-          _scroll.position.maxScrollExtent,
-        ),
+      final position = _scroll.position;
+      final target = (value ? -position.viewportDimension : 0.0).clamp(
+        position.minScrollExtent,
+        position.maxScrollExtent,
       );
+      if (MediaQuery.disableAnimationsOf(context)) {
+        _scroll.jumpTo(target);
+      } else {
+        _scroll.animateTo(
+          target,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+        );
+      }
     });
   }
 
@@ -106,10 +113,17 @@ class _PullToRevealListState extends State<PullToRevealList> {
                       : const ClampingScrollPhysics(),
                   slivers: [
                     // Slivers before the center grow upward, leaving the current items anchored.
-                    if (_revealed)
+                    if (_revealed) ...[
+                      if (widget.hiddenChildren.isNotEmpty)
+                        const SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: SizedBox.shrink(),
+                        ),
                       AnimatedSliverChildren(
+                        key: const ValueKey('hidden'),
                         children: widget.hiddenChildren.reversed.toList(),
                       ),
+                    ],
                     AnimatedSliverChildren(
                       key: _currentItems,
                       children: [
