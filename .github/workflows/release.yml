@@ -70,6 +70,7 @@ jobs:
           pattern: BITree-*
           path: dist
           merge-multiple: true
+          skip-decompress: true
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}

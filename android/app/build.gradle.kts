@@ -24,6 +24,7 @@ android {
 
     defaultConfig {
         applicationId = "dev.so1ve.bitree"
+        manifestPlaceholders["appLabel"] = "BITree"
 
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
@@ -45,7 +46,13 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.findByName("release")
+            val releaseSigning = signingConfigs.findByName("release")
+            signingConfig = releaseSigning ?: signingConfigs.getByName("debug")
+
+            if (releaseSigning == null) {
+                applicationIdSuffix = ".preview"
+                manifestPlaceholders["appLabel"] = "BITree 测试版"
+            }
         }
     }
 }

@@ -15,7 +15,7 @@ inputs:
     description: Build number derived from the commit time
     required: true
   signing-password:
-    description: Optional Android keystore password; builds are unsigned when empty
+    description: Optional Android keystore password; builds use debug signing when empty
     required: false
 
 runs:
@@ -135,13 +135,57 @@ runs:
         --version "$BITREE_VERSION"
         --native-version "$BITREE_NATIVE_VERSION"
         --build-number "$BITREE_BUILD_NUMBER"
-    - uses: actions/upload-artifact@v7
-      if: ${{ !cancelled() }}
+    - name: Upload Android armeabi-v7a APK
+      if: ${{ !cancelled() && inputs.target == 'android' }}
+      uses: actions/upload-artifact@v7
       with:
-        name: BITree-${{ inputs.target }}-${{ inputs.version }}
-        path: dist/*
+        path: dist/*-android-armeabi-v7a*.apk
+        archive: false
         if-no-files-found: warn
-        compression-level: 0
+        retention-days: 14
+    - name: Upload Android arm64-v8a APK
+      if: ${{ !cancelled() && inputs.target == 'android' }}
+      uses: actions/upload-artifact@v7
+      with:
+        path: dist/*-android-arm64-v8a*.apk
+        archive: false
+        if-no-files-found: warn
+        retention-days: 14
+    - name: Upload Android x86_64 APK
+      if: ${{ !cancelled() && inputs.target == 'android' }}
+      uses: actions/upload-artifact@v7
+      with:
+        path: dist/*-android-x86_64*.apk
+        archive: false
+        if-no-files-found: warn
+        retention-days: 14
+    - name: Upload Android app bundle
+      if: ${{ !cancelled() && inputs.target == 'android' }}
+      uses: actions/upload-artifact@v7
+      with:
+        path: dist/*.aab
+        archive: false
+        if-no-files-found: warn
+        retention-days: 14
+    - name: Upload desktop or iOS package
+      if: ${{ !cancelled() && inputs.target != 'android' }}
+      uses: actions/upload-artifact@v7
+      with:
+        path: |
+          dist/*.exe
+          dist/*.tar.xz
+          dist/*.zip
+          dist/*.ipa
+        archive: false
+        if-no-files-found: warn
+        retention-days: 14
+    - name: Upload update metadata
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@v7
+      with:
+        path: dist/*-update.json
+        archive: false
+        if-no-files-found: warn
         retention-days: 14
     - name: Remove Android signing files
       if: ${{ always() && inputs.target == 'android' }}
