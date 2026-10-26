@@ -4,9 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'agenda/controller.dart';
+import 'agenda/deadline_source.dart';
 import 'data/desktop_widget.dart';
 import 'data/schedule_store.dart';
 import 'data/school_errors.dart';
+import 'data/lexue_deadlines.dart';
+import 'data/eclass_deadlines.dart';
 import 'data/school_exams.dart';
 import 'data/school_login.dart';
 import 'data/school_network.dart';
@@ -214,10 +217,16 @@ class AppController extends ChangeNotifier {
   Future<bool> signIn(
     SchoolCredentials credentials,
     SchoolNetwork using,
-    VerifySchoolLogin verify,
-  ) => _runSchool(using, (session) async {
+    VerifySchoolLogin verify, {
+    DeadlineSource? source,
+  }) => _runSchool(using, (session) async {
     await _schoolStorage.clearSession(using);
-    await SchoolLogin(session, verify).signIn(credentials);
+    final login = SchoolLogin(session, verify);
+    if (source == null) {
+      await login.signIn(credentials);
+    } else {
+      await login.openLearningPlatform(source, credentials: credentials);
+    }
     session.checkActive();
     await _schoolStorage.saveCredentials(credentials);
     username = credentials.username;
@@ -297,6 +306,25 @@ class AppController extends ChangeNotifier {
     );
     session.checkActive();
     if (!await agenda.replaceExams(result.term, result.exams)) {
+      throw SchoolRequestError(agenda.error ?? '安排正在保存，请稍后重试。');
+    }
+  });
+
+  Future<bool> importDeadlines(
+    DeadlineSource source, {
+    SchoolNetwork? using,
+    required VerifySchoolLogin verify,
+  }) => _runSchool(using ?? network, (session) async {
+    final page = await SchoolLogin(
+      session,
+      verify,
+    ).openLearningPlatform(source);
+    final deadlines = await switch (source) {
+      DeadlineSource.lexue => fetchLexueDeadlines(session, page),
+      DeadlineSource.eclass => fetchEclassDeadlines(session),
+    };
+    session.checkActive();
+    if (!await agenda.mergeDeadlines(deadlines)) {
       throw SchoolRequestError(agenda.error ?? '安排正在保存，请稍后重试。');
     }
   });

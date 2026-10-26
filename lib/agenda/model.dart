@@ -1,4 +1,5 @@
 import '../schedule/model.dart';
+import 'deadline_source.dart';
 
 enum AgendaKind {
   event('活动'),
@@ -23,6 +24,9 @@ class AgendaEntry {
     this.done = false,
     this.term,
     this.local = true,
+    this.source,
+    this.course = '',
+    this.url,
   }) {
     if (id.isEmpty || title.trim().isEmpty) {
       throw const FormatException('日程标题或编号缺失');
@@ -30,6 +34,13 @@ class AgendaEntry {
     if (kind != AgendaKind.deadline &&
         (endsAt == null || !endsAt!.isAfter(startsAt))) {
       throw const FormatException('结束时间必须晚于开始时间');
+    }
+    if (url != null &&
+        (source == null ||
+            url!.scheme != 'https' ||
+            url!.host != source!.host ||
+            url!.userInfo.isNotEmpty)) {
+      throw const FormatException('作业链接不属于对应的学校平台');
     }
   }
 
@@ -44,6 +55,9 @@ class AgendaEntry {
   final bool done;
   final String? term;
   final bool local;
+  final DeadlineSource? source;
+  final String course;
+  final Uri? url;
 
   bool get isDeadline => kind == AgendaKind.deadline;
 
@@ -80,6 +94,9 @@ class AgendaEntry {
     done: value,
     term: term,
     local: local,
+    source: source,
+    course: course,
+    url: url,
   );
 
   Map<String, dynamic> toJson() => {
@@ -94,6 +111,9 @@ class AgendaEntry {
     'done': done,
     'term': term,
     'local': local,
+    'source': source?.name,
+    'course': course,
+    'url': url?.toString(),
   };
 
   factory AgendaEntry.fromJson(Map<String, dynamic> json) => AgendaEntry(
@@ -110,6 +130,11 @@ class AgendaEntry {
     done: json['done'] as bool,
     term: json['term'] as String?,
     local: json['local'] as bool,
+    source: json['source'] == null
+        ? null
+        : DeadlineSource.values.byName(json['source'] as String),
+    course: json['course'] as String? ?? '',
+    url: json['url'] == null ? null : Uri.parse(json['url'] as String),
   );
 }
 

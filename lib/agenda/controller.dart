@@ -52,6 +52,16 @@ class AgendaController extends ChangeNotifier {
     ]);
   }
 
+  Future<bool> mergeDeadlines(List<AgendaEntry> incoming) {
+    final entries = {for (final entry in _entries) entry.id: entry};
+    for (final entry in incoming) {
+      final saved = entries[entry.id];
+      final next = saved?.local == true ? saved! : entry;
+      entries[entry.id] = next.withDone(entry.done || saved?.done == true);
+    }
+    return _write(entries.values.toList());
+  }
+
   Future<bool> _write(List<AgendaEntry> next) async {
     if (!ready || busy) return false;
     busy = true;

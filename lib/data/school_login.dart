@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:html/dom.dart';
 import 'package:html/parser.dart';
 
+import '../agenda/deadline_source.dart';
 import 'school_crypto.dart';
 import 'school_errors.dart';
 import 'school_network.dart';
@@ -20,6 +21,26 @@ class SchoolLogin {
   final VerifySchoolLogin verify;
   static final _sso = Uri.https('sso.bit.edu.cn');
   Uri _referer = _sso.resolve('/cas/login');
+
+  Future<SchoolResponse> openLearningPlatform(
+    DeadlineSource source, {
+    SchoolCredentials? credentials,
+  }) async {
+    var service = source.loginPage;
+    if (source == DeadlineSource.eclass) {
+      final response = await session.request(service);
+      if (!isSchoolLogin(response.url)) return response;
+      final callback = response.url.queryParameters['service'];
+      if (callback == null) {
+        throw const SchoolRequestError('学校登录入口没有提供回调地址。');
+      }
+      service = Uri.parse(callback);
+    }
+    final account = credentials ?? await session.storage.readCredentials();
+    if (account == null) throw const SchoolCredentialsRequired();
+    final callback = await _authenticate(account, service);
+    return _openCallback(callback);
+  }
 
   Future<void> signIn(SchoolCredentials credentials) async {
     if (session.network == SchoolNetwork.webvpn) {
