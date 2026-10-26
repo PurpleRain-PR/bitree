@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fix: correct WebVPN authentication order ([795893f](https://github.com/so1ve/bitree/commit/795893f79edc5901316ea289259f3e4432220ea0))
+- feat: add native school login and background imports ([8f2e1e6](https://github.com/so1ve/bitree/commit/8f2e1e6749a66db1da8d80ab77784cdf902aa9c1))
 - fix(ci): isolate dev builds by branch ([aa220e9](https://github.com/so1ve/bitree/commit/aa220e9683832a36759c956ad27c01880a450959))
 - chore(deps): update dependency python to 3.15 (#2) ([89aa645](https://github.com/so1ve/bitree/commit/89aa645f65afd6b9991de806e17539e74132008c))
 - feat: add native secure storage for school credentials ([0e14ba3](https://github.com/so1ve/bitree/commit/0e14ba38a5a641920098b1062d1458826329c120))
