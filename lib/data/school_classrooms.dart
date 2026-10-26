@@ -31,7 +31,7 @@ Future<ClassroomDirectory> fetchClassroomDirectory(
         SchoolBuilding(
           code: row['JXLDM'] as String,
           name: row['JXLMC'] as String,
-          campusCode: row['XXXQDM'] as String,
+          campusCode: row['XXXQDM'] as String?,
         ),
     ],
   );

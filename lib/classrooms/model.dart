@@ -16,7 +16,7 @@ class SchoolBuilding {
 
   final String code;
   final String name;
-  final String campusCode;
+  final String? campusCode;
 }
 
 class ClassroomDirectory {
