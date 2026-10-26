@@ -32,6 +32,7 @@ class SchoolLogin {
     final callback = await _authenticate(credentials, Uri.parse(service));
 
     if (session.network == SchoolNetwork.webvpn) {
+      await _prepareWebVpn();
       final vpnCallback = await _authenticate(
         credentials,
         SchoolNetwork.vpnLogin,
@@ -40,7 +41,30 @@ class SchoolLogin {
     }
 
     await _openCallback(callback);
-    await session.checkLogin();
+    try {
+      await session.checkLogin();
+    } on SessionExpired {
+      throw SchoolRequestError('未能建立${session.network.label}登录会话，请重试。');
+    }
+  }
+
+  Future<void> _prepareWebVpn() async {
+    final response = await session.request(SchoolNetwork.vpnLogin);
+    if (response.url.path != '/fingerprint') return;
+
+    // The gateway binds its session cookie to a stable client identifier.
+    final fingerprint = schoolSha256(await _device()).substring(0, 32);
+    await session.request(
+      response.url
+          .resolve('/set-fingerprint')
+          .replace(
+            queryParameters: {
+              ...response.url.queryParameters,
+              'fingerprint': fingerprint,
+            },
+          ),
+      headers: {'Referer': response.url.toString()},
+    );
   }
 
   Future<SchoolResponse> _openCallback(Uri callback) => session.request(
@@ -241,7 +265,7 @@ class SchoolLogin {
     return (await _request(_sso.resolve('/cas/').resolve(url))).bytes;
   }
 
-  Future<Map<String, dynamic>> _riskPayload() async {
+  Future<String> _device() async {
     final cookies = await session.storage.cookiesFor(session.network, _sso);
     var device = cookies
         .where((cookie) => cookie.name == 'device')
@@ -255,6 +279,12 @@ class SchoolLogin {
           ..secure = true,
       ]);
     }
+    return device;
+  }
+
+  Future<Map<String, dynamic>> _riskPayload() async {
+    final device = await _device();
+    final cookies = await session.storage.cookiesFor(session.network, _sso);
     final group =
         cookies
             .where((cookie) => cookie.name == 'riskSystemGroupId')
