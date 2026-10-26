@@ -88,6 +88,7 @@ class SchoolSession {
     bool followRedirects = true,
     bool stopAtLogin = false,
     bool checkStatus = true,
+    bool anonymous = false,
   }) async {
     var url = target;
     var payload = form != null
@@ -134,7 +135,9 @@ class SchoolSession {
           outgoing.headers.set(entry.key, value);
         }
       }
-      outgoing.cookies.addAll(await storage.cookiesFor(network, url));
+      if (!anonymous) {
+        outgoing.cookies.addAll(await storage.cookiesFor(network, url));
+      }
       checkActive();
       if (payload != null) {
         outgoing.headers.set(HttpHeaders.contentTypeHeader, contentType);
@@ -144,7 +147,9 @@ class SchoolSession {
         const Duration(seconds: 25),
       );
       checkActive();
-      await storage.saveCookies(network, url, response.cookies);
+      if (!anonymous) {
+        await storage.saveCookies(network, url, response.cookies);
+      }
       final bytes = await response
           .fold<BytesBuilder>(
             BytesBuilder(copy: false),

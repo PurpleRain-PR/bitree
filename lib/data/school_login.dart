@@ -22,16 +22,23 @@ class SchoolLogin {
   Uri _referer = _sso.resolve('/cas/login');
 
   Future<void> signIn(SchoolCredentials credentials) async {
-    if (session.network == SchoolNetwork.webvpn) {
-      final callback = await _authenticate(credentials, SchoolNetwork.vpnLogin);
-      await _openCallback(callback);
-    }
+    // The public entry supplies the CAS service; the VPN proxy rewrites it.
     final preflight = await session.request(
-      session.network.route(SchoolNetwork.teachingLogin),
+      SchoolNetwork.teachingLogin,
       followRedirects: false,
+      anonymous: true,
     );
     final service = preflight.location!.queryParameters['service']!;
     final callback = await _authenticate(credentials, Uri.parse(service));
+
+    if (session.network == SchoolNetwork.webvpn) {
+      final vpnCallback = await _authenticate(
+        credentials,
+        SchoolNetwork.vpnLogin,
+      );
+      await _openCallback(vpnCallback);
+    }
+
     await _openCallback(callback);
     await session.checkLogin();
   }
