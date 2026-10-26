@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'animated_sliver_list.dart';
+
 class PullToRevealList extends StatefulWidget {
   const PullToRevealList({
     super.key,
@@ -105,14 +107,15 @@ class _PullToRevealListState extends State<PullToRevealList> {
                   slivers: [
                     // Slivers before the center grow upward, leaving the current items anchored.
                     if (_revealed)
-                      SliverList.list(
+                      AnimatedSliverChildren(
                         children: widget.hiddenChildren.reversed.toList(),
                       ),
-                    SliverList.list(
+                    AnimatedSliverChildren(
                       key: _currentItems,
                       children: [
                         if (widget.hiddenChildren.isNotEmpty)
                           Center(
+                            key: const ValueKey('reveal'),
                             child: TextButton(
                               onPressed: () => _setRevealed(!_revealed),
                               child: Text(

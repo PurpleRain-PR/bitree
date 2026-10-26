@@ -52,7 +52,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
       days.putIfAbsent(day, () => []).add(entry);
     }
 
-    Widget heading(String label, {bool highlight = false}) => Padding(
+    Widget heading(Key key, String label, {bool highlight = false}) => Padding(
+      key: key,
       padding: const EdgeInsets.only(top: 16, bottom: 4),
       child: Text(
         label,
@@ -125,7 +126,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               hiddenLabel: '已截止的 DDL',
               hiddenChildren: [
                 if (overdue.isNotEmpty) ...[
-                  heading('已截止的 DDL'),
+                  heading(const ValueKey('overdue-heading'), '已截止的 DDL'),
                   for (final entry in overdue)
                     CalendarItemTile(
                       key: ValueKey(entry.id),
@@ -138,11 +139,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
               children: [
                 if (days.isEmpty)
                   const Padding(
+                    key: ValueKey('empty-state'),
                     padding: EdgeInsets.symmetric(vertical: 64),
                     child: Center(child: Text('没有待办安排')),
                   ),
                 for (final day in days.entries) ...[
                   heading(
+                    ValueKey(('day', day.key)),
                     agendaDateLabel(day.key),
                     highlight: day.key == today,
                   ),
